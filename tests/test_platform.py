@@ -146,6 +146,28 @@ class PlatformTests(unittest.TestCase):
             compose.write_text("services:\n  api:\n    image: demo:latest\n    privileged: true\n    environment:\n      API_KEY: literal\n", encoding="utf-8")
             result = self.command(ROOT / "docker-operations/scripts/compose-preflight.py", compose)
             self.assertNotEqual(result.returncode, 0); self.assertIn("literal sensitive", result.stdout)
+    def test_plugin_manifests_match_the_catalog_and_keep_enforcement_opt_in(self):
+        catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
+        plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8-sig"))
+        marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8-sig"))
+        self.assertEqual(plugin["name"], "devops-skill-platform")
+        self.assertEqual(plugin["version"], catalog["version"])
+        self.assertEqual(plugin["license"], "Apache-2.0")
+        self.assertEqual(plugin["skills"], ".")
+        for name in catalog["skills"]:
+            self.assertTrue((ROOT / name / "SKILL.md").is_file(), name)
+        self.assertNotIn("hooks", plugin, "installing the plugin must not silently enable the command gate")
+        self.assertTrue(marketplace["name"] and marketplace["owner"]["name"])
+        self.assertNotIn(marketplace["name"], {
+            "claude-code-marketplace", "claude-code-plugins", "claude-plugins-official",
+            "claude-plugins-community", "claude-community", "anthropic-marketplace",
+            "anthropic-plugins", "agent-skills", "anthropic-agent-skills",
+        })
+        entries = {entry["name"]: entry for entry in marketplace["plugins"]}
+        self.assertIn(plugin["name"], entries)
+        entry = entries[plugin["name"]]
+        self.assertEqual(entry["version"], catalog["version"])
+        self.assertTrue((ROOT / entry["source"]).is_dir())
     def test_repo_protection_audit_flags_weak_protection(self):
         snapshot = {
             "repository": {"full_name": "example/repo", "default_branch": "main"},
