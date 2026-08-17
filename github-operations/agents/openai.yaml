@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Operations"
+  short_description: "Safely operate GitHub repository controls"
+  default_prompt: "Use $github-operations to plan a safe GitHub protection, environment, or release change."
