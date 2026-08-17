@@ -40,6 +40,7 @@ READ_ONLY_PLATFORM_SCRIPTS = {
         "docker-operations/scripts/compose-preflight.py",
         "network-edge-operations/scripts/http-path-check.py",
         "reliability-operations/scripts/deploy-verify.py",
+        "github-operations/scripts/repo-protection-audit.py",
         "examples/portfolio-demo/run_demo.py",
     )
 }

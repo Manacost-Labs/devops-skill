@@ -1,0 +1,61 @@
+name: github-operations
+version: 0.1.0
+kind: executor
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(gh:*)
+  - Bash(python tools/devops_exec.py:*)
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - github-repo-discovery
+  - github-branch-protection-management
+  - github-environment-deployment-gates
+  - github-actions-run-operations
+  - github-release-operations
+  - github-runner-trust-administration
+risk_domains:
+  - repository-protection-controls
+  - deployment-gate-integrity
+  - workflow-execution-trust
+  - release-artifact-trust
+  - runner-trust
+  - token-permission-scope
+platforms:
+  - GitHub.com
+  - GitHub CLI
+provides:
+  - github-control-plane-v1
+  - contract-v2-executor
+source_freshness:
+  last_verified: '2026-08-18'
+  refresh_before_change: true
+  official_sources:
+    - https://docs.github.com/en/rest
+    - https://docs.github.com/en/github-cli/github-cli/about-github-cli
+    - https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+    - https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets
+    - https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/managing-environments-for-deployment
+    - https://docs.github.com/en/actions/reference/security/secure-use
+    - https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
+    - https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases
+  capability_sources:
+    github-repo-discovery:
+      - https://docs.github.com/en/rest
+      - https://docs.github.com/en/github-cli/github-cli/about-github-cli
+    github-branch-protection-management:
+      - https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+      - https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets
+    github-environment-deployment-gates:
+      - https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/managing-environments-for-deployment
+    github-actions-run-operations:
+      - https://docs.github.com/en/actions/reference/security/secure-use
+      - https://docs.github.com/en/rest
+    github-release-operations:
+      - https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases
+    github-runner-trust-administration:
+      - https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
+      - https://docs.github.com/en/actions/reference/security/secure-use
