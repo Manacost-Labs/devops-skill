@@ -91,6 +91,20 @@ CLOUD_MUTATING_VERBS = {
     "disable", "start", "stop", "restart", "resize", "attach", "detach", "import", "export",
     "run", "submit", "rollout", "promote", "migrate", "reset", "rotate", "upgrade", "scale",
 }
+GH_READ_ONLY = {
+    "pr": {"view", "list", "checks", "diff", "status"},
+    "run": {"list", "view", "watch"},
+    "repo": {"view", "list"},
+    "release": {"list", "view"},
+    "workflow": {"list", "view"},
+    "ruleset": {"list", "view", "check"},
+    "issue": {"list", "view"},
+    "cache": {"list"},
+    "label": {"list"},
+    "auth": {"status"},
+    "status": {""},
+}
+GH_API_MUTATING_FLAGS = ("-X", "--method", "-f", "--field", "-F", "--raw-field", "--input")
 CURL_MUTATING_FLAGS = {
     "-d", "--data", "--data-raw", "--data-binary", "--data-urlencode", "-F", "--form",
     "-T", "--upload-file", "-o", "-O", "--output", "--remote-name", "-K", "--config",
@@ -221,6 +235,16 @@ def classify_segment(argv: list[str], cwd: Path) -> tuple[bool, str]:
         if any(token in CLOUD_READ_ONLY_VERBS for token in positionals):
             return True, f"{name} read-only verb"
         return False, f"{name} verb is not provably read-only"
+    if name == "gh":
+        verb = positionals[0] if positionals else ""
+        if verb == "api":
+            if any(token in GH_API_MUTATING_FLAGS or token.startswith(("--method", "--field", "--raw-field", "--input")) for token in rest):
+                return False, "gh api with a mutating method or request body"
+            return True, "gh api GET"
+        sub = positionals[1] if len(positionals) > 1 else ""
+        if sub in GH_READ_ONLY.get(verb, ()):
+            return True, f"gh {verb} {sub}".strip()
+        return False, f"gh {verb} {sub}".strip() + " is not provably read-only"
     if name == "curl":
         request_value = ""
         for index, token in enumerate(rest):
