@@ -1,6 +1,7 @@
 ---
 name: cloudflare-operations
 description: Safely audit and operate Cloudflare DNS, cache, WAF, rate limiting, Access, Tunnel, and Workers under the devops-core contract. Use for Cloudflare incident diagnosis, configuration review, origin protection, or bounded edge changes.
+allowed-tools: Read, Grep, Glob, Bash(curl:*)
 ---
 
 # Cloudflare Operations

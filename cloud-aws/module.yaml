@@ -1,6 +1,11 @@
 name: cloud-aws
 version: 0.3.0
 kind: executor
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(aws:*)
 requires:
   - devops-platform-contracts >= 0.3.0
   - devops-core >= 0.3.0

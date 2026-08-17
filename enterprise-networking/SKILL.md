@@ -1,6 +1,7 @@
 ---
 name: enterprise-networking
 description: Safely assess, design, and change enterprise VPN, BGP, routing, segmentation, and hybrid-connectivity paths. Use for route or ACL changes, tunnel and peering operations, asymmetric-routing or MTU diagnosis, staged network cutovers, and out-of-band recovery planning.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Enterprise Networking

@@ -1,6 +1,7 @@
 ---
 name: docker-operations
 description: Safely audit, design, deploy, verify, and roll back Docker and Docker Compose workloads under the devops-core safety contract. Use for container images, registries, Compose files, containers, networks, volumes, image security, service rollout, or container rollback.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Docker Operations

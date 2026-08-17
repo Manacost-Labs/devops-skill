@@ -1,6 +1,7 @@
 ---
 name: devops-core
 description: Coordinate safe, evidence-driven infrastructure work across modular DevOps skills. Use for any request to assess, design, deploy, change, troubleshoot, or operate servers, cloud resources, containers, networking, DNS/TLS, CI/CD, observability, backups, or production infrastructure—especially when the task needs risk classification, module routing, approvals, rollback, or verification.
+allowed-tools: Read, Grep, Glob, Bash(python devops-core/scripts/profile_digest.py:*), Bash(python devops-core/scripts/validate_contracts.py:*), Bash(python devops-platform-contracts/scripts/operation_gate.py:*), Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
 ---
 
 # DevOps Core

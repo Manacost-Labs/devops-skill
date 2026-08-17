@@ -1,6 +1,7 @@
 ---
 name: iac-operations
 description: Safely audit, plan, apply, and recover infrastructure-as-code under the devops-core contract. Use for Terraform or OpenTofu plans/applies, state and backend work, drift/import review, or bounded Ansible and cloud-init changes.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # IaC Operations

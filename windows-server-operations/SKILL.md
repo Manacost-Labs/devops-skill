@@ -1,6 +1,7 @@
 ---
 name: windows-server-operations
 description: Safely audit, bootstrap, operate, diagnose, and recover Windows Server hosts under the devops-core safety contract. Use for PowerShell remoting, WinRM, RDP, local users/groups, Windows services, Event Logs, Windows Firewall, disks, updates, reboot planning, Windows networking, or host hardening.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Windows Server Operations

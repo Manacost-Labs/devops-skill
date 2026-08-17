@@ -1,6 +1,7 @@
 ---
 name: secrets-access-operations
 description: Govern secret references, workload identities, privileged access, JIT/JEA elevation, credential rotation and revocation, and break-glass workflows. Use for production access changes, secret lifecycle operations, least-privilege design, dual-control approval, and provider-specific access handoffs.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Secrets and Access Operations

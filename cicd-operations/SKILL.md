@@ -1,6 +1,7 @@
 ---
 name: cicd-operations
 description: Safely audit, design, change, and verify GitHub Actions and generic delivery pipelines under the devops-core contract. Use for workflow security, OIDC and permissions, protected deployments, immutable artifacts and attestations, runner trust, releases, or rollback design.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # CI/CD Operations

@@ -1,6 +1,7 @@
 ---
 name: data-resilience-operations
 description: Safely assess, plan, and execute bounded PostgreSQL and Redis backup, restore, PITR, migration, failover, retention, and data-masking operations. Use for database recoverability, RPO/RTO validation, isolated restore testing, production data changes, and stateful recovery workflows.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Data Resilience Operations

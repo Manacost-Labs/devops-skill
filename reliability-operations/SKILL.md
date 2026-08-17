@@ -1,6 +1,7 @@
 ---
 name: reliability-operations
 description: Design and verify observability, service health, SLI/SLOs, actionable alerts, incident flow, and evidence-driven release validation. Use for metrics, logs, traces, dashboards, alerting, uptime checks, error/latency analysis, incident triage, or post-deploy verification.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Reliability Operations

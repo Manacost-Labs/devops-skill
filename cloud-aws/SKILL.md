@@ -1,6 +1,7 @@
 ---
 name: cloud-aws
 description: Assess, plan, execute, and verify bounded AWS control-plane operations under contract v2. Use for AWS account and regional discovery, IAM, VPC and security controls, EC2, managed container control planes, managed database routing, cost and quota impact, rollback, and evidence-driven production change handoff.
+allowed-tools: Read, Grep, Glob, Bash(aws:*)
 ---
 
 # AWS Cloud Operations

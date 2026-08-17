@@ -1,6 +1,7 @@
 ---
 name: kubernetes-operations
 description: Safely audit and change confirmed Kubernetes clusters and workloads under the devops-core contract. Use for cluster/workload inventory, manifests and server-side apply, rollout diagnosis, RBAC, Pod Security Standards, NetworkPolicy, or Kubernetes storage/control-plane coordination; never select Kubernetes without confirming it is the target platform.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Kubernetes Operations

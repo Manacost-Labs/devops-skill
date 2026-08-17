@@ -1,6 +1,7 @@
 ---
 name: cloud-gcp
 description: Assess, plan, execute, and verify bounded Google Cloud control-plane operations under contract v2. Use for organization and project discovery, IAM, VPC and firewall controls, Compute Engine, managed container control planes, managed database routing, cost and quota impact, rollback, and evidence-driven production change handoff.
+allowed-tools: Read, Grep, Glob, Bash(gcloud:*), Bash(gsutil:*)
 ---
 
 # Google Cloud Operations

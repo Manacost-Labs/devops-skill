@@ -1,6 +1,10 @@
 name: cloud-generic
 version: 0.3.0
 kind: executor
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
 requires:
   - devops-platform-contracts >= 0.3.0
   - devops-core >= 0.3.0

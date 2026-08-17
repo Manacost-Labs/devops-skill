@@ -1,6 +1,7 @@
 ---
 name: linux-operations
 description: Safely audit, bootstrap, operate, diagnose, and recover Debian/Ubuntu Linux servers under the devops-core safety contract. Use for Linux VPS/VM work involving SSH, users and sudo, systemd services, packages, firewall, disks, memory, processes, logs, network basics, host hardening, or controlled recovery.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Linux Operations
