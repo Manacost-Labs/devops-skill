@@ -31,7 +31,7 @@ provides:
   - github-control-plane-v1
   - contract-v2-executor
 source_freshness:
-  last_verified: '2026-08-18'
+  last_verified: '2026-08-17'
   refresh_before_change: true
   official_sources:
     - https://docs.github.com/en/rest
