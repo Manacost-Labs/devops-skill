@@ -99,6 +99,124 @@ class WrapperTests(unittest.TestCase):
         self.assertNotIn("should-not-run", result.stdout)
 
 
+class PlanBuilderTests(unittest.TestCase):
+    PROFILE = ROOT / "devops-platform-contracts/templates/target-profile.yaml"
+    BUILDER = ROOT / "tools" / "devops_plan.py"
+
+    def build(self, command, directory=None, extra=()):
+        arguments = [
+            PYTHON, str(self.BUILDER),
+            "--target-profile", str(self.PROFILE),
+            "--action", "container_rollout",
+            "--risk", "R2",
+            "--objective", "Roll out the approved immutable release",
+            "--scope", "service:api",
+            "--verify", "health endpoint returns 2xx",
+            "--external-side-effects",
+            "--at", NOW,
+            *extra,
+        ]
+        if directory is not None:
+            arguments += ["--output", str(Path(directory) / "request.json")]
+        arguments += ["--", *command]
+        return subprocess.run(arguments, capture_output=True, text=True, check=False)
+
+    def test_builder_binds_the_exact_command_policy_and_profile(self):
+        command = [PYTHON, "-c", "print('planned')"]
+        result = self.build(command)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        request = json.loads(result.stdout)
+        self.assertEqual(request["change"]["plan_digest"], command_digest(command))
+        self.assertEqual(request["policy"]["digest"], request["approvals"][0]["policy_digest"])
+        self.assertTrue(request["target"]["profile_digest"].startswith("sha256:"))
+        self.assertEqual(request["execution"]["window_start"], "2026-08-17T10:15:00Z")
+        self.assertIn("NOT YET AUTHORIZED", result.stderr)
+
+    def test_generated_request_is_not_authorized_until_a_human_fills_approvals(self):
+        command = [PYTHON, "-c", "print('must-not-run')"]
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(self.build(command, directory).returncode, 0)
+            request_path = Path(directory) / "request.json"
+            gate = subprocess.run(
+                [PYTHON, str(ROOT / "devops-platform-contracts/scripts/operation_gate.py"),
+                 "--request", str(request_path), "--at", NOW],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(gate.returncode, 1, gate.stdout)
+            self.assertIn("distinct valid approval(s) required", gate.stdout)
+            wrapper = subprocess.run(
+                [PYTHON, str(WRAPPER), "--operation", str(request_path), "--at", NOW,
+                 "--ledger", str(Path(directory) / "ledger.jsonl"), "--", *command],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(wrapper.returncode, 0)
+            self.assertNotIn("must-not-run", wrapper.stdout)
+
+    def test_planned_request_executes_after_approval(self):
+        command = [PYTHON, "-c", "print('gated-execution')"]
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(self.build(command, directory).returncode, 0)
+            request_path = Path(directory) / "request.json"
+            request = json.loads(request_path.read_text(encoding="utf-8"))
+            for approval in request["approvals"]:
+                approval.update({
+                    "approver": "user:service-owner",
+                    "role": "service-owner",
+                    "evidence_ref": "ticket:CHG-9001",
+                    "approved_at": "2026-08-17T10:15:00Z",
+                    "expires_at": "2026-08-17T11:00:00Z",
+                })
+            request_path.write_text(json.dumps(request), encoding="utf-8")
+            wrapper = subprocess.run(
+                [PYTHON, str(WRAPPER), "--operation", str(request_path), "--at", NOW,
+                 "--ledger", str(Path(directory) / "ledger.jsonl"), "--", *command],
+                capture_output=True, text=True, check=False,
+            )
+        self.assertEqual(wrapper.returncode, 0, wrapper.stdout + wrapper.stderr)
+        self.assertIn("ALLOWED:", wrapper.stdout)
+        self.assertIn("gated-execution", wrapper.stdout)
+
+    def test_builder_refuses_to_understate_risk(self):
+        result = self.build([PYTHON, "-c", "print(1)"], extra=["--destructive"])
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("at least R4", result.stdout)
+        arguments = [
+            PYTHON, str(self.BUILDER), "--target-profile", str(self.PROFILE),
+            "--action", "dns_change", "--risk", "R2", "--objective", "Change a DNS record",
+            "--scope", "zone:example", "--verify", "resolver returns the new value",
+            "--external-side-effects", "--at", NOW, "--", "echo", "x",
+        ]
+        result = subprocess.run(arguments, capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("at least R3", result.stdout)
+
+    def test_builder_requires_acceptance_criteria_at_r2(self):
+        arguments = [
+            PYTHON, str(self.BUILDER), "--target-profile", str(self.PROFILE),
+            "--action", "container_rollout", "--risk", "R2", "--objective", "Roll out a release",
+            "--scope", "service:api", "--external-side-effects", "--at", NOW, "--", "echo", "x",
+        ]
+        result = subprocess.run(arguments, capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--verify is required", result.stdout)
+
+    def test_builder_reports_recovery_and_lock_obligations(self):
+        arguments = [
+            PYTHON, str(self.BUILDER), "--target-profile", str(self.PROFILE),
+            "--action", "database_migration", "--risk", "R4", "--objective", "Migrate the primary schema",
+            "--scope", "database:primary", "--verify", "row counts match", "--stateful",
+            "--at", NOW, "--", "echo", "migrate",
+        ]
+        result = subprocess.run(arguments, capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        request = json.loads(result.stdout)
+        self.assertTrue(request["recovery"]["required"])
+        self.assertEqual(request["execution"]["change_lock_ref"], "")
+        self.assertIn("change lock", result.stderr)
+        self.assertIn("prove recovery", result.stderr)
+        self.assertIn("separation of duties", result.stderr)
+
+
 class HookTests(unittest.TestCase):
     def run_hook(self, command=None, payload=None, cwd=None):
         if payload is None:
@@ -165,9 +283,13 @@ class HookTests(unittest.TestCase):
             self.assert_blocked(command)
 
     def test_hook_allows_registered_platform_scripts_by_resolved_path(self):
-        returncode, decision, reason = self.run_hook("python devops-platform-contracts/scripts/validate_platform.py")
-        self.assertEqual(decision, "allow", reason)
-        self.assertEqual(returncode, 0)
+        for command in (
+            "python devops-platform-contracts/scripts/validate_platform.py",
+            "python tools/devops_plan.py --target-profile p.yaml --action container_rollout --risk R2 -- docker compose up -d",
+        ):
+            returncode, decision, reason = self.run_hook(command)
+            self.assertEqual(decision, "allow", f"{command}: {reason}")
+            self.assertEqual(returncode, 0, command)
 
     def test_hook_blocks_lookalike_platform_script(self):
         with tempfile.TemporaryDirectory() as directory:
