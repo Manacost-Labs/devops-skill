@@ -4,6 +4,9 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+- Added `github-operations`, a bounded GitHub control-plane executor (catalog 0.4.0, 22 skills): branch protection and rulesets, deployment environments and reviewer gates, Actions run and runner administration, releases, and token-permission scope, with a permission-model reference, verified failure modes, a change-card template, and a read-only repository-protection audit script; joined the `delivery` and `all` profiles with docs.github.com freshness validation.
+- Taught the PreToolUse gate to classify the `gh` CLI: view/list/checks subcommands and body-less `gh api` GET calls pass as read-only; every other `gh` invocation is denied and routed through the gated wrapper.
+- Added six GitHub prompt-injection scenarios (PR-comment merge pressure, log-embedded protection rollback, bypass-list requests, fake API approvals, release re-tagging, fork access to privileged runners) to the adversarial evaluation suite.
 - Required a least-privilege `allowed-tools` declaration in every module manifest and `SKILL.md` frontmatter; validation now fails on missing, malformed, or mismatched declarations.
 - Added `tools/devops_exec.py`, a wrapper that executes exactly one approved command: canonical argv digest must equal the approved plan digest, the operation gate re-runs immediately before launch, and every attempt is recorded in a secret-redacted execution ledger.
 - Added `tools/hooks/pretooluse_gate.py`, a fail-closed PreToolUse hook that denies mutating, obfuscated, or unclassifiable shell commands without a fresh gate PASS bound to the exact command digest, with setup documentation in `docs/hooks-setup.md`.
