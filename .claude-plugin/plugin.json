@@ -1,0 +1,25 @@
+{
+  "name": "devops-skill-platform",
+  "displayName": "DevOps Skill Platform",
+  "version": "0.4.0",
+  "description": "Composable DevOps skills with a fail-closed change-control contract: risk classification, digest-bound approvals, recovery proof, and verification evidence for hosts, containers, Kubernetes, IaC, delivery, GitHub, data, edge, and cloud work.",
+  "author": {
+    "name": "Manacost Labs",
+    "url": "https://github.com/Manacost-Labs"
+  },
+  "homepage": "https://github.com/Manacost-Labs/devops-skill",
+  "repository": "https://github.com/Manacost-Labs/devops-skill",
+  "license": "Apache-2.0",
+  "keywords": [
+    "devops",
+    "infrastructure",
+    "change-control",
+    "kubernetes",
+    "terraform",
+    "docker",
+    "cloud",
+    "github",
+    "safety"
+  ],
+  "skills": "."
+}

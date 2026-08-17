@@ -6,6 +6,15 @@ A modular, Codex-first platform for bounded, evidence-driven infrastructure work
 
 This project demonstrates system administration and DevOps engineering practices: decomposing operational ownership, classifying risk, planning recovery, constraining privileged changes, validating packages, and collecting verification evidence. It is not a certification, a managed service, or an autonomous administrator.
 
+## Install as a Claude Code plugin
+
+```
+/plugin marketplace add Manacost-Labs/devops-skill
+/plugin install devops-skill-platform@manacost-devops
+```
+
+This installs the skills only. Command-execution enforcement is deliberately opt-in: the fail-closed `PreToolUse` gate denies mutating shell commands session-wide, so you enable it yourself when you want that boundary — see [docs/hooks-setup.md](docs/hooks-setup.md). For a source checkout instead, see the [5-minute safe evaluation](#5-minute-safe-evaluation).
+
 ## Start here
 
 - [5-minute safe evaluation](#5-minute-safe-evaluation) — validate the platform and preview an install without changing a host or cloud account.
@@ -114,6 +123,22 @@ python tools/install.py --profile web-linux
 A successful validation reports `22/22 compatible installed skills`. The installer then prints each proposed destination and ends with `Dry-run only`. Review the [architecture](docs/architecture.md) next, or run the [shipped synthetic portfolio demo](examples/portfolio-demo/README.md) without connecting to a real target.
 
 `tools/install.py` is dry-run by default. `--apply` writes to the selected skills directory, and `--apply --force` can replace existing skills; neither option is part of this safe evaluation.
+
+## Running one real change
+
+The contract binds an approval to one exact command. `tools/devops_plan.py` computes the bindings a human cannot compute by hand (canonical command digest, policy digest, validated target-profile digest) and derives the minimum risk class the policy implies:
+
+```bash
+python tools/devops_plan.py --target-profile my-target.yaml --action container_rollout --risk R2 --objective "Roll out the approved release" --scope service:api --verify "health endpoint returns 2xx" --external-side-effects --output change.json -- docker compose up -d
+```
+
+The generated request is deliberately **not** authorized: approval slots are empty, and required change locks or recovery evidence are left blank. The builder prints exactly what a human must supply. After a real approver fills those fields, execute through the wrapper:
+
+```bash
+python tools/devops_exec.py --operation change.json -- docker compose up -d
+```
+
+The wrapper re-runs the gate immediately before launch and refuses if the command no longer matches the approved digest. Planning never grants authority; only a filled, unexpired, identity-backed approval does.
 
 ## Safe operation flow
 
