@@ -1,0 +1,47 @@
+name: cloud-selectel
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - selectel-project-discovery
+  - selectel-iam-control-plane
+  - selectel-network-control-plane
+  - selectel-compute-control-plane
+  - selectel-managed-service-routing
+risk_domains:
+  - selectel-project-boundary
+  - iam-policy-change
+  - network-exposure
+  - compute-replacement
+  - managed-service-state
+  - billing-impact
+platforms:
+  - selectel-cloud
+provides:
+  - selectel-cloud-control-plane-v1
+  - contract-v2-executor
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://docs.selectel.ru/en/terraform/
+    - https://docs.selectel.ru/en/managed-kubernetes/
+    - https://docs.selectel.ru/en/api/authorization/
+    - https://docs.selectel.ru/en/access-control/
+    - https://docs.selectel.ru/en/cloud-servers/
+    - https://docs.selectel.ru/en/managed-databases/
+  capability_sources:
+    selectel-project-discovery:
+      - https://docs.selectel.ru/en/api/authorization/
+    selectel-iam-control-plane:
+      - https://docs.selectel.ru/en/access-control/
+    selectel-network-control-plane:
+      - https://docs.selectel.ru/en/cloud-servers/
+    selectel-compute-control-plane:
+      - https://docs.selectel.ru/en/cloud-servers/
+      - https://docs.selectel.ru/en/terraform/
+    selectel-managed-service-routing:
+      - https://docs.selectel.ru/en/managed-kubernetes/
+      - https://docs.selectel.ru/en/managed-databases/

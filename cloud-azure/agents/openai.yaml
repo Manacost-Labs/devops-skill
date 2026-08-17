@@ -1,0 +1,4 @@
+interface:
+  display_name: "Azure Cloud Operations"
+  short_description: "Operate Azure workloads with current guardrails"
+  default_prompt: "Use $cloud-azure to assess and plan this Azure operation safely."

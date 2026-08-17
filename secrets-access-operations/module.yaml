@@ -1,0 +1,25 @@
+name: secrets-access-operations
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - secret-reference-governance
+  - workload-identity
+  - just-in-time-access
+  - constrained-administration
+  - credential-rotation
+  - access-revocation
+  - break-glass-access
+  - privileged-access-review
+  - provider-access-handoff
+risk_domains:
+  - identity-and-access
+  - secret-handling
+  - privileged-control
+  - production-state
+platforms:
+  - Cloud IAM
+  - Vaults and credential brokers
+  - Enterprise directories

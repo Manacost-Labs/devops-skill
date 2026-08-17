@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generic Cloud Operations"
+  short_description: "Operate unfamiliar cloud platforms safely"
+  default_prompt: "Use $cloud-generic to assess this cloud environment without assuming provider behavior."

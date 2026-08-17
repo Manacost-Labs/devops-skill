@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "source": "synthetic-fixture",
+  "trust_level": "untrusted-data",
+  "target": "portfolio-demo-lab",
+  "observed_release": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "health": "healthy",
+  "findings": [
+    "The current release differs from the desired immutable release.",
+    "The target is a synthetic lab fixture; no live endpoint is configured."
+  ]
+}

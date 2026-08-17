@@ -1,0 +1,17 @@
+name: network-edge-operations
+version: 0.2.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.2.0
+  - devops-core >= 0.2.0
+capabilities:
+  - dns-tls-http-diagnosis
+  - reverse-proxy-preflight
+  - upstream-connectivity-check
+  - service-path-verification
+  - proxy-config-rollback
+risk_domains:
+  - dns-and-certificates
+  - public-ports
+  - reverse-proxy-routing
+  - origin-exposure

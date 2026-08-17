@@ -1,0 +1,47 @@
+{
+  "schema_version": "2.0",
+  "operation_id": "ops-example-0001",
+  "objective": "Roll out the approved immutable container release",
+  "data_classification": "internal",
+  "policy": {
+    "id": "default-baseline",
+    "version": "2.0",
+    "digest": "sha256:6588bac7b50476dee73d9f87808fac3da11d1c7240d0a0240972a6f942d6e9d3"
+  },
+  "target": {
+    "name": "example-lab",
+    "environment": "lab",
+    "owner": "platform-owner",
+    "profile_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "change": {
+    "action": "container_rollout",
+    "risk": "R2",
+    "scope": ["service:api"],
+    "plan_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "stateful": false,
+    "destructive": false,
+    "external_side_effects": true
+  },
+  "execution": {
+    "executor": "service:codex",
+    "requested_at": "2026-08-17T10:00:00Z",
+    "window_start": "2026-08-17T10:00:00Z",
+    "window_end": "2026-08-17T11:00:00Z",
+    "idempotency_key": "example-lab-api-0001",
+    "change_lock_ref": null
+  },
+  "approvals": [{
+    "approver": "user:service-owner",
+    "role": "service-owner",
+    "target": "example-lab",
+    "plan_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "policy_digest": "sha256:6588bac7b50476dee73d9f87808fac3da11d1c7240d0a0240972a6f942d6e9d3",
+    "approved_at": "2026-08-17T09:55:00Z",
+    "expires_at": "2026-08-17T11:00:00Z",
+    "evidence_ref": "ticket:CHG-0001"
+  }],
+  "recovery": {"required": false, "method": "previous immutable image", "artifact_ref": "release:api-previous", "restore_tested_at": null, "rpo_minutes": null, "rto_minutes": 5},
+  "verification": {"criteria": ["health endpoint returns 2xx", "external service path succeeds"], "observation_window_minutes": 10},
+  "exception": null
+}

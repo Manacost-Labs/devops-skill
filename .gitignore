@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+dist/
+lab-artifacts/
+.devops-skill-backups/
+
+# Operator-specific bootstrap helpers are intentionally local-only. Keep the
+# public skill engine independent from any real host or access bootstrap.
+/tools/bootstrap-*-nocloud.ps1
+/tools/enable-codex-ssh-*.sh
+/tools/install-codex-key-*.sh

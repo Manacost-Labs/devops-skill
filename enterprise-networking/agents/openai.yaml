@@ -1,0 +1,4 @@
+interface:
+  display_name: "Enterprise Networking"
+  short_description: "Plan and change hybrid networks safely"
+  default_prompt: "Use $enterprise-networking to assess and plan this hybrid network change."

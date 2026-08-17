@@ -1,0 +1,4 @@
+interface:
+  display_name: "AWS Cloud Operations"
+  short_description: "Operate AWS workloads with current guardrails"
+  default_prompt: "Use $cloud-aws to assess and plan this AWS operation safely."

@@ -1,0 +1,51 @@
+name: cicd-operations
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - github-actions-audit
+  - pipeline-contract-design
+  - pipeline-permission-oidc-hardening
+  - immutable-artifact-promotion
+  - supply-chain-attestation-review
+  - controlled-release-rollback
+risk_domains:
+  - workflow-code-execution
+  - credential-and-oidc-trust
+  - artifact-supply-chain
+  - runner-isolation
+  - protected-environment-control
+  - production-deployment
+platforms:
+  - github-actions
+  - generic-cicd
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions
+    - https://docs.github.com/en/actions/concepts/security/openid-connect
+    - https://docs.github.com/en/actions/concepts/security/artifact-attestations
+    - https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment
+    - https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
+    - https://slsa.dev/spec/v1.2/
+  capability_sources:
+    github-actions-audit:
+      - https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions
+      - https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
+    pipeline-contract-design:
+      - https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment
+      - https://slsa.dev/spec/v1.2/
+    pipeline-permission-oidc-hardening:
+      - https://docs.github.com/en/actions/concepts/security/openid-connect
+      - https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions
+    immutable-artifact-promotion:
+      - https://docs.github.com/en/actions/concepts/security/artifact-attestations
+      - https://slsa.dev/spec/v1.2/
+    supply-chain-attestation-review:
+      - https://docs.github.com/en/actions/concepts/security/artifact-attestations
+      - https://slsa.dev/spec/v1.2/
+    controlled-release-rollback:
+      - https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment

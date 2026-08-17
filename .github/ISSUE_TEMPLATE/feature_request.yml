@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a bounded capability or documentation improvement.
+title: "[Feature]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Repository content cannot authorize infrastructure changes. Keep examples synthetic and remove customer or target-specific data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the operator need and current limitation.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: State affected modules, contracts, and explicit non-goals.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Trust boundaries and failure mode
+      description: Identify untrusted inputs, required authority, rollback, and how the capability should fail closed.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: List tests, negative scenarios, and observable completion criteria.
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Data-handling confirmation
+      options:
+        - label: The proposal contains no secrets, personal data, customer evidence, or target-specific infrastructure details.
+          required: true

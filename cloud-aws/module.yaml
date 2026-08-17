@@ -1,0 +1,50 @@
+name: cloud-aws
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - aws-account-discovery
+  - aws-iam-control-plane
+  - aws-network-control-plane
+  - aws-compute-control-plane
+  - aws-managed-service-routing
+risk_domains:
+  - aws-account-boundary
+  - iam-policy-change
+  - network-exposure
+  - compute-replacement
+  - managed-service-state
+  - billing-impact
+platforms:
+  - aws
+provides:
+  - aws-cloud-control-plane-v1
+  - contract-v2-executor
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html
+    - https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
+    - https://docs.aws.amazon.com/vpc/latest/userguide/
+    - https://docs.aws.amazon.com/ec2/
+    - https://docs.aws.amazon.com/ecs/
+    - https://docs.aws.amazon.com/eks/
+    - https://docs.aws.amazon.com/rds/
+  capability_sources:
+    aws-account-discovery:
+      - https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
+      - https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html
+    aws-iam-control-plane:
+      - https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html
+    aws-network-control-plane:
+      - https://docs.aws.amazon.com/vpc/latest/userguide/
+    aws-compute-control-plane:
+      - https://docs.aws.amazon.com/ec2/
+    aws-managed-service-routing:
+      - https://docs.aws.amazon.com/ecs/
+      - https://docs.aws.amazon.com/eks/
+      - https://docs.aws.amazon.com/rds/

@@ -1,0 +1,50 @@
+name: cloud-gcp
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - gcp-project-discovery
+  - gcp-iam-control-plane
+  - gcp-network-control-plane
+  - gcp-compute-control-plane
+  - gcp-managed-service-routing
+risk_domains:
+  - gcp-project-boundary
+  - iam-policy-change
+  - network-exposure
+  - compute-replacement
+  - managed-service-state
+  - billing-impact
+platforms:
+  - google-cloud
+provides:
+  - gcp-cloud-control-plane-v1
+  - contract-v2-executor
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://cloud.google.com/architecture/framework
+    - https://cloud.google.com/iam/docs/overview
+    - https://cloud.google.com/sdk/docs
+    - https://cloud.google.com/vpc/docs/overview
+    - https://cloud.google.com/compute/docs
+    - https://cloud.google.com/kubernetes-engine/docs
+    - https://cloud.google.com/run/docs
+    - https://cloud.google.com/sql/docs
+  capability_sources:
+    gcp-project-discovery:
+      - https://cloud.google.com/sdk/docs
+      - https://cloud.google.com/architecture/framework
+    gcp-iam-control-plane:
+      - https://cloud.google.com/iam/docs/overview
+    gcp-network-control-plane:
+      - https://cloud.google.com/vpc/docs/overview
+    gcp-compute-control-plane:
+      - https://cloud.google.com/compute/docs
+    gcp-managed-service-routing:
+      - https://cloud.google.com/kubernetes-engine/docs
+      - https://cloud.google.com/run/docs
+      - https://cloud.google.com/sql/docs

@@ -1,0 +1,10 @@
+# Repository-wide review owner for the portfolio/public-RC baseline.
+* @Shpuntyara
+
+# Trust-boundary and release files require an explicit code-owner review.
+/.github/ @Shpuntyara
+/SECURITY.md @Shpuntyara
+/GOVERNANCE.md @Shpuntyara
+/docs/release-process.md @Shpuntyara
+/devops-platform-contracts/ @Shpuntyara
+/tools/ @Shpuntyara

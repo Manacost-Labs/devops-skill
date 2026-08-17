@@ -1,0 +1,17 @@
+name: reliability-operations
+version: 0.2.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.2.0
+  - devops-core >= 0.2.0
+capabilities:
+  - observability-inventory
+  - sli-slo-design
+  - actionable-alert-design
+  - release-verification
+  - incident-evidence-and-handoff
+risk_domains:
+  - telemetry-data-exposure
+  - alert-routing
+  - retention-and-cost
+  - incident-communication

@@ -1,0 +1,3 @@
+# Updates and reboot planning
+
+Patch assessment is read-only until approval. A reboot-pending signal does not authorize reboot. For a production patch/reboot change card include maintenance window, service owner, dependency/drain plan, backup/recovery posture, console path, expected restart order, and post-boot verification: remote access, time sync, firewall, critical services, local endpoints, and user path.

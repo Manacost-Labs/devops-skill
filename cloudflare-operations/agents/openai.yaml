@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cloudflare Operations"
+  short_description: "Operate Cloudflare edge changes safely"
+  default_prompt: "Use $cloudflare-operations to assess and plan this Cloudflare change safely."

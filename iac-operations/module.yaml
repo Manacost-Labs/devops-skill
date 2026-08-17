@@ -1,0 +1,52 @@
+name: iac-operations
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - terraform-opentofu-audit
+  - terraform-opentofu-plan-apply
+  - iac-drift-import-review
+  - iac-state-backend-recovery
+  - bounded-ansible-execution
+  - cloud-init-validation
+risk_domains:
+  - infrastructure-state
+  - backend-and-locking
+  - secrets-in-plans-and-state
+  - provider-supply-chain
+  - configuration-fanout
+  - bootstrap-and-replacement
+platforms:
+  - terraform
+  - opentofu
+  - ansible
+  - cloud-init
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://developer.hashicorp.com/terraform/cli/commands/plan
+    - https://developer.hashicorp.com/terraform/cli/import
+    - https://developer.hashicorp.com/terraform/language/backend
+    - https://developer.hashicorp.com/terraform/language/state/sensitive-data
+    - https://opentofu.org/docs/cli/commands/plan/
+    - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
+    - https://cloudinit.readthedocs.io/en/latest/howto/debugging.html
+  capability_sources:
+    terraform-opentofu-audit:
+      - https://developer.hashicorp.com/terraform/cli/commands/plan
+      - https://opentofu.org/docs/cli/commands/plan/
+    terraform-opentofu-plan-apply:
+      - https://developer.hashicorp.com/terraform/cli/commands/plan
+      - https://opentofu.org/docs/cli/commands/plan/
+    iac-drift-import-review:
+      - https://developer.hashicorp.com/terraform/cli/import
+    iac-state-backend-recovery:
+      - https://developer.hashicorp.com/terraform/language/backend
+      - https://developer.hashicorp.com/terraform/language/state/sensitive-data
+    bounded-ansible-execution:
+      - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
+    cloud-init-validation:
+      - https://cloudinit.readthedocs.io/en/latest/howto/debugging.html

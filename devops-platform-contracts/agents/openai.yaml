@@ -1,0 +1,4 @@
+interface:
+  display_name: "DevOps Platform Contracts"
+  short_description: "Shared policies and module compatibility contracts"
+  default_prompt: "Use $devops-platform-contracts to validate DevOps skill modules and policy contracts."

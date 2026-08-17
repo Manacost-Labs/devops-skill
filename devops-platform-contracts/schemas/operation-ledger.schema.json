@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DevOps operation ledger v2 record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "policy_id", "target", "target_profile_digest", "environment", "risk", "plan_digest", "modules", "actor", "approval_refs", "changes", "verification", "rollback", "status", "started_at", "finished_at", "previous_hash", "record_hash"],
+  "properties": {
+    "schema_version": {"const": "2.0"},
+    "operation_id": {"type": "string", "pattern": "^ops-"},
+    "policy_id": {"type": "string"},
+    "target": {"type": "string"},
+    "target_profile_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "environment": {"enum": ["lab", "dev", "staging", "production"]},
+    "risk": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
+    "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "modules": {"type": "array", "items": {"type": "string"}},
+    "actor": {"type": "string"},
+    "approval_refs": {"type": "array", "items": {"type": "string"}},
+    "changes": {"type": "array"},
+    "verification": {"type": "array"},
+    "rollback": {"type": "object"},
+    "status": {"type": "string", "enum": ["verified", "partially_verified", "rolled_back", "blocked"]},
+    "started_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "handoff": {"type": "array", "items": {"type": "string"}},
+    "previous_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "record_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

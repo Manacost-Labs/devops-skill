@@ -1,0 +1,22 @@
+name: linux-operations
+version: 0.2.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.2.0
+  - devops-core >= 0.2.0
+capabilities:
+  - debian-ubuntu-host-audit
+  - ssh-access-and-hardening
+  - systemd-service-operations
+  - host-firewall-operations
+  - disk-memory-network-diagnosis
+  - controlled-host-recovery
+risk_domains:
+  - ssh-and-access
+  - firewall-and-networking
+  - users-and-sudo
+  - packages-and-reboots
+  - host-configuration
+platforms:
+  - debian
+  - ubuntu

@@ -1,0 +1,55 @@
+name: cloudflare-operations
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - cloudflare-zone-audit
+  - cloudflare-dns-operations
+  - cloudflare-cache-invalidation
+  - cloudflare-waf-rate-limit-operations
+  - cloudflare-access-tunnel-operations
+  - cloudflare-workers-deployment
+  - cloudflare-origin-protection
+risk_domains:
+  - dns-and-proxying
+  - cache-invalidation
+  - waf-and-rate-limits
+  - identity-and-access
+  - tunnel-routing
+  - edge-code-deployment
+  - origin-exposure
+platforms:
+  - cloudflare
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://developers.cloudflare.com/api/
+    - https://developers.cloudflare.com/fundamentals/api/reference/permissions/
+    - https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/
+    - https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/
+    - https://developers.cloudflare.com/cache/how-to/purge-cache/
+    - https://developers.cloudflare.com/waf/
+    - https://developers.cloudflare.com/waf/rate-limiting-rules/
+    - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+    - https://developers.cloudflare.com/workers/
+    - https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/
+  capability_sources:
+    cloudflare-zone-audit:
+      - https://developers.cloudflare.com/api/
+      - https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/
+    cloudflare-dns-operations:
+      - https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/
+    cloudflare-cache-invalidation:
+      - https://developers.cloudflare.com/cache/how-to/purge-cache/
+    cloudflare-waf-rate-limit-operations:
+      - https://developers.cloudflare.com/waf/
+      - https://developers.cloudflare.com/waf/rate-limiting-rules/
+    cloudflare-access-tunnel-operations:
+      - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+    cloudflare-workers-deployment:
+      - https://developers.cloudflare.com/workers/
+    cloudflare-origin-protection:
+      - https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/

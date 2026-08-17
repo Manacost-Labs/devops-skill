@@ -1,0 +1,21 @@
+name: cloud-generic
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - cloud-provider-identification
+  - cloud-scope-inventory
+  - cloud-change-planning
+  - cloud-capability-routing
+risk_domains:
+  - unknown-provider-behavior
+  - tenant-boundary
+  - billing-impact
+  - unsupported-mutation
+platforms:
+  - provider-agnostic
+provides:
+  - provider-neutral-cloud-intake-v1
+  - unsupported-mutation-refusal-v1

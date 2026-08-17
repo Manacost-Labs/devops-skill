@@ -1,0 +1,17 @@
+name: docker-operations
+version: 0.2.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.2.0
+  - devops-core >= 0.2.0
+capabilities:
+  - docker-inventory
+  - compose-preflight
+  - image-provenance-check
+  - compose-rollout
+  - container-rollback
+risk_domains:
+  - persistent-volumes
+  - production-recreate
+  - registry-credentials
+  - host-exposure

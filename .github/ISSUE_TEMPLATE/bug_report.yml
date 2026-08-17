@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible, sanitized defect. Security reports must remain private.
+title: "[Bug]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, credentials, customer data, private infrastructure details, or live exploit material. Suspected vulnerabilities belong in GitHub's private vulnerability reporting flow described in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Version or revision
+      description: Release tag or full commit SHA where the problem was observed.
+      placeholder: v0.3.0-rc.1 or a full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: profile
+    attributes:
+      label: Profile and modules
+      description: List the selected profile and affected modules without target identifiers.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: Explain what happened using sanitized output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Provide bounded steps that do not operate a real production target.
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Documentation only
+        - Validation or packaging
+        - Planning or routing
+        - Potential mutation or safety-boundary impact
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Data-handling confirmation
+      options:
+        - label: I removed secrets, personal data, customer evidence, domain names, IP addresses, and sensitive topology.
+          required: true
+        - label: This is not a vulnerability report or live-target emergency.
+          required: true

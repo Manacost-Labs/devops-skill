@@ -1,0 +1,12 @@
+schema_version: "2.0"
+name: portfolio-demo-lab
+environment: lab
+owner: portfolio-demo-owner
+data_classification: public
+services:
+  - demo-web
+access: {}
+credential_broker: null
+risk_overrides:
+  production_confirmation: required
+  destructive_confirmation: required

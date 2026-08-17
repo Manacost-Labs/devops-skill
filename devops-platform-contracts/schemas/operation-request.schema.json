@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/devops/operation-request-v2.schema.json",
+  "title": "DevOps operation gate request v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "objective", "data_classification", "policy", "target", "change", "execution", "approvals", "recovery", "verification"],
+  "properties": {
+    "schema_version": {"const": "2.0"},
+    "operation_id": {"type": "string", "pattern": "^ops-[A-Za-z0-9._-]{6,120}$"},
+    "objective": {"type": "string", "minLength": 8, "maxLength": 1000},
+    "data_classification": {"enum": ["public", "internal", "confidential", "restricted"]},
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version", "digest"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,79}$"},
+        "version": {"const": "2.0"},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "environment", "owner", "profile_digest"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "environment": {"enum": ["lab", "dev", "staging", "production"]},
+        "owner": {"type": "string", "minLength": 1},
+        "profile_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "change": {
+      "type": "object", "additionalProperties": false,
+      "required": ["action", "risk", "scope", "plan_digest", "stateful", "destructive", "external_side_effects"],
+      "properties": {
+        "action": {"type": "string", "pattern": "^[a-z0-9_-]{2,80}$"},
+        "risk": {"enum": ["R0", "R1", "R2", "R3", "R4"]},
+        "scope": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "stateful": {"type": "boolean"},
+        "destructive": {"type": "boolean"},
+        "external_side_effects": {"type": "boolean"}
+      }
+    },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["executor", "requested_at", "window_start", "window_end", "idempotency_key", "change_lock_ref"],
+      "properties": {
+        "executor": {"type": "string", "minLength": 3},
+        "requested_at": {"type": "string", "format": "date-time"},
+        "window_start": {"type": "string", "format": "date-time"},
+        "window_end": {"type": "string", "format": "date-time"},
+        "idempotency_key": {"type": "string", "minLength": 8},
+        "change_lock_ref": {"type": ["string", "null"]}
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["approver", "role", "target", "plan_digest", "policy_digest", "approved_at", "expires_at", "evidence_ref"],
+        "properties": {
+          "approver": {"type": "string", "minLength": 3}, "role": {"type": "string", "minLength": 2},
+          "target": {"type": "string", "minLength": 1}, "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "approved_at": {"type": "string", "format": "date-time"}, "expires_at": {"type": "string", "format": "date-time"},
+          "evidence_ref": {"type": "string", "minLength": 4}
+        }
+      }
+    },
+    "recovery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required", "method", "artifact_ref", "restore_tested_at", "rpo_minutes", "rto_minutes"],
+      "properties": {
+        "required": {"type": "boolean"}, "method": {"type": ["string", "null"]}, "artifact_ref": {"type": ["string", "null"]},
+        "restore_tested_at": {"type": ["string", "null"], "format": "date-time"}, "rpo_minutes": {"type": ["integer", "null"], "minimum": 0},
+        "rto_minutes": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["criteria", "observation_window_minutes"],
+      "properties": {"criteria": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 3}}, "observation_window_minutes": {"type": "integer", "minimum": 0}}
+    },
+    "exception": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["owner", "evidence_ref", "rationale", "compensating_controls", "approved_at", "expires_at"],
+          "properties": {
+            "owner": {"type": "string", "minLength": 3}, "evidence_ref": {"type": "string", "minLength": 4},
+            "rationale": {"type": "string", "minLength": 8}, "compensating_controls": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 3}},
+            "approved_at": {"type": "string", "format": "date-time"}, "expires_at": {"type": "string", "format": "date-time"}
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI/CD Operations"
+  short_description: "Secure and verify delivery pipelines"
+  default_prompt: "Use $cicd-operations to assess and harden this delivery pipeline."

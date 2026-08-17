@@ -1,0 +1,23 @@
+name: windows-server-operations
+version: 0.2.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.2.0
+  - devops-core >= 0.2.0
+capabilities:
+  - windows-server-host-audit
+  - winrm-rdp-access-operations
+  - windows-service-operations
+  - windows-firewall-operations
+  - windows-update-reboot-planning
+  - controlled-windows-recovery
+risk_domains:
+  - winrm-and-rdp-access
+  - local-administrators-and-service-accounts
+  - windows-firewall-and-networking
+  - updates-and-reboots
+  - windows-host-configuration
+platforms:
+  - windows-server-2019
+  - windows-server-2022
+  - windows-server-2025

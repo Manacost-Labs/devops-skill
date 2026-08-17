@@ -1,0 +1,16 @@
+name: devops-core
+version: 0.3.0
+kind: coordinator
+capabilities:
+  - task-normalization
+  - risk-classification
+  - module-routing
+  - change-control
+  - evidence-and-handoff
+provides:
+  - safety-contract-v2
+  - operation-ledger-v2
+  - untrusted-content-boundary-v1
+
+requires:
+  - devops-platform-contracts >= 0.3.0

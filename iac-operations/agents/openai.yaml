@@ -1,0 +1,4 @@
+interface:
+  display_name: "IaC Operations"
+  short_description: "Plan and apply infrastructure code safely"
+  default_prompt: "Use $iac-operations to review and safely execute this infrastructure-as-code change."

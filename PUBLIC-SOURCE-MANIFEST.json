@@ -1,0 +1,900 @@
+{
+  "excluded": [
+    "git-history",
+    "operations",
+    "lab-artifacts",
+    "target-specific-tools",
+    "credentials",
+    "release-archives"
+  ],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "sha256:ff26bef30b84d958679a20f509a2f73d1433eb79956787125892ce8f8ba24972",
+      "size": 304
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "sha256": "sha256:588440bb055c25bf4225d252c4900dd8c5176af44bc8b0bcf350ef4a409df1ce",
+      "size": 329
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "sha256": "sha256:62f134cdd8df8418d9e755be0e5978b6b896c796d54f8a39357d849b9da4e377",
+      "size": 258
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "sha256:587c783df9841951a5e26a73b9cbb45bb44c000ec71bff57e1c41641e43617a2",
+      "size": 2047
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "sha256:8b09e7df09fc7534371988062769ee427af2954a02c04c763e8a8005be0f2be4",
+      "size": 46
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "sha256:e9517fdfac4b7bdeb0e63370e689c33d5f464011fbd531a679d52808e2b95e12",
+      "size": 1440
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "sha256": "sha256:d1b8d70b5c0ea11970807512ffa2cfd57cd2d35e45f7f247c36e643dd9ffc3d0",
+      "size": 1355
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "sha256": "sha256:42a168d97f7de4c511f57c882694f4f7d135ed888f12a6d6c099ec86944c2766",
+      "size": 584
+    },
+    {
+      "path": ".github/workflows/release-prep.yml",
+      "sha256": "sha256:e0516bd286803850677e3f8aa1716f3706a4aa67a50416f0cc353816462f4a69",
+      "size": 1677
+    },
+    {
+      "path": ".github/workflows/validate.yml",
+      "sha256": "sha256:9d56da9a84fc53e4241065b6f0da9e0b1a21f31feb294838bfbe81c8440d8502",
+      "size": 1523
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "sha256:76197c2b160b0b48ff7c650de46da91c3fd8e88e865ba25199ee93899bd782a6",
+      "size": 331
+    },
+    {
+      "path": "catalog.json",
+      "sha256": "sha256:03aca7c9ded4d6506cf601623708ddd0226c0dad71a81728dd101f9dd9d8c142",
+      "size": 5544
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "sha256:29493c6118fc3bd77759b02be69d548fa39376d4bd9af5bf668331bf33fdddfa",
+      "size": 1786
+    },
+    {
+      "path": "cicd-operations/agents/openai.yaml",
+      "sha256": "sha256:2c0a0ba578c6f4fefe0067b750def370df8a340afcf5b0af4a45193dd42d7a90",
+      "size": 196
+    },
+    {
+      "path": "cicd-operations/module.yaml",
+      "sha256": "sha256:23baef9135b2f750c503b1aca7eb73d53c346680f9180c497d01ad9652b0558f",
+      "size": 2406
+    },
+    {
+      "path": "cicd-operations/references/github-actions.md",
+      "sha256": "sha256:96adc12c0237272f7522f24f9941d651e2dacd60b9bf48be022b2952158ece11",
+      "size": 2426
+    },
+    {
+      "path": "cicd-operations/references/official-sources.md",
+      "sha256": "sha256:b850b36f74fc83d4f93568a16c5c041ea226588b160dc180bf6782f581c61c45",
+      "size": 1090
+    },
+    {
+      "path": "cicd-operations/references/pipeline-contract.md",
+      "sha256": "sha256:364a43f6b9b3774abdc705204b0c8d91030092f71d1e72a30c303bb71cd2ae54",
+      "size": 2020
+    },
+    {
+      "path": "cicd-operations/SKILL.md",
+      "sha256": "sha256:a053e79f705e6440296c76e22ceb678d2c77ec21eddbcf03829510893af68a5e",
+      "size": 5113
+    },
+    {
+      "path": "cloud-aws/agents/openai.yaml",
+      "sha256": "sha256:a09dce008cbfc7b564bbcf4d9f542c770103b16f972ffce9fea39ff09424511d",
+      "size": 204
+    },
+    {
+      "path": "cloud-aws/module.yaml",
+      "sha256": "sha256:2292b43894d3a0e42e1812b8451650ca2a4a852852cf7ab68cb9b88bada8908b",
+      "size": 1703
+    },
+    {
+      "path": "cloud-aws/references/provider-sources.md",
+      "sha256": "sha256:bc7474dfefd7a4a80cb0f491fc8a07c5e1f871ad3af85ecc6db5ff011dc8cad9",
+      "size": 1937
+    },
+    {
+      "path": "cloud-aws/SKILL.md",
+      "sha256": "sha256:5d08d07f7473dc2be35ad32633a1efdc4ed99fe432097f0d28f93f83c9461aa1",
+      "size": 4902
+    },
+    {
+      "path": "cloud-azure/agents/openai.yaml",
+      "sha256": "sha256:df7e3cd134d12d66d14ad0d68cc8b6ab03033e7789cb73b93032546cb2684db1",
+      "size": 212
+    },
+    {
+      "path": "cloud-azure/module.yaml",
+      "sha256": "sha256:d69119bbe66b66472e58c9168e4034787385d73512f289b2f4fb5122afa652e3",
+      "size": 2014
+    },
+    {
+      "path": "cloud-azure/references/provider-sources.md",
+      "sha256": "sha256:ccaf5cce581efc02a18a172bbe4cfc91a600a35f8789b9e16a2922863c13ce05",
+      "size": 2461
+    },
+    {
+      "path": "cloud-azure/SKILL.md",
+      "sha256": "sha256:b525b7eebd8367016da2f49c6fe7c72abb9876fc85e2a0fd3166695907814ce8",
+      "size": 5472
+    },
+    {
+      "path": "cloud-gcp/agents/openai.yaml",
+      "sha256": "sha256:55f4939ed8bcdf38619c5f8a9ee60cb18e97d609e31f2daca8849263a7097d72",
+      "size": 215
+    },
+    {
+      "path": "cloud-gcp/module.yaml",
+      "sha256": "sha256:6090853fb92cd1053f4251dfdb21fb67d1ebe94377640a0d814b4d548463644c",
+      "size": 1548
+    },
+    {
+      "path": "cloud-gcp/references/provider-sources.md",
+      "sha256": "sha256:7e2cbbdcabcf9c5e23faa8c5928aa4a4d262fbdadc848f0f3da883536a69aa7e",
+      "size": 1977
+    },
+    {
+      "path": "cloud-gcp/SKILL.md",
+      "sha256": "sha256:2683104bc1ef0bc2539e7079fd2d2ad0490ec16a3e221a7978eab705389fd49e",
+      "size": 5323
+    },
+    {
+      "path": "cloud-generic/agents/openai.yaml",
+      "sha256": "sha256:f18e4e6f1e615918e6bc06654fc811fbb233d534017dfb038a09c50d84c98216",
+      "size": 231
+    },
+    {
+      "path": "cloud-generic/module.yaml",
+      "sha256": "sha256:dd484898db07d8f078bc988d63e46402c9f05a58a26693b0c82835068b49ef97",
+      "size": 477
+    },
+    {
+      "path": "cloud-generic/references/provider-boundary.md",
+      "sha256": "sha256:c1e84b549d8460c335b065533abfd5d6ec56528a1ee40fb3e3fca2ec12bc0bd2",
+      "size": 1644
+    },
+    {
+      "path": "cloud-generic/SKILL.md",
+      "sha256": "sha256:07cfdac1396be92fd27c87ef7c6efa04be474cf6fb72caceeb25addd80b15c99",
+      "size": 4283
+    },
+    {
+      "path": "cloud-selectel/agents/openai.yaml",
+      "sha256": "sha256:4f001c8255f5eecb3a09d228c9796b509ea09b21fb2e58446200ce38d76cf42f",
+      "size": 220
+    },
+    {
+      "path": "cloud-selectel/module.yaml",
+      "sha256": "sha256:5e1dadc7bb1ccea31764533fbc7e30cda20a6fe13b88af5d1644c69b5130d7ef",
+      "size": 1530
+    },
+    {
+      "path": "cloud-selectel/references/provider-sources.md",
+      "sha256": "sha256:2dcc737f65ec3cc4543f2ae2e7a2097fee6853821a2516078e31a4ea1aa90a35",
+      "size": 2130
+    },
+    {
+      "path": "cloud-selectel/SKILL.md",
+      "sha256": "sha256:f8c2aaa5fea245575a28f751af44575c7a4471ba8d6b5cdb585ecd227c3de70b",
+      "size": 5415
+    },
+    {
+      "path": "cloudflare-operations/agents/openai.yaml",
+      "sha256": "sha256:2ca1e2ce01f6c8feae5e58c9edc402cbcdd2a6f0168a204d28099d111f71116c",
+      "size": 214
+    },
+    {
+      "path": "cloudflare-operations/module.yaml",
+      "sha256": "sha256:95563fdfc7ad299b3414ebfbbddfa705862ff785385100742e7e5c21d39bfe7d",
+      "size": 2307
+    },
+    {
+      "path": "cloudflare-operations/references/edge-change-playbooks.md",
+      "sha256": "sha256:104356dc55e268e6d102045e40ae0fd274a28c4da3a770eb38c210e7a85ae1f2",
+      "size": 2832
+    },
+    {
+      "path": "cloudflare-operations/references/provider-sources.md",
+      "sha256": "sha256:e16285eef7d9b1561e759003cabd379261134aa51cae99d71aa64a5a4aace524",
+      "size": 2174
+    },
+    {
+      "path": "cloudflare-operations/SKILL.md",
+      "sha256": "sha256:e202f207b00d67683a37df1faeab1c484d8b84687770f4a409299a63b715a967",
+      "size": 4768
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "sha256:6bba06cc3a907b66134fc591cc01e5394399fa7d3f1e14f50eb35e0bd53a582f",
+      "size": 2221
+    },
+    {
+      "path": "data-resilience-operations/agents/openai.yaml",
+      "sha256": "sha256:a5a02754fd164cbef2de679ed2d37565a208e11bb4e54bb8dc161c710d357be1",
+      "size": 223
+    },
+    {
+      "path": "data-resilience-operations/module.yaml",
+      "sha256": "sha256:c89f9a03f1b0bb1aefbe5407706abbeae9924d21fc25ece78412612417db4133",
+      "size": 2708
+    },
+    {
+      "path": "data-resilience-operations/references/official-sources.md",
+      "sha256": "sha256:402dd21ee958285d790b5e715a488a1116093eaf75601b9b9b5ba0f32e15121e",
+      "size": 1294
+    },
+    {
+      "path": "data-resilience-operations/references/operation-gates.md",
+      "sha256": "sha256:3ee3996efa3ead2637beb738e226b72d978af4d8bf684b85c9823cfe70edf352",
+      "size": 2362
+    },
+    {
+      "path": "data-resilience-operations/SKILL.md",
+      "sha256": "sha256:ad236a82c983b75bf0069f0f45e3c0396e6cf5b5c87e9f7836cc261e2af4ca63",
+      "size": 3433
+    },
+    {
+      "path": "devops-core/agents/openai.yaml",
+      "sha256": "sha256:a998e9c6be0c1a193c2d31b2661771e0c269d0cca8d35915a479dd720e0c1a00",
+      "size": 185
+    },
+    {
+      "path": "devops-core/module.yaml",
+      "sha256": "sha256:7f055a980187706399ab891212f8370b55d564f4337f6769e544db0b5e2d8e76",
+      "size": 316
+    },
+    {
+      "path": "devops-core/references/capability-routing.md",
+      "sha256": "sha256:57496ffb3caf7bd313d474d49958164ad7c990c53bbd42f1417b22701da1bab6",
+      "size": 3427
+    },
+    {
+      "path": "devops-core/references/control-plane-ownership.md",
+      "sha256": "sha256:73e19759752bd956245f023187f046801604c37d27d01597dae7fa8b1de5097b",
+      "size": 4029
+    },
+    {
+      "path": "devops-core/references/enterprise-change-control.md",
+      "sha256": "sha256:15c0e88370d9c780cab84d1c14e3b9166141d8f8b22cdac90b99e1038be27f35",
+      "size": 2328
+    },
+    {
+      "path": "devops-core/references/evidence-standard.md",
+      "sha256": "sha256:9e7f0e9ab94ff108216d7f03428023a71eb0d9d329ed64d9ef133fb0f097079e",
+      "size": 1918
+    },
+    {
+      "path": "devops-core/references/risk-classification.md",
+      "sha256": "sha256:ba25dd2b116cfe6b12f85662f1bf3d8f01c20ec9617524cb3f64b619a91fc318",
+      "size": 1790
+    },
+    {
+      "path": "devops-core/references/supply-chain-baseline.md",
+      "sha256": "sha256:9ceeec04d98ed3957d069f475d5130645f89dfc32604561291c8023d8d0b6059",
+      "size": 1551
+    },
+    {
+      "path": "devops-core/references/untrusted-content-boundary.md",
+      "sha256": "sha256:286922d8cb3261581a6bed3ef8efe8b49572166d9be8434884a603db1440c404",
+      "size": 2369
+    },
+    {
+      "path": "devops-core/scripts/profile_digest.py",
+      "sha256": "sha256:a7399f039fefbf2a2013dba025caa7f411b30ded72d8d1b4005286ead3479f14",
+      "size": 1132
+    },
+    {
+      "path": "devops-core/scripts/validate_contracts.py",
+      "sha256": "sha256:f80ac31993707d9e0ba78c7834cd9b8d7e0de94ac4c2333d64ff6debcd67d518",
+      "size": 3345
+    },
+    {
+      "path": "devops-core/SKILL.md",
+      "sha256": "sha256:9dd7968197981fe212c8059387fd82612ed95270caf8026c33ff99ee53c70d78",
+      "size": 6799
+    },
+    {
+      "path": "devops-core/templates/access-request.md",
+      "sha256": "sha256:b073772415ab0acfca68602c53107af350d1a28b6868657adac96cd0c3e17562",
+      "size": 248
+    },
+    {
+      "path": "devops-core/templates/architecture-decision.md",
+      "sha256": "sha256:57f2cc3a705620f49c2831c1d2a3c079566e49e0ba5f66871b2bd2d92647a3ec",
+      "size": 169
+    },
+    {
+      "path": "devops-core/templates/change-card.md",
+      "sha256": "sha256:30152ec0927fad04512b19ef0869313d548aa44225c38e615123b661ff42686b",
+      "size": 775
+    },
+    {
+      "path": "devops-core/templates/operation-ledger.md",
+      "sha256": "sha256:924ae49992bc9b401650ffb0d08e0c6d6a63db9f12be987b2a49b14c0d006c3a",
+      "size": 664
+    },
+    {
+      "path": "devops-platform-contracts/agents/openai.yaml",
+      "sha256": "sha256:fdacfc3ea43b45f48459eefe70aa764a3f2276a00398d1db44878825564b6fc4",
+      "size": 239
+    },
+    {
+      "path": "devops-platform-contracts/catalog.json",
+      "sha256": "sha256:03aca7c9ded4d6506cf601623708ddd0226c0dad71a81728dd101f9dd9d8c142",
+      "size": 5544
+    },
+    {
+      "path": "devops-platform-contracts/module.yaml",
+      "sha256": "sha256:094acaeeebe0819052fe10d88b3510d2f9bae3a465535317cf2d737c5b3834ba",
+      "size": 272
+    },
+    {
+      "path": "devops-platform-contracts/policies/default-policy.json",
+      "sha256": "sha256:0dd786ed0eb0ea2db35d249cecdb3e2647f3129180066ac7c84849c2d07231dc",
+      "size": 1426
+    },
+    {
+      "path": "devops-platform-contracts/policies/enterprise-policy.json",
+      "sha256": "sha256:0af5255923d03b46f0485bed36c75e51b411947d647683b790e589776e269b94",
+      "size": 950
+    },
+    {
+      "path": "devops-platform-contracts/references/contract-v1.md",
+      "sha256": "sha256:50b0c7aa7991d03f414e0a3aa0876c63713b029cadbce0c478b8fad87599ae9e",
+      "size": 447
+    },
+    {
+      "path": "devops-platform-contracts/references/contract-v2.md",
+      "sha256": "sha256:d33a46bd318bdc922d6c205c8ad06f24cbb1700e0e2abefc617f945ef2e6cc60",
+      "size": 3477
+    },
+    {
+      "path": "devops-platform-contracts/references/provider-freshness.md",
+      "sha256": "sha256:5378964f3107cd925ef4fad40ce72de2e7cc8a62ecaad11ba98136af737bcae8",
+      "size": 1318
+    },
+    {
+      "path": "devops-platform-contracts/requirements.txt",
+      "sha256": "sha256:dfdadb0f719c1cefb3aeaaa352b683932747803ee2c1529e07aaf1b912ef361c",
+      "size": 804
+    },
+    {
+      "path": "devops-platform-contracts/schemas/module-manifest.schema.json",
+      "sha256": "sha256:ce1adef7f588ae73b71650eddefd600ef45d1c41534182f69ee465c4b17f0672",
+      "size": 1944
+    },
+    {
+      "path": "devops-platform-contracts/schemas/operation-ledger.schema.json",
+      "sha256": "sha256:9e44cbfb458a44028d0d4d79b8e774e42343718d12f85f1845bb09b6935c8901",
+      "size": 1659
+    },
+    {
+      "path": "devops-platform-contracts/schemas/operation-request.schema.json",
+      "sha256": "sha256:366399a380c411ea7bc89447ccc892d874b2212988faaf0fe208c6a867146c1d",
+      "size": 5141
+    },
+    {
+      "path": "devops-platform-contracts/schemas/target-profile.schema.json",
+      "sha256": "sha256:f57d89b747d0376a2c72dc8f1c6a9c7cf8b4818a6d17f862420af1bd6feaba96",
+      "size": 1195
+    },
+    {
+      "path": "devops-platform-contracts/scripts/ledger_chain.py",
+      "sha256": "sha256:26ea6180425ef3777bf276d83a2996e7d110c8e89f1610accd4303d925ae95bd",
+      "size": 5175
+    },
+    {
+      "path": "devops-platform-contracts/scripts/operation_gate.py",
+      "sha256": "sha256:d851bcd674e93ee89b422b52577746b18b8ca3a786e952daaf06d25ffd921084",
+      "size": 28020
+    },
+    {
+      "path": "devops-platform-contracts/scripts/resolve_capabilities.py",
+      "sha256": "sha256:1b2f1145f517b6e4d92aa1847baa62db7db7673caf66e0f84638e358d6ea6299",
+      "size": 3042
+    },
+    {
+      "path": "devops-platform-contracts/scripts/validate_platform.py",
+      "sha256": "sha256:99ab111ca3a03a13d3bc11131694d7eff28afab10553c019c59956f53bcd28c4",
+      "size": 20404
+    },
+    {
+      "path": "devops-platform-contracts/SKILL.md",
+      "sha256": "sha256:8e440af0f403911d57cdc1584065b1e04be258391f46c41fe76ddc8de1b0c428",
+      "size": 3258
+    },
+    {
+      "path": "devops-platform-contracts/templates/operation-request.json",
+      "sha256": "sha256:002c1261d8a9aa6d1c2eee13f5955c6555e98769f72695d838607d1c0f51253b",
+      "size": 1836
+    },
+    {
+      "path": "devops-platform-contracts/templates/target-profile.yaml",
+      "sha256": "sha256:80c98fea4984f913833c294abf923c3f4c84df8de3e7e2a9969ef33cf0cc57f0",
+      "size": 362
+    },
+    {
+      "path": "docker-operations/agents/openai.yaml",
+      "sha256": "sha256:f18ed1a583d270d5cabc105ae983680d24abd0924cf738184a9ff29e47fced31",
+      "size": 216
+    },
+    {
+      "path": "docker-operations/module.yaml",
+      "sha256": "sha256:25ca2f7620a4d9bbd4c92540323133937765c9e5277f3d6458c440dedc7cb720",
+      "size": 359
+    },
+    {
+      "path": "docker-operations/references/compose-safety.md",
+      "sha256": "sha256:4e739cec4b364073bde3165a71f8419e014630a692a908f591a3be8523761aa6",
+      "size": 748
+    },
+    {
+      "path": "docker-operations/references/rollback.md",
+      "sha256": "sha256:071f4a6934c35b9de08cf087261f564562ded7fdbfc90e712d9612df5e4a1c8f",
+      "size": 493
+    },
+    {
+      "path": "docker-operations/scripts/compose-preflight.py",
+      "sha256": "sha256:e40b8aa44b2813ede5913a1fb1f0855d343768e4efafdf296fbb866a4568e375",
+      "size": 4628
+    },
+    {
+      "path": "docker-operations/SKILL.md",
+      "sha256": "sha256:500c44647509758bfd9b70410043ca1d28d3d1ada911b678ccc39cab481c7876",
+      "size": 2652
+    },
+    {
+      "path": "docs/architecture.md",
+      "sha256": "sha256:a8276a5646d525bb9e755463afdb94b033a850935b5578a04c4a3a0851389c1d",
+      "size": 7052
+    },
+    {
+      "path": "docs/control-crosswalk.md",
+      "sha256": "sha256:b80e218ec48f2955a14335755a3fd2365ef7d855784cf1ef404e81fce1d93371",
+      "size": 1938
+    },
+    {
+      "path": "docs/enterprise-adoption.md",
+      "sha256": "sha256:5c38a6d6f149d8053a92248cf5d269fcf0dce2f4e4047f4660c91c50bb6f626b",
+      "size": 3397
+    },
+    {
+      "path": "docs/github-repository-settings.md",
+      "sha256": "sha256:6d566c16c88eddf756190ad042d97e85202824c925c268d2bf46f099d007a34b",
+      "size": 4382
+    },
+    {
+      "path": "docs/module-authoring.md",
+      "sha256": "sha256:af24cc54ac398ea1d640f6762b906c8ad01866aef5a94af066ca13de48f5a2ae",
+      "size": 2173
+    },
+    {
+      "path": "docs/portfolio-case-study.md",
+      "sha256": "sha256:183e92ab2047f02e00fcfa7028c1c514b746f28ebc66c7b7ce43f5b917b6fda2",
+      "size": 6951
+    },
+    {
+      "path": "docs/private-pilot-boundary.md",
+      "sha256": "sha256:1765ecfb1e6bb49f3e40fce2bd110c9fda4c065ffaf05b2b01ad2da149cc0169",
+      "size": 2976
+    },
+    {
+      "path": "docs/release-process.md",
+      "sha256": "sha256:4761f1b3c77e07c0572460e4e3d396044bfbe529e4edb9839e3f9b9d32b1e8a1",
+      "size": 5001
+    },
+    {
+      "path": "docs/threat-model.md",
+      "sha256": "sha256:d315497eee89685c72f2e1cab0d1072feb720b168d7298a3520c43deff21996d",
+      "size": 4271
+    },
+    {
+      "path": "enterprise-networking/agents/openai.yaml",
+      "sha256": "sha256:4ba48b579bf65521e0e9442b134952085b48feabbcdcccfdba5687040d3a0c93",
+      "size": 211
+    },
+    {
+      "path": "enterprise-networking/module.yaml",
+      "sha256": "sha256:a71f6e3bf7e7c5cf042e44498db28879256a3acaa7f98652e121c85f5f704b10",
+      "size": 496
+    },
+    {
+      "path": "enterprise-networking/references/change-gates.md",
+      "sha256": "sha256:22347a89f4e657345f6d694152c23720d99030d5dd51324f4b37fced65305e0a",
+      "size": 1805
+    },
+    {
+      "path": "enterprise-networking/SKILL.md",
+      "sha256": "sha256:e285e1da30579ed08282a4e1af9510d649b0329833a528399a46963eabc924b0",
+      "size": 3232
+    },
+    {
+      "path": "evaluations/scenarios.json",
+      "sha256": "sha256:45286bb5bc44e6a49610bcaa3f687d5f98976f5b2d341443b19f937776bcd45e",
+      "size": 8485
+    },
+    {
+      "path": "examples/portfolio-demo/fixtures/audit.json",
+      "sha256": "sha256:a25d2da2c8666a522877e204eb247ad8fbc43ba44e28c7ab0efba7b183be847b",
+      "size": 421
+    },
+    {
+      "path": "examples/portfolio-demo/fixtures/plan.json",
+      "sha256": "sha256:05eb87bb2ef744b04246122d0bc4fa94cf068971d2a5dfb486e34e1f1587d081",
+      "size": 663
+    },
+    {
+      "path": "examples/portfolio-demo/fixtures/target-profile.yaml",
+      "sha256": "sha256:59e53736d8dbe501b389206975e7cea471ce80bba97148e00a26914c72725b73",
+      "size": 267
+    },
+    {
+      "path": "examples/portfolio-demo/README.md",
+      "sha256": "sha256:e02f144c206bb6e8335990809d476e0a27db5de0004a4cbfa50bce958d35f284",
+      "size": 1948
+    },
+    {
+      "path": "examples/portfolio-demo/run_demo.py",
+      "sha256": "sha256:c264583eb231ec1781380e310395e9e1a56b991f9ac78966e126841c79b209e7",
+      "size": 10601
+    },
+    {
+      "path": "examples/portfolio-demo/tests/test_demo.py",
+      "sha256": "sha256:16dc19cb8bc41bd33f724713b5b18cf2ef22d6b81299d36f4ad40e9e26386c20",
+      "size": 1923
+    },
+    {
+      "path": "GOVERNANCE.md",
+      "sha256": "sha256:07d0efdb1d5d61e29be9305db21c2e297d68188b85b5d336a0fa1052304b20c2",
+      "size": 3135
+    },
+    {
+      "path": "iac-operations/agents/openai.yaml",
+      "sha256": "sha256:e504def9799edf3757f854c9fdb4deada7adc9f15c1e8d7c6c4243dbc23cf72d",
+      "size": 218
+    },
+    {
+      "path": "iac-operations/module.yaml",
+      "sha256": "sha256:7e494838715060e5a5802bb110da5abdfc646799eaa7f3aa8fffd1910eda1500",
+      "size": 1946
+    },
+    {
+      "path": "iac-operations/references/ansible-cloud-init.md",
+      "sha256": "sha256:c8ba7ef69c48f48e0c64b66b9e156f83f357b23a38b28afeefae66b34ebd8ad7",
+      "size": 1860
+    },
+    {
+      "path": "iac-operations/references/official-sources.md",
+      "sha256": "sha256:1365592760b21c9f2e15c772eab7387ebb875c19ee16906d1c68d8bc13eda306",
+      "size": 949
+    },
+    {
+      "path": "iac-operations/references/terraform-opentofu.md",
+      "sha256": "sha256:775f455aae289a66f5c5d9c188e50e75c8d6f38c4504fa9d28e74ccd2982d0c9",
+      "size": 2807
+    },
+    {
+      "path": "iac-operations/SKILL.md",
+      "sha256": "sha256:a5bf55c0859b28e2d792f76850b315b0e54d40cd527f37a5a84b3c6332d3bfed",
+      "size": 4878
+    },
+    {
+      "path": "kubernetes-operations/agents/openai.yaml",
+      "sha256": "sha256:2728daac2b67398e9b26889769da8f0003ad9c8a5cff91153278da6e0a652efe",
+      "size": 220
+    },
+    {
+      "path": "kubernetes-operations/module.yaml",
+      "sha256": "sha256:60dd080130b31e0779038308a5515e7f7800715ab2e460fa029bae5e7108c113",
+      "size": 1940
+    },
+    {
+      "path": "kubernetes-operations/references/audit-and-rollout.md",
+      "sha256": "sha256:f331cfc949fe9e4325bdceb6982e33b1d0fae5b790d7b7ffc969ccf97da56877",
+      "size": 2340
+    },
+    {
+      "path": "kubernetes-operations/references/security-and-state.md",
+      "sha256": "sha256:9207a2ffd3c6ab8511ce272d4762ff9897ec9608a351f5ff33ab903bad076368",
+      "size": 2195
+    },
+    {
+      "path": "kubernetes-operations/SKILL.md",
+      "sha256": "sha256:02b0a0f9434372de350608e1530ce34301e4899c201147d061e3003d13e2d005",
+      "size": 5560
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "sha256:50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+      "size": 11324
+    },
+    {
+      "path": "linux-operations/agents/openai.yaml",
+      "sha256": "sha256:89120f9a5b6be73933002538959b698cbafebdc3aa04aa2a2ad5bee3ce027a4e",
+      "size": 217
+    },
+    {
+      "path": "linux-operations/module.yaml",
+      "sha256": "sha256:ec4590296395c30d8a5cc8f27ede0fd2fcf14f9705f3de9974c232d0b9cbe7cf",
+      "size": 483
+    },
+    {
+      "path": "linux-operations/references/debian-ubuntu-baseline.md",
+      "sha256": "sha256:67103db8420ee9d463fe497a207ab40fbea78ee6ebfff2684c8738d902f7a8e5",
+      "size": 1131
+    },
+    {
+      "path": "linux-operations/references/host-audit-signals.md",
+      "sha256": "sha256:4ada09d07368456cf9aaf180be541178168608bd5518aaaf8867500d9225e72a",
+      "size": 1482
+    },
+    {
+      "path": "linux-operations/references/module-handoffs.md",
+      "sha256": "sha256:0437336fa9686bdb629838c82ea02e90c98de6798e2f998e82594bc3e21fea03",
+      "size": 637
+    },
+    {
+      "path": "linux-operations/references/recovery-and-break-glass.md",
+      "sha256": "sha256:a6bdde0a0b01f0cc702321ec9895c41f80de99c79a1321b27eac8c8bc5d810a8",
+      "size": 959
+    },
+    {
+      "path": "linux-operations/references/ssh-access-and-hardening.md",
+      "sha256": "sha256:f856e4da38804eb82fa59d05a56d47bfde138d1090449f8741f283c5bcaf31f0",
+      "size": 983
+    },
+    {
+      "path": "linux-operations/references/systemd-and-logs.md",
+      "sha256": "sha256:f4f540aca21f936bfe4eeabbcdc81e5d79b58f3a351122604de4f0e241df43ca",
+      "size": 768
+    },
+    {
+      "path": "linux-operations/scripts/host-audit",
+      "sha256": "sha256:5eaa736144110c72ba5d957cb9ed99cc2c1e88c10695dda68d51bd41b1335a3d",
+      "size": 4706
+    },
+    {
+      "path": "linux-operations/SKILL.md",
+      "sha256": "sha256:a2b4ed174082978f13a70a5513d6cd199f4d2c772cf210ca12218442e9bb5137",
+      "size": 5122
+    },
+    {
+      "path": "linux-operations/templates/host-health-report.md",
+      "sha256": "sha256:088c8655cd91231df28dd386df5080bf300cdac78ac66aeaa6844dce16f2aa27",
+      "size": 367
+    },
+    {
+      "path": "linux-operations/templates/linux-change-card.md",
+      "sha256": "sha256:7be366dbcb97a9fc20739d55a4d1cd19bfbadd6bdd1d74af124ad7622ea7b62e",
+      "size": 248
+    },
+    {
+      "path": "network-edge-operations/agents/openai.yaml",
+      "sha256": "sha256:eb8f9f428f197ed1312e08b302f7f6c18e8a0c63e31dee661b85bd359617bd31",
+      "size": 223
+    },
+    {
+      "path": "network-edge-operations/module.yaml",
+      "sha256": "sha256:cd7ff2f733600e0458a2e1588cf638dbbd8a20fdffd23530bbf3d5c78c24793f",
+      "size": 393
+    },
+    {
+      "path": "network-edge-operations/references/reverse-proxy.md",
+      "sha256": "sha256:2477d3d2e42d6cc5bc318bfdc2757da025d022029089358b62fee342a091c497",
+      "size": 427
+    },
+    {
+      "path": "network-edge-operations/references/service-path.md",
+      "sha256": "sha256:9994c31dccc1be16d416c5a44af185a3474cb77c8975e6e32405cd50fdb452ec",
+      "size": 675
+    },
+    {
+      "path": "network-edge-operations/scripts/http-path-check.py",
+      "sha256": "sha256:9b215be65ba004c09aacb549f91a0695feff845b28c98bb4574401858a0cdf13",
+      "size": 2389
+    },
+    {
+      "path": "network-edge-operations/SKILL.md",
+      "sha256": "sha256:b2f5a7849d9f93d3aa32d8d0253bfe3c9ac1fa5352c1b682078e60171f07bcd7",
+      "size": 2403
+    },
+    {
+      "path": "README.md",
+      "sha256": "sha256:99add28dff3199581edf264a67dcec85f6d6916cc495f27f7f6391f71b72d19d",
+      "size": 11544
+    },
+    {
+      "path": "reliability-operations/agents/openai.yaml",
+      "sha256": "sha256:3cf5c14a4035600bbcec9f790cbe58892869c690318274d7a3151114131b557c",
+      "size": 232
+    },
+    {
+      "path": "reliability-operations/module.yaml",
+      "sha256": "sha256:2e3045529229fb1ad546be3365529f3ad709a4ec2481b13097e9a1178b273cb9",
+      "size": 391
+    },
+    {
+      "path": "reliability-operations/references/incident-flow.md",
+      "sha256": "sha256:c8e90104a642e0aabf8b49930e8f59355e1ed19c1a0985c7115e8e22d3664748",
+      "size": 495
+    },
+    {
+      "path": "reliability-operations/references/signal-and-alert-design.md",
+      "sha256": "sha256:8f789d6979f968516656165335a56bdd053efc3a340c710e6ceeb6bad8c4e61d",
+      "size": 675
+    },
+    {
+      "path": "reliability-operations/scripts/deploy-verify.py",
+      "sha256": "sha256:1402a15bba6dd12fa700175a61e4dd1d196259662d93472cc03c6f0015a8cdd1",
+      "size": 2600
+    },
+    {
+      "path": "reliability-operations/SKILL.md",
+      "sha256": "sha256:0242dad3403274515bf92810cebfd722b1446d5a148a7852f8de9a8fd1be7885",
+      "size": 2451
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "sha256:dfdadb0f719c1cefb3aeaaa352b683932747803ee2c1529e07aaf1b912ef361c",
+      "size": 804
+    },
+    {
+      "path": "secrets-access-operations/agents/openai.yaml",
+      "sha256": "sha256:195f8ae1d03bb79090cd1180056ebdeea199ed0debaf32ce519b7c7c7467f8d5",
+      "size": 241
+    },
+    {
+      "path": "secrets-access-operations/module.yaml",
+      "sha256": "sha256:6e1d975fa701650b90d3a99ae52da7c2d7deeaee84a382820b396bb10389ca3d",
+      "size": 573
+    },
+    {
+      "path": "secrets-access-operations/references/access-lifecycle.md",
+      "sha256": "sha256:81a908e257d89be862696701a4b46a0e73aa05a36a20a4d894920294ba37a215",
+      "size": 1688
+    },
+    {
+      "path": "secrets-access-operations/SKILL.md",
+      "sha256": "sha256:018510b4f89b2202ffbd294798b0a672714aa20e431224dcba89fb7b4607ff9a",
+      "size": 3299
+    },
+    {
+      "path": "security-compliance-operations/agents/openai.yaml",
+      "sha256": "sha256:6f78829698ea5e1981347b42af60d6dbe2da9f65f8e17ed0c608e28d95ad17e4",
+      "size": 231
+    },
+    {
+      "path": "security-compliance-operations/module.yaml",
+      "sha256": "sha256:a038937c8fd7619c088730f671ab1fe8b2cdd0fa727dd3be8fe3b6d6d4aa0338",
+      "size": 557
+    },
+    {
+      "path": "security-compliance-operations/references/evidence-and-exceptions.md",
+      "sha256": "sha256:e72e5d433948a50ff9aa66bc9241909b98af134714a4a415e2940a08f0da034f",
+      "size": 2179
+    },
+    {
+      "path": "security-compliance-operations/SKILL.md",
+      "sha256": "sha256:5c03e67a741dc3be927a03b52266e8036b702c2ac9dc2f68277626c4b66205c3",
+      "size": 3490
+    },
+    {
+      "path": "SECURITY.md",
+      "sha256": "sha256:b47384de3de3f06b15ea3da1ec9f87cc4ed63c9c9fc45e0a133a12efb12c6bd3",
+      "size": 3151
+    },
+    {
+      "path": "SUPPORT.md",
+      "sha256": "sha256:d079d38d74d9bd762661895651339cf8bd7dfcacb5d44a3b288a1b3f91e1836a",
+      "size": 1892
+    },
+    {
+      "path": "tests/test_platform.py",
+      "sha256": "sha256:2dbe3f2bb0771109a29183714bafd9ce7001aad76c64d00b378b10999ea7953d",
+      "size": 31137
+    },
+    {
+      "path": "tools/build_public_source.py",
+      "sha256": "sha256:94f499535a5e8dbc87372e4b9118805c2b233a34d9e60260e1d4fc8818caecd9",
+      "size": 7541
+    },
+    {
+      "path": "tools/build_release.py",
+      "sha256": "sha256:31ae0138ef09a4d54044724fcfd2254e42ec9572cc874df6a58169643fa06699",
+      "size": 7375
+    },
+    {
+      "path": "tools/install.py",
+      "sha256": "sha256:d9293093f112f4e6ab26059b561c4cd3d81d9e610c64e57358205cab180273a4",
+      "size": 9039
+    },
+    {
+      "path": "tools/verify_release.py",
+      "sha256": "sha256:d9f2ce2686f28776cd9802ae07462084d5d4ab7d6501fd06aa2d521d6668bb72",
+      "size": 11033
+    },
+    {
+      "path": "windows-server-operations/agents/openai.yaml",
+      "sha256": "sha256:f4367996f6aa0a3b66febe6c0c9b7535ba934dbf5aabc6951f5f15f27808b2b0",
+      "size": 230
+    },
+    {
+      "path": "windows-server-operations/module.yaml",
+      "sha256": "sha256:c2ab85f3f5384d7c8d94bbbe9a9edd789cf9346a55fb7a748328171d809bfb70",
+      "size": 601
+    },
+    {
+      "path": "windows-server-operations/references/module-handoffs.md",
+      "sha256": "sha256:e9c88c711c6489cf4b90120f1920c939e41d5614b28b0fc4ebdfdf57329f6874",
+      "size": 505
+    },
+    {
+      "path": "windows-server-operations/references/services-events-recovery.md",
+      "sha256": "sha256:a567093ab7536c34d7af96e6b21561371340c778af94a2be950bf106ca7a6b15",
+      "size": 574
+    },
+    {
+      "path": "windows-server-operations/references/updates-and-reboot.md",
+      "sha256": "sha256:4f692fb1e1495d32f9f0941f2762293880d60d5fc65823e78a43bcf2b1190683",
+      "size": 413
+    },
+    {
+      "path": "windows-server-operations/references/windows-server-baseline.md",
+      "sha256": "sha256:00fbb4cd9cf1e6449e9731a5213faa38d2a4d698c9a3d8d523e01656f88bde80",
+      "size": 617
+    },
+    {
+      "path": "windows-server-operations/references/winrm-rdp-and-access.md",
+      "sha256": "sha256:bbf24302eed19f46dca1157c5dc6145a95757c5e46990374981c7c1593468ae6",
+      "size": 633
+    },
+    {
+      "path": "windows-server-operations/scripts/win-host-audit.ps1",
+      "sha256": "sha256:77b39fb995e905ca39f0c90a6d7e4e5a3dc641812012918e2be6f26de6e11c7c",
+      "size": 4044
+    },
+    {
+      "path": "windows-server-operations/SKILL.md",
+      "sha256": "sha256:08faee474c32c7f67940401857f277b68f893d3833a35bae087da47b2e2fbb2c",
+      "size": 3192
+    },
+    {
+      "path": "windows-server-operations/templates/windows-change-card.md",
+      "sha256": "sha256:e101c1e6db48c5ce6385152bcdab4864e0ee0a8a80fa94803046a31911e091e6",
+      "size": 273
+    },
+    {
+      "path": "windows-server-operations/templates/windows-host-health-report.md",
+      "sha256": "sha256:2a61a691a6cc91048067ec261851914bcdc3caad429a75aa9faf52dd87fbdedf",
+      "size": 375
+    }
+  ],
+  "name": "devops-skill-platform",
+  "schema_version": "1.0",
+  "version": "0.3.0"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Secrets and Access Operations"
+  short_description: "Govern secrets and privileged access safely"
+  default_prompt: "Use $secrets-access-operations to assess this secret or privileged-access workflow safely."

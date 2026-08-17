@@ -1,0 +1,19 @@
+{
+  "version": "2.0",
+  "policy_id": "enterprise-baseline",
+  "extends": "default-policy.json",
+  "approval_ttl_minutes": 60,
+  "minimum_approvals": {"R0": 0, "R1": 0, "R2": 1, "R3": 2, "R4": 2},
+  "require_separation_of_duties": {"R0": false, "R1": false, "R2": false, "R3": true, "R4": true},
+  "require_change_lock": ["R3", "R4"],
+  "require_plan_digest": ["R2", "R3", "R4"],
+  "require_recovery_evidence": ["database_migration", "persistent_volume_deletion", "object_deletion", "terraform_state_surgery", "production_failover"],
+  "exceptions": {
+    "allowed": true,
+    "max_ttl_minutes": 60,
+    "minimum_compensating_controls": 1,
+    "never_waive": ["target_identity", "literal_secrets", "evidence_preservation", "post_change_verification"]
+  },
+  "ledger": {"hash_chain": true, "external_immutable_sink_required": true},
+  "data": {"allowed_classifications": ["public", "internal", "confidential", "restricted"], "default": "restricted"}
+}

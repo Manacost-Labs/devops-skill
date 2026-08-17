@@ -1,0 +1,4 @@
+interface:
+  display_name: "Google Cloud Operations"
+  short_description: "Operate Google Cloud with current guardrails"
+  default_prompt: "Use $cloud-gcp to assess and plan this Google Cloud operation safely."

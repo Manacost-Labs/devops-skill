@@ -1,0 +1,4 @@
+interface:
+  display_name: "Selectel Cloud Operations"
+  short_description: "Operate Selectel cloud with current guardrails"
+  default_prompt: "Use $cloud-selectel to assess and plan this Selectel operation safely."

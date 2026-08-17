@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DevOps target profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "environment", "owner", "data_classification", "services", "access", "risk_overrides"],
+  "properties": {
+    "schema_version": {"const": "2.0"},
+    "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,120}$"},
+    "environment": {"type": "string", "enum": ["lab", "dev", "staging", "production"]},
+    "owner": {"type": "string", "minLength": 1},
+    "data_classification": {"enum": ["public", "internal", "confidential", "restricted"]},
+    "services": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "access": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^(profile|ref|vault|oidc|ssh-config):"}},
+    "credential_broker": {"type": ["string", "null"]},
+    "risk_overrides": {
+      "type": "object", "additionalProperties": false,
+      "required": ["production_confirmation", "destructive_confirmation"],
+      "properties": {"production_confirmation": {"const": "required"}, "destructive_confirmation": {"const": "required"}}
+    }
+  }
+}

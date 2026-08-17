@@ -1,0 +1,13 @@
+# Non-secret target profile template. Store credential references only.
+schema_version: "2.0"
+name: example-lab
+environment: lab
+owner: platform-owner
+data_classification: internal
+services: []
+access:
+  ssh: ssh-config:example-lab
+credential_broker: vault:approved-broker
+risk_overrides:
+  production_confirmation: required
+  destructive_confirmation: required

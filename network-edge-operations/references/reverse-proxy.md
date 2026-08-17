@@ -1,0 +1,3 @@
+# Reverse proxy safety
+
+Prefer one clearly owned public ingress. Keep app services on private Docker networks or localhost where suitable. Validate configuration before reload and retain a copy of the last known-good config. Use HSTS and redirect policies only when the domain/TLS posture is confirmed. Certificate lifecycle, DNS ownership, and CDN/WAF changes require explicit coordination with their respective owner modules.

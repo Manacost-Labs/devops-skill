@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Resilience Operations"
+  short_description: "Prove backups, restores, and migrations"
+  default_prompt: "Use $data-resilience-operations to validate this backup, restore, or migration."

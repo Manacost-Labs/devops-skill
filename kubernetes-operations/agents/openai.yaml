@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kubernetes Operations"
+  short_description: "Audit and change Kubernetes workloads safely"
+  default_prompt: "Use $kubernetes-operations to assess and plan this Kubernetes change safely."

@@ -1,0 +1,50 @@
+name: cloud-azure
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - azure-subscription-discovery
+  - azure-rbac-control-plane
+  - azure-network-control-plane
+  - azure-compute-control-plane
+  - azure-managed-service-routing
+risk_domains:
+  - azure-subscription-boundary
+  - iam-policy-change
+  - network-exposure
+  - compute-replacement
+  - managed-service-state
+  - billing-impact
+platforms:
+  - microsoft-azure
+provides:
+  - azure-cloud-control-plane-v1
+  - contract-v2-executor
+source_freshness:
+  last_verified: '2026-08-17'
+  refresh_before_change: true
+  official_sources:
+    - https://learn.microsoft.com/en-us/azure/well-architected/
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/overview
+    - https://learn.microsoft.com/en-us/cli/azure/
+    - https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview
+    - https://learn.microsoft.com/en-us/azure/virtual-machines/overview
+    - https://learn.microsoft.com/en-us/azure/aks/what-is-aks
+    - https://learn.microsoft.com/en-us/azure/container-apps/overview
+    - https://learn.microsoft.com/en-us/azure/azure-sql/database/sql-database-paas-overview
+  capability_sources:
+    azure-subscription-discovery:
+      - https://learn.microsoft.com/en-us/cli/azure/
+      - https://learn.microsoft.com/en-us/azure/well-architected/
+    azure-rbac-control-plane:
+      - https://learn.microsoft.com/en-us/azure/role-based-access-control/overview
+    azure-network-control-plane:
+      - https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview
+    azure-compute-control-plane:
+      - https://learn.microsoft.com/en-us/azure/virtual-machines/overview
+    azure-managed-service-routing:
+      - https://learn.microsoft.com/en-us/azure/aks/what-is-aks
+      - https://learn.microsoft.com/en-us/azure/container-apps/overview
+      - https://learn.microsoft.com/en-us/azure/azure-sql/database/sql-database-paas-overview

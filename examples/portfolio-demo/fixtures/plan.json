@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "simulation_only": true,
+  "target": "portfolio-demo-lab",
+  "action": "container_rollout",
+  "scope": [
+    "service:demo-web"
+  ],
+  "desired_release": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "steps": [
+    "Record the synthetic pre-change state.",
+    "Replace the release identifier in a temporary local state file.",
+    "Verify the immutable release and synthetic health state.",
+    "Restore the pre-change state during the rollback drill."
+  ],
+  "prohibited_capabilities": [
+    "cloud-api",
+    "dns",
+    "network",
+    "production-executor",
+    "ssh",
+    "container-runtime"
+  ]
+}

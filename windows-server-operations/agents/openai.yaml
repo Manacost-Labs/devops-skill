@@ -1,0 +1,4 @@
+interface:
+  display_name: "Windows Server Operations"
+  short_description: "Safe Windows Server infrastructure operations"
+  default_prompt: "Use $windows-server-operations to audit and safely operate a Windows Server host."

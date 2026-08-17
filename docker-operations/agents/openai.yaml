@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docker Operations"
+  short_description: "Safe Docker and Compose lifecycle operations"
+  default_prompt: "Use $docker-operations to audit and safely deploy a Docker Compose workload."

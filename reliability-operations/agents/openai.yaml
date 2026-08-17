@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reliability Operations"
+  short_description: "Evidence-driven observability and incident operations"
+  default_prompt: "Use $reliability-operations to design observability and verify service health."

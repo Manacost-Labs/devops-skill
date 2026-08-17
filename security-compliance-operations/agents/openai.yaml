@@ -1,0 +1,4 @@
+interface:
+  display_name: "Security Governance Operations"
+  short_description: "Build evidence-led security governance"
+  default_prompt: "Use $security-compliance-operations to build a control-owned security evidence plan."

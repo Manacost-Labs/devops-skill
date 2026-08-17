@@ -1,0 +1,4 @@
+interface:
+  display_name: "Network Edge Operations"
+  short_description: "Safe DNS TLS and reverse proxy operations"
+  default_prompt: "Use $network-edge-operations to diagnose or safely change an HTTPS service path."

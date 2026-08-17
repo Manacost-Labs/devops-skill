@@ -1,0 +1,12 @@
+name: devops-platform-contracts
+version: 0.3.0
+kind: policy-and-validation
+capabilities:
+  - module-registry
+  - compatibility-validation
+  - safety-policy
+  - contract-schemas
+  - evaluation-suite
+provides:
+  - devops-platform-contract-v2
+  - chained-operation-ledger-v1

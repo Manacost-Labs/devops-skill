@@ -1,0 +1,24 @@
+name: security-compliance-operations
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - threat-assessment
+  - control-evidence-mapping
+  - control-effectiveness-review
+  - vulnerability-triage
+  - finding-ownership
+  - exception-governance
+  - compensating-control-review
+  - privacy-aware-evidence
+risk_domains:
+  - security-governance
+  - vulnerability-management
+  - privacy
+  - audit-evidence
+platforms:
+  - Enterprise systems
+  - Security evidence systems
+  - Governance workflows

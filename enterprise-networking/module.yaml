@@ -1,0 +1,24 @@
+name: enterprise-networking
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - vpn-operations
+  - bgp-operations
+  - route-management
+  - network-segmentation
+  - hybrid-connectivity
+  - route-acl-diff
+  - mtu-path-analysis
+  - staged-network-change
+risk_domains:
+  - network-control-plane
+  - connectivity-loss
+  - traffic-exposure
+  - management-plane
+platforms:
+  - Enterprise networks
+  - Hybrid networks
+  - VPN and BGP

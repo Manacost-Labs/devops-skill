@@ -1,0 +1,4 @@
+interface:
+  display_name: "DevOps Core"
+  short_description: "Safe infrastructure change coordinator"
+  default_prompt: "Use $devops-core to plan a safe infrastructure operation."

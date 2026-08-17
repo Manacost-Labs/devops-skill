@@ -1,0 +1,182 @@
+{
+  "name": "devops-skill-platform",
+  "version": "0.3.0",
+  "contract_version": "v2",
+  "skills": {
+    "devops-platform-contracts": {"version": "0.3.0", "role": "policy-and-validation"},
+    "devops-core": {"version": "0.3.0", "role": "coordinator"},
+    "linux-operations": {"version": "0.2.0", "role": "executor"},
+    "windows-server-operations": {"version": "0.2.0", "role": "executor"},
+    "docker-operations": {"version": "0.2.0", "role": "executor"},
+    "network-edge-operations": {"version": "0.2.0", "role": "executor"},
+    "reliability-operations": {"version": "0.2.0", "role": "executor"},
+    "secrets-access-operations": {"version": "0.3.0", "role": "executor"},
+    "cloudflare-operations": {"version": "0.3.0", "role": "executor"},
+    "iac-operations": {"version": "0.3.0", "role": "executor"},
+    "cicd-operations": {"version": "0.3.0", "role": "executor"},
+    "data-resilience-operations": {"version": "0.3.0", "role": "executor"},
+    "cloud-generic": {"version": "0.3.0", "role": "executor"},
+    "cloud-aws": {"version": "0.3.0", "role": "executor"},
+    "cloud-gcp": {"version": "0.3.0", "role": "executor"},
+    "cloud-azure": {"version": "0.3.0", "role": "executor"},
+    "cloud-selectel": {"version": "0.3.0", "role": "executor"},
+    "kubernetes-operations": {"version": "0.3.0", "role": "executor"},
+    "enterprise-networking": {"version": "0.3.0", "role": "executor"},
+    "security-compliance-operations": {"version": "0.3.0", "role": "executor"}
+  },
+  "profiles": {
+    "core": [
+      "devops-platform-contracts",
+      "devops-core"
+    ],
+    "web-linux": [
+      "devops-platform-contracts",
+      "devops-core",
+      "linux-operations",
+      "docker-operations",
+      "network-edge-operations",
+      "cloudflare-operations",
+      "reliability-operations"
+    ],
+    "hybrid-server": [
+      "devops-platform-contracts",
+      "devops-core",
+      "linux-operations",
+      "windows-server-operations",
+      "docker-operations",
+      "network-edge-operations",
+      "reliability-operations"
+    ],
+    "delivery": [
+      "devops-platform-contracts",
+      "devops-core",
+      "iac-operations",
+      "cicd-operations",
+      "secrets-access-operations"
+    ],
+    "data-safe": [
+      "devops-platform-contracts",
+      "devops-core",
+      "data-resilience-operations",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "cloud-foundation": [
+      "devops-platform-contracts",
+      "devops-core",
+      "cloud-generic",
+      "iac-operations",
+      "network-edge-operations",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "kubernetes": [
+      "devops-platform-contracts",
+      "devops-core",
+      "kubernetes-operations",
+      "docker-operations",
+      "network-edge-operations",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "aws-platform": [
+      "devops-platform-contracts",
+      "devops-core",
+      "cloud-generic",
+      "cloud-aws",
+      "iac-operations",
+      "cicd-operations",
+      "docker-operations",
+      "kubernetes-operations",
+      "data-resilience-operations",
+      "network-edge-operations",
+      "enterprise-networking",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "gcp-platform": [
+      "devops-platform-contracts",
+      "devops-core",
+      "cloud-generic",
+      "cloud-gcp",
+      "iac-operations",
+      "cicd-operations",
+      "docker-operations",
+      "kubernetes-operations",
+      "data-resilience-operations",
+      "network-edge-operations",
+      "enterprise-networking",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "azure-platform": [
+      "devops-platform-contracts",
+      "devops-core",
+      "cloud-generic",
+      "cloud-azure",
+      "iac-operations",
+      "cicd-operations",
+      "docker-operations",
+      "kubernetes-operations",
+      "data-resilience-operations",
+      "network-edge-operations",
+      "enterprise-networking",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "selectel-platform": [
+      "devops-platform-contracts",
+      "devops-core",
+      "cloud-generic",
+      "cloud-selectel",
+      "iac-operations",
+      "cicd-operations",
+      "docker-operations",
+      "kubernetes-operations",
+      "data-resilience-operations",
+      "network-edge-operations",
+      "enterprise-networking",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "hybrid-network": [
+      "devops-platform-contracts",
+      "devops-core",
+      "linux-operations",
+      "windows-server-operations",
+      "network-edge-operations",
+      "enterprise-networking",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "assurance": [
+      "devops-platform-contracts",
+      "devops-core",
+      "security-compliance-operations",
+      "reliability-operations",
+      "secrets-access-operations"
+    ],
+    "all": [
+      "devops-platform-contracts",
+      "devops-core",
+      "linux-operations",
+      "windows-server-operations",
+      "docker-operations",
+      "network-edge-operations",
+      "reliability-operations",
+      "secrets-access-operations",
+      "cloudflare-operations",
+      "iac-operations",
+      "cicd-operations",
+      "data-resilience-operations",
+      "cloud-generic",
+      "cloud-aws",
+      "cloud-gcp",
+      "cloud-azure",
+      "cloud-selectel",
+      "kubernetes-operations",
+      "enterprise-networking",
+      "security-compliance-operations"
+    ]
+  }
+}
