@@ -18,6 +18,7 @@ DEMO_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DEMO_DIR.parents[1]
 FIXTURES = DEMO_DIR / "fixtures"
 GATE = REPO_ROOT / "devops-platform-contracts" / "scripts" / "operation_gate.py"
+WRAPPER = REPO_ROOT / "tools" / "devops_exec.py"
 CONTRACT_VALIDATOR = REPO_ROOT / "devops-core" / "scripts" / "validate_contracts.py"
 POLICY_DIGEST_RE = re.compile(r"digest=(sha256:[0-9a-f]{64})")
 PLAIN_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -131,6 +132,23 @@ def gate_request(request: dict[str, Any], directory: Path, name: str) -> subproc
     )
 
 
+def run_wrapper(request_path: Path, command: list[str], ledger_path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable, str(WRAPPER),
+            "--operation", str(request_path),
+            "--policy", "default-policy.json",
+            "--at", AT,
+            "--ledger", str(ledger_path),
+            "--", *command,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def write_evidence(path: Path, evidence: dict[str, Any]) -> None:
     if path.exists():
         raise RuntimeError(f"refusing to overwrite existing evidence: {path}")
@@ -152,12 +170,31 @@ def run_demo(output: Path | None) -> dict[str, Any]:
 
     contract = run_checked([sys.executable, str(CONTRACT_VALIDATOR), str(profile_path)])
     selected_policy_digest = policy_digest()
-    selected_plan_digest = canonical_digest(plan)
     selected_profile_digest = profile_digest(profile_path)
-    request = make_request(selected_plan_digest, selected_profile_digest, selected_policy_digest)
 
     with tempfile.TemporaryDirectory(prefix="devops-portfolio-demo-") as temporary:
         workspace = Path(temporary)
+        state_path = workspace / "simulated-state.json"
+        ledger_path = workspace / "execution-ledger.jsonl"
+
+        before = {
+            "release": audit["observed_release"],
+            "health": audit["health"],
+            "target": audit["target"],
+        }
+        state_path.write_text(json.dumps(before, sort_keys=True), encoding="utf-8")
+
+        rollout_step = (
+            "import json, sys\n"
+            "from pathlib import Path\n"
+            "path = Path(sys.argv[1])\n"
+            "state = json.loads(path.read_text(encoding='utf-8'))\n"
+            "state['release'] = sys.argv[2]\n"
+            "path.write_text(json.dumps(state, sort_keys=True), encoding='utf-8')\n"
+        )
+        approved_command = [sys.executable, "-c", rollout_step, str(state_path), str(plan["desired_release"])]
+        selected_plan_digest = canonical_digest(approved_command)
+        request = make_request(selected_plan_digest, selected_profile_digest, selected_policy_digest)
 
         mismatched = copy.deepcopy(request)
         mismatched["approvals"][0]["plan_digest"] = "sha256:" + "0" * 64
@@ -172,18 +209,18 @@ def run_demo(output: Path | None) -> dict[str, Any]:
         allowed = gate_request(request, workspace, "request-exact.json")
         if allowed.returncode != 0 or not allowed.stdout.startswith("ALLOWED:"):
             raise RuntimeError("gate rejected the exact synthetic approval: " + (allowed.stdout + allowed.stderr).strip())
+        request_path = workspace / "request-exact.json"
 
-        before = {
-            "release": audit["observed_release"],
-            "health": audit["health"],
-            "target": audit["target"],
-        }
-        state_path = workspace / "simulated-state.json"
-        state_path.write_text(json.dumps(before, sort_keys=True), encoding="utf-8")
+        tampered_command = approved_command[:-1] + ["attacker-release"]
+        drift = run_wrapper(request_path, tampered_command, ledger_path)
+        if drift.returncode == 0 or "BLOCKED:" not in drift.stdout:
+            raise RuntimeError("wrapper failed to block a command that drifted from the approved plan digest")
+        if read_json(state_path) != before:
+            raise RuntimeError("blocked command must not mutate the simulated state")
 
-        after = dict(before)
-        after["release"] = plan["desired_release"]
-        state_path.write_text(json.dumps(after, sort_keys=True), encoding="utf-8")
+        executed = run_wrapper(request_path, approved_command, ledger_path)
+        if executed.returncode != 0:
+            raise RuntimeError("wrapper rejected the exactly approved command: " + (executed.stdout + executed.stderr).strip())
         observed = read_json(state_path)
         verified = observed["release"] == plan["desired_release"] and observed["health"] == "healthy"
         if not verified:
@@ -200,6 +237,10 @@ def run_demo(output: Path | None) -> dict[str, Any]:
         if not rollback_verified:
             raise RuntimeError("rollback drill failed to restore the pre-change state")
 
+        ledger_records = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines()]
+        if [record["status"] for record in ledger_records] != ["blocked_digest_mismatch", "executed"]:
+            raise RuntimeError("execution ledger does not record the blocked drift and the gated execution")
+
         evidence = {
             "operation_id": request["operation_id"],
             "status": "verified",
@@ -212,7 +253,15 @@ def run_demo(output: Path | None) -> dict[str, Any]:
             "contract_validation": contract.stdout.strip(),
             "approval_negative_test": blocked.stdout.strip(),
             "approval_exact_test": allowed.stdout.strip(),
-            "execution": {"simulated": True, "temporary_state_only": True},
+            "wrapper_drift_test": drift.stdout.strip().splitlines()[0],
+            "execution": {
+                "simulated": True,
+                "temporary_state_only": True,
+                "wrapper": "tools/devops_exec.py",
+                "command_digest": selected_plan_digest,
+                "exit_code": executed.returncode,
+                "ledger_statuses": [record["status"] for record in ledger_records],
+            },
             "verification": {"post_change": verified, "rollback_triggered": rollback_triggered, "rollback_verified": rollback_verified},
             "redaction_status": "no-sensitive-input",
         }
@@ -236,7 +285,8 @@ def main() -> int:
     print(f"PLAN: {evidence['plan_digest']}")
     print("GATE NEGATIVE: mismatched approval blocked")
     print("GATE EXACT: exact target, plan, policy, and time-bound approval allowed")
-    print("EXECUTION: simulated in a temporary local state file")
+    print("WRAPPER DRIFT: command that diverged from the approved digest blocked before execution")
+    print("EXECUTION: approved command executed through tools/devops_exec.py into a temporary local state file")
     print("VERIFY: desired release and synthetic health verified")
     print("ROLLBACK DRILL: injected failure detected and pre-change state restored")
     print("RESULT: verified (simulation only; no live target contacted)")

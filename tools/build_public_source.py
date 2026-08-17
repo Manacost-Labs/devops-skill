@@ -31,6 +31,7 @@ PUBLIC_TREES = {".github", "docs", "evaluations", "examples", "tests"}
 PUBLIC_TOOLS = {
     "tools/build_public_source.py",
     "tools/build_release.py",
+    "tools/devops_exec.py",
     "tools/install.py",
     "tools/verify_release.py",
 }

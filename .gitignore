@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 dist/
 lab-artifacts/
+operations/
 .devops-skill-backups/
 
 # Operator-specific bootstrap helpers are intentionally local-only. Keep the

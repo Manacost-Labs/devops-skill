@@ -27,6 +27,7 @@ ROOT_FILES = {
     "CHANGELOG.md",
 }
 TOOL_FILES = {
+    "tools/devops_exec.py",
     "tools/install.py",
     "tools/verify_release.py",
 }
