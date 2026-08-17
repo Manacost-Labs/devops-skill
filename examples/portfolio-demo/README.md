@@ -2,7 +2,7 @@
 
 This example demonstrates the platform workflow without contacting a server, cloud API, DNS provider, container runtime, or network endpoint:
 
-`synthetic audit -> immutable plan digest -> exact approval gate -> local simulation -> verification -> rollback drill`
+`synthetic audit -> immutable plan digest -> exact approval gate -> gated wrapper execution -> verification -> rollback drill`
 
 The approval identity and evidence reference are fixtures. They demonstrate contract binding only and cannot authorize a real operation. The R2 request models the controls required for an externally impactful rollout; the runner itself performs only local, reversible file operations in an automatically removed temporary directory.
 
@@ -29,6 +29,7 @@ The runner refuses to overwrite an existing evidence file; choose a new path for
 - A target profile passes the shared secret-field contract validator.
 - A synthetic approval with the wrong plan digest is rejected.
 - An approval bound to the exact target, plan, policy, and execution window is accepted.
+- The approved plan digest is the canonical digest of the exact command; `tools/devops_exec.py` re-runs the gate immediately before launch, blocks any command that drifts from that digest with a non-zero exit code, and records both outcomes in a secret-redacted execution ledger.
 - Execution cannot start unless the fixture declares `simulation_only: true` and the full prohibited-capability boundary.
 - Verification checks the desired immutable release and health state.
 - A deliberately injected health failure triggers a rollback drill and restores the exact pre-change state.
