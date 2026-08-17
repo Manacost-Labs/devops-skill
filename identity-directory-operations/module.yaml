@@ -1,0 +1,62 @@
+name: identity-directory-operations
+version: 0.3.0
+kind: executor
+requires:
+  - devops-platform-contracts >= 0.3.0
+  - devops-core >= 0.3.0
+capabilities:
+  - active-directory-readonly-discovery
+  - active-directory-ou-and-object-provisioning
+  - active-directory-principal-and-group-provisioning
+  - active-directory-group-membership-governance
+  - active-directory-delegated-administration
+  - group-policy-inventory-and-reporting
+  - group-policy-staged-change-management
+  - group-policy-backup-restore-planning
+risk_domains:
+  - directory-control-plane
+  - privileged-group-membership
+  - directory-delegation
+  - group-policy-inheritance-and-enforcement
+  - domain-controller-and-sysvol
+platforms:
+  - Active Directory Domain Services
+  - Group Policy Management
+  - Windows Server 2019
+  - Windows Server 2022
+  - Windows Server 2025
+source_freshness:
+  last_verified: "2026-08-17"
+  refresh_before_change: true
+  official_sources:
+    - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/activedirectory/new-aduser?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/activedirectory/new-adcomputer?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gpo?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/new-gpo?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/new-gplink?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/backup-gpo?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/import-gpo?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory
+  capability_sources:
+    active-directory-readonly-discovery:
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
+    active-directory-ou-and-object-provisioning:
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/new-adcomputer?view=windowsserver2025-ps
+    active-directory-principal-and-group-provisioning:
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/new-aduser?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
+    active-directory-group-membership-governance:
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory
+    active-directory-delegated-administration:
+      - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory
+    group-policy-inventory-and-reporting:
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gpo?view=windowsserver2025-ps
+    group-policy-staged-change-management:
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/new-gpo?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/new-gplink?view=windowsserver2025-ps
+    group-policy-backup-restore-planning:
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/backup-gpo?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/import-gpo?view=windowsserver2025-ps

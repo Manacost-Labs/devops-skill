@@ -19,7 +19,7 @@ flowchart TB
     subgraph S["DevOps Skill Platform"]
         C["devops-core: coordination and routing"]
         P["devops-platform-contracts: policy, schemas, compatibility, gate"]
-        M["Specialist modules: host, workload, edge, delivery, data, cloud, trust"]
+        M["Specialist modules: host, directory identity, workload, edge, delivery, data, cloud, trust"]
         E["Redacted evidence model"]
         C --> M
         P --> C
@@ -45,6 +45,7 @@ Solid arrows are implemented information paths. Dashed arrows are organization-o
 | `devops-platform-contracts` | Catalog, compatibility, policy, schemas, operation gate, ledger shape, package validation | Infrastructure execution, immutable audit storage, organizational policy approval |
 | Specialist executor | Discovery, plan, bounded execution, rollback and verification for one technical domain | Authority outside its capability or target boundary |
 | Provider pack | Provider control-plane discovery and operations | IaC state, Kubernetes objects, application data, CI trust, or service acceptance owned by other modules |
+| Directory identity pack | AD DS objects, group governance, GPO state and staged rollout | Local Windows host state, Entra/cloud IAM, secrets, approval identity, or service acceptance |
 | Installer and release tools | Validation, dependency-closed selection, deterministic package checks, dry-run and transactional local installation | Trusted build identity, artifact signing, registry immutability, vulnerability acceptance |
 | Adopting organization | Identity, credentials, approvals, separation of duties, target registry, audit retention, policy exceptions, incident ownership | These controls are never delegated to repository text or model judgement |
 

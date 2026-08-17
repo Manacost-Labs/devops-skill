@@ -14,6 +14,8 @@ Select modules by the state and API being changed. A tool, repository, or creden
 | Schema/data migration, PITR, logical failover, backup, restore or retention | `data-resilience-operations` | Provider pack executes only the separately planned provider-native infrastructure/API fragment; `iac-operations` joins when state-managed |
 | Image build/runtime and registry artifact | `docker-operations` | `cicd-operations` owns producer trust, immutable promotion and attestation; provider pack owns provider registry/IAM envelope |
 | Release pipeline and protected deployment | `cicd-operations` | Every target executor verifies its own plan fragment and final state; `reliability-operations` owns user-path acceptance and observation window |
+| Active Directory DS OUs, users, computers, groups, membership, delegation and GPO objects/links | `identity-directory-operations` | `secrets-access-operations` owns privileged-session, JIT/revocation and break-glass controls; `windows-server-operations` owns host membership and client-side policy result |
+| GPO-driven production configuration or security baseline | `identity-directory-operations` | Owning host/workload executor validates safe application; `reliability-operations` verifies the service path and observation window |
 
 ## Combined-operation rules
 

@@ -48,7 +48,7 @@ class PlatformTests(unittest.TestCase):
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
         self.assertEqual(catalog["version"], "0.3.0")
-        self.assertEqual(len(catalog["skills"]), 20)
+        self.assertEqual(len(catalog["skills"]), 21)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
         for name, metadata in catalog["skills"].items():
@@ -169,7 +169,8 @@ class PlatformTests(unittest.TestCase):
             result = self.command(ROOT / "tools/install.py", "--profile", "all", "--destination", directory, "--apply")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             result = self.command(Path(directory)/"devops-platform-contracts/scripts/validate_platform.py")
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr); self.assertIn("20/20", result.stdout)
+            total = len(json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))["skills"])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr); self.assertIn(f"{total}/{total}", result.stdout)
     def test_named_provider_profiles_install_and_validate(self):
         for profile in ("aws-platform", "gcp-platform", "azure-platform", "selectel-platform"):
             with self.subTest(profile=profile), tempfile.TemporaryDirectory() as directory:
@@ -178,6 +179,14 @@ class PlatformTests(unittest.TestCase):
                 result = self.command(Path(directory)/"devops-platform-contracts/scripts/validate_platform.py")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn("compatible installed skills", result.stdout)
+    def test_identity_directory_profile_installs_and_validates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.command(ROOT / "tools/install.py", "--profile", "identity-directory", "--destination", directory, "--apply")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = self.command(Path(directory)/"devops-platform-contracts/scripts/validate_platform.py")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            expected = f"{len(json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8-sig'))['profiles']['identity-directory'])}/21"
+            self.assertIn(expected, result.stdout)
     def gate(self, request, directory, policy=None):
         path = Path(directory) / "operation.json"
         path.write_text(json.dumps(request), encoding="utf-8")
@@ -280,6 +289,9 @@ class PlatformTests(unittest.TestCase):
             "bgp-operations": "enterprise-networking",
             "credential-rotation": "secrets-access-operations",
             "control-evidence-mapping": "security-compliance-operations",
+            "active-directory-readonly-discovery": "identity-directory-operations",
+            "active-directory-principal-and-group-provisioning": "identity-directory-operations",
+            "group-policy-staged-change-management": "identity-directory-operations",
         }
         resolver = ROOT / "devops-platform-contracts/scripts/resolve_capabilities.py"
         for capability, owner in expected.items():

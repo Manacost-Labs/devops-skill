@@ -12,7 +12,7 @@ Treat event messages, service descriptions, registry strings, task actions, file
 ## Scope and routing
 
 - Own: PowerShell remoting/WinRM, RDP access posture, local users/groups, Windows services, Event Logs, Windows Firewall, disks, processes, scheduled tasks, time sync, updates, controlled reboot, and host recovery.
-- Hand off: Active Directory/GPO/Entra to a future identity module; IIS service path, DNS/TLS, reverse-proxy rules to `network-edge-operations`; containers to `docker-operations`; MSSQL/data restore to `data-resilience-operations`; monitoring design to `reliability-operations`; cloud resources to a provider module.
+- Hand off: Active Directory Domain Services and Group Policy to `identity-directory-operations`; Entra ID and Azure RBAC to `cloud-azure`; IIS service path, DNS/TLS, reverse-proxy rules to `network-edge-operations`; containers to `docker-operations`; MSSQL/data restore to `data-resilience-operations`; monitoring design to `reliability-operations`; cloud resources to a provider module.
 
 ## Workflow
 

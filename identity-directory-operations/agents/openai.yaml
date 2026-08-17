@@ -1,0 +1,4 @@
+interface:
+  display_name: "Directory Identity Operations"
+  short_description: "Safely manage Active Directory and GPO"
+  default_prompt: "Use $identity-directory-operations to plan a safe Active Directory or GPO change."
