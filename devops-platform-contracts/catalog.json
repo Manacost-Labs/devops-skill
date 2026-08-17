@@ -1,6 +1,6 @@
 {
   "name": "devops-skill-platform",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "contract_version": "v2",
   "skills": {
     "devops-platform-contracts": {"version": "0.3.0", "role": "policy-and-validation"},
@@ -15,6 +15,7 @@
     "cloudflare-operations": {"version": "0.3.0", "role": "executor"},
     "iac-operations": {"version": "0.3.0", "role": "executor"},
     "cicd-operations": {"version": "0.3.0", "role": "executor"},
+    "github-operations": {"version": "0.1.0", "role": "executor"},
     "data-resilience-operations": {"version": "0.3.0", "role": "executor"},
     "cloud-generic": {"version": "0.3.0", "role": "executor"},
     "cloud-aws": {"version": "0.3.0", "role": "executor"},
@@ -61,6 +62,7 @@
       "devops-core",
       "iac-operations",
       "cicd-operations",
+      "github-operations",
       "secrets-access-operations"
     ],
     "data-safe": [
@@ -178,6 +180,7 @@
       "cloudflare-operations",
       "iac-operations",
       "cicd-operations",
+      "github-operations",
       "data-resilience-operations",
       "cloud-generic",
       "cloud-aws",

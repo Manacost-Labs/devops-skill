@@ -15,7 +15,7 @@ env:
 
 jobs:
   verify-rc:
-    name: Verify 0.3.0 RC candidate
+    name: Verify 0.4.0 RC candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -42,13 +42,13 @@ jobs:
         run: python -m unittest discover -s tests -v
 
       - name: Build deterministic candidate
-        run: python tools/build_release.py --output dist/devops-skill-platform-0.3.0.zip
+        run: python tools/build_release.py --output dist/devops-skill-platform-0.4.0.zip
 
       - name: Verify candidate contents
-        run: python tools/verify_release.py dist/devops-skill-platform-0.3.0.zip
+        run: python tools/verify_release.py dist/devops-skill-platform-0.4.0.zip
 
       - name: Print candidate digest
-        run: sha256sum dist/devops-skill-platform-0.3.0.zip
+        run: sha256sum dist/devops-skill-platform-0.4.0.zip
 
       # Intentionally no upload-artifact, release creation, signing, package
       # publication, environment, OIDC, or secret access. A maintainer must

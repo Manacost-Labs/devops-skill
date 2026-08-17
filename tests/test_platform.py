@@ -47,8 +47,8 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.3.0")
-        self.assertEqual(len(catalog["skills"]), 21)
+        self.assertEqual(catalog["version"], "0.4.0")
+        self.assertEqual(len(catalog["skills"]), 22)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
         for name, metadata in catalog["skills"].items():
@@ -71,6 +71,7 @@ class PlatformTests(unittest.TestCase):
         read_only_modules = {
             "devops-platform-contracts", "devops-core", "cloud-generic", "cloud-aws",
             "cloud-gcp", "cloud-azure", "cloud-selectel", "cloudflare-operations",
+            "github-operations",
         }
         for name in catalog["skills"]:
             manifest = yaml.safe_load((ROOT / name / "module.yaml").read_text(encoding="utf-8-sig"))
@@ -96,6 +97,7 @@ class PlatformTests(unittest.TestCase):
             "cloudflare-operations": {"developers.cloudflare.com"},
             "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
             "cicd-operations": {"docs.github.com", "slsa.dev"},
+            "github-operations": {"docs.github.com"},
             "data-resilience-operations": {"www.postgresql.org", "redis.io", "csrc.nist.gov"},
             "cloud-aws": {"docs.aws.amazon.com"},
             "cloud-gcp": {"cloud.google.com", "docs.cloud.google.com"},
@@ -144,6 +146,43 @@ class PlatformTests(unittest.TestCase):
             compose.write_text("services:\n  api:\n    image: demo:latest\n    privileged: true\n    environment:\n      API_KEY: literal\n", encoding="utf-8")
             result = self.command(ROOT / "docker-operations/scripts/compose-preflight.py", compose)
             self.assertNotEqual(result.returncode, 0); self.assertIn("literal sensitive", result.stdout)
+    def test_repo_protection_audit_flags_weak_protection(self):
+        snapshot = {
+            "repository": {"full_name": "example/repo", "default_branch": "main"},
+            "branch_protection": {
+                "enforce_admins": {"enabled": False},
+                "required_pull_request_reviews": {"required_approving_review_count": 1},
+                "required_status_checks": None,
+                "allow_force_pushes": {"enabled": True},
+            },
+            "rulesets": [{"name": "release-guard", "enforcement": "evaluate", "bypass_actors": [{"actor_id": 1}]}],
+            "environments": {"environments": [{"name": "production", "protection_rules": []}]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "snapshot.json"
+            path.write_text(json.dumps(snapshot), encoding="utf-8")
+            tool = ROOT / "github-operations/scripts/repo-protection-audit.py"
+            result = self.command(tool, "--from-file", path, "--strict")
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(result.stdout)
+        findings = "\n".join(report["findings"])
+        self.assertIn("administrators", findings)
+        self.assertIn("status checks", findings)
+        self.assertIn("force pushes", findings)
+        self.assertIn("not active", findings)
+        self.assertIn("bypass actor", findings)
+        self.assertIn("production", findings)
+        clean = {
+            "repository": {"full_name": "example/repo", "default_branch": "main"},
+            "branch_protection": None,
+            "rulesets": [{"name": "main-guard", "enforcement": "active", "bypass_actors": []}],
+            "environments": {"environments": [{"name": "production", "protection_rules": [{"type": "required_reviewers"}]}]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "snapshot.json"
+            path.write_text(json.dumps(clean), encoding="utf-8")
+            result = self.command(ROOT / "github-operations/scripts/repo-protection-audit.py", "--from-file", path, "--strict")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_installer_is_dry_run_by_default(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.command(ROOT / "tools/install.py", "--destination", directory)
@@ -213,7 +252,7 @@ class PlatformTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             result = self.command(Path(directory)/"devops-platform-contracts/scripts/validate_platform.py")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            expected = f"{len(json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8-sig'))['profiles']['identity-directory'])}/21"
+            expected = f"{len(json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8-sig'))['profiles']['identity-directory'])}/22"
             self.assertIn(expected, result.stdout)
     def gate(self, request, directory, policy=None):
         path = Path(directory) / "operation.json"
@@ -307,6 +346,11 @@ class PlatformTests(unittest.TestCase):
             "cloudflare-dns-operations": "cloudflare-operations",
             "terraform-opentofu-plan-apply": "iac-operations",
             "immutable-artifact-promotion": "cicd-operations",
+            "github-branch-protection-management": "github-operations",
+            "github-environment-deployment-gates": "github-operations",
+            "github-actions-run-operations": "github-operations",
+            "github-release-operations": "github-operations",
+            "github-runner-trust-administration": "github-operations",
             "isolated-restore-testing": "data-resilience-operations",
             "cloud-provider-identification": "cloud-generic",
             "aws-account-discovery": "cloud-aws",
@@ -376,7 +420,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.3.0")
+                self.assertEqual(manifest["version"], "0.4.0")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)
