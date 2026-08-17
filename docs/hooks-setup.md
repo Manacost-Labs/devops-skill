@@ -37,7 +37,7 @@ runtimes that ignore the JSON body still block the call.
 
 | Command class | Decision |
 |---|---|
-| Provably read-only segments (`ls`, `cat`, `grep`, `systemctl status`, `kubectl get/describe/logs`, `terraform plan/validate/show`, `docker ps/inspect/logs`, `git status/log/diff`, `aws/gcloud/az/openstack` describe/list/get/show, plain `curl` GET probes, ...) | allow |
+| Provably read-only segments (`ls`, `cat`, `grep`, `systemctl status`, `kubectl get/describe/logs`, `terraform plan/validate/show`, `docker ps/inspect/logs`, `git status/log/diff`, `aws/gcloud/az/openstack` describe/list/get/show, `gh` view/list/checks and `gh api` without a method or body, plain `curl` GET probes, ...) | allow |
 | Registered platform scripts, verified by resolved path (validators, `operation_gate.py`, `resolve_capabilities.py`, `ledger_chain.py`, digest tools, preflight and verification scripts, the portfolio demo runner) | allow |
 | `python tools/devops_exec.py --operation <request> -- <command>` | allow only after the hook re-verifies that `change.plan_digest` equals the canonical digest of the exact wrapped command, the execution window is open, and `operation_gate.py` returns a fresh PASS for that request |
 | Mutating verbs (`terraform apply/destroy`, `kubectl apply/delete/patch/scale`, `docker compose up/down`, `systemctl restart/stop/disable`, `rm`, `dd`, `mkfs`, package installs, firewall changes, cloud create/update/delete, ...) | deny with the exact remediation |

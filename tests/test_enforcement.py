@@ -133,6 +133,37 @@ class HookTests(unittest.TestCase):
             self.assertEqual(decision, "allow", f"{command}: {reason}")
             self.assertEqual(returncode, 0, command)
 
+    def test_hook_allows_read_only_gh_commands(self):
+        for command in (
+            "gh pr view 4",
+            "gh pr checks 4",
+            "gh run list --limit 10",
+            "gh run view 12345",
+            "gh repo view Manacost-Labs/devops-skill",
+            "gh release list",
+            "gh workflow list",
+            "gh issue list",
+            "gh auth status",
+            "gh api repos/Manacost-Labs/devops-skill/branches/main/protection",
+        ):
+            returncode, decision, reason = self.run_hook(command)
+            self.assertEqual(decision, "allow", f"{command}: {reason}")
+            self.assertEqual(returncode, 0, command)
+
+    def test_hook_blocks_mutating_gh_commands(self):
+        for command in (
+            "gh pr merge 4 --rebase",
+            "gh workflow run deploy.yml",
+            "gh release create v1.0.0",
+            "gh secret set DEPLOY_KEY",
+            "gh repo delete Manacost-Labs/devops-skill",
+            "gh api -X DELETE repos/Manacost-Labs/devops-skill",
+            "gh api repos/Manacost-Labs/devops-skill/dispatches --method POST",
+            "gh api repos/Manacost-Labs/devops-skill -f name=renamed",
+            "gh api repos/Manacost-Labs/devops-skill --input payload.json",
+        ):
+            self.assert_blocked(command)
+
     def test_hook_allows_registered_platform_scripts_by_resolved_path(self):
         returncode, decision, reason = self.run_hook("python devops-platform-contracts/scripts/validate_platform.py")
         self.assertEqual(decision, "allow", reason)
