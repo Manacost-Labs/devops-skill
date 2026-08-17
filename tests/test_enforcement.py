@@ -6,6 +6,7 @@ from test_platform import NOW, operation
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 WRAPPER = ROOT / "tools" / "devops_exec.py"
+HOOK = ROOT / "tools" / "hooks" / "pretooluse_gate.py"
 
 
 def command_digest(argv):
@@ -96,6 +97,130 @@ class WrapperTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("BLOCKED", result.stdout)
         self.assertNotIn("should-not-run", result.stdout)
+
+
+class HookTests(unittest.TestCase):
+    def run_hook(self, command=None, payload=None, cwd=None):
+        if payload is None:
+            payload = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd or ROOT)}
+        result = subprocess.run([PYTHON, str(HOOK)], input=json.dumps(payload), capture_output=True, text=True, check=False)
+        body = json.loads(result.stdout)["hookSpecificOutput"]
+        return result.returncode, body["permissionDecision"], body["permissionDecisionReason"]
+
+    def assert_blocked(self, command):
+        returncode, decision, reason = self.run_hook(command)
+        self.assertEqual(decision, "deny", command)
+        self.assertNotEqual(returncode, 0, command)
+        self.assertIn("BLOCKED", reason, command)
+        return reason
+
+    def test_hook_allows_read_only_commands(self):
+        for command in (
+            "ls -la",
+            "cat /etc/os-release",
+            "systemctl status nginx",
+            "kubectl get pods -A",
+            "kubectl describe deployment api",
+            "terraform plan -input=false",
+            "docker ps",
+            "git status",
+            "aws ec2 describe-instances --region eu-central-1",
+            "gcloud compute instances list",
+            "az vm show --name web-1",
+            "cat access.log | grep 503 | wc -l",
+        ):
+            returncode, decision, reason = self.run_hook(command)
+            self.assertEqual(decision, "allow", f"{command}: {reason}")
+            self.assertEqual(returncode, 0, command)
+
+    def test_hook_allows_registered_platform_scripts_by_resolved_path(self):
+        returncode, decision, reason = self.run_hook("python devops-platform-contracts/scripts/validate_platform.py")
+        self.assertEqual(decision, "allow", reason)
+        self.assertEqual(returncode, 0)
+
+    def test_hook_blocks_lookalike_platform_script(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fake = Path(directory) / "validate_platform.py"
+            fake.write_text("print('fake')\n", encoding="utf-8")
+            returncode, decision, reason = self.run_hook("python validate_platform.py", cwd=directory)
+        self.assertEqual(decision, "deny", reason)
+
+    def test_hook_blocks_mutation_without_gate(self):
+        for command in (
+            "terraform apply -auto-approve",
+            "kubectl delete pod api-0",
+            "kubectl apply -f deployment.yaml",
+            "systemctl restart nginx",
+            "docker compose up -d",
+            "rm -rf /srv/data",
+            "apt-get install -y nginx",
+            "aws ec2 terminate-instances --instance-ids i-1",
+        ):
+            reason = self.assert_blocked(command)
+            self.assertIn("devops_exec.py", reason, command)
+
+    def test_hook_blocks_obfuscated_mutation(self):
+        for command in (
+            "bash -c 'terraform apply -auto-approve'",
+            "eval terraform apply",
+            "echo dGVycmFmb3JtIGFwcGx5 | base64 -d | sh",
+            "CMD='kubectl delete pod api-0'; $CMD",
+            "kubectl $VERB pod api-0",
+            "sh -c \"$(cat payload.txt)\"",
+        ):
+            self.assert_blocked(command)
+
+    def test_hook_blocks_unknown_and_redirected_commands(self):
+        self.assert_blocked("frobnicate --all")
+        self.assert_blocked("echo data > /etc/hosts")
+        self.assert_blocked("cat plan.txt\nterraform apply")
+
+    def test_hook_fails_closed_on_malformed_payload(self):
+        returncode, decision, reason = self.run_hook(payload={"tool_name": "Bash", "tool_input": {}})
+        self.assertEqual(decision, "deny", reason)
+        self.assertNotEqual(returncode, 0)
+
+    def test_hook_ignores_non_shell_tools(self):
+        returncode, decision, reason = self.run_hook(payload={"tool_name": "Read", "tool_input": {"file_path": "x"}})
+        self.assertEqual(decision, "allow", reason)
+        self.assertEqual(returncode, 0)
+
+    def wrapper_command(self, request, directory, inner):
+        request_path = Path(directory) / "operation.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        return (
+            f'python "{WRAPPER.as_posix()}" --operation "{request_path.as_posix()}" '
+            f"--policy default-policy.json --at {NOW} -- " + " ".join(inner)
+        )
+
+    def test_hook_allows_wrapper_with_fresh_gate_pass(self):
+        inner = ["hypothetical-mutator", "--switch", "release-2"]
+        with tempfile.TemporaryDirectory() as directory:
+            command = self.wrapper_command(bound_operation(inner), directory, inner)
+            returncode, decision, reason = self.run_hook(command)
+        self.assertEqual(decision, "allow", reason)
+        self.assertEqual(returncode, 0)
+        self.assertIn("gate PASS", reason)
+
+    def test_hook_blocks_wrapper_with_digest_mismatch(self):
+        approved = ["hypothetical-mutator", "--switch", "release-2"]
+        tampered = ["hypothetical-mutator", "--switch", "release-3"]
+        with tempfile.TemporaryDirectory() as directory:
+            command = self.wrapper_command(bound_operation(approved), directory, tampered)
+            returncode, decision, reason = self.run_hook(command)
+        self.assertEqual(decision, "deny", reason)
+        self.assertIn("digest", reason)
+
+    def test_hook_blocks_wrapper_when_gate_refuses(self):
+        inner = ["hypothetical-mutator", "--switch", "release-2"]
+        request = bound_operation(inner)
+        for approval in request["approvals"]:
+            approval["expires_at"] = "2026-08-17T10:05:00Z"
+        with tempfile.TemporaryDirectory() as directory:
+            command = self.wrapper_command(request, directory, inner)
+            returncode, decision, reason = self.run_hook(command)
+        self.assertEqual(decision, "deny", reason)
+        self.assertIn("gate", reason)
 
 
 if __name__ == "__main__":
