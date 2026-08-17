@@ -2,7 +2,7 @@
 
 **Portfolio project · release candidate 0.3.0**
 
-A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 20 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, containers, edge, delivery, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
+A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 21 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
 
 This project demonstrates system administration and DevOps engineering practices: decomposing operational ownership, classifying risk, planning recovery, constraining privileged changes, validating packages, and collecting verification evidence. It is not a certification, a managed service, or an autonomous administrator.
 
@@ -60,6 +60,7 @@ flowchart LR
 |---|---|---|
 | Control plane | `devops-platform-contracts`, `devops-core` | Policy, schemas, compatibility, operation gate, routing, evidence |
 | Hosts and workloads | `linux-operations`, `windows-server-operations`, `docker-operations`, `kubernetes-operations` | OS and workload lifecycle; Kubernetes is selected only when justified |
+| Directory identity | `identity-directory-operations` | AD DS, OUs, principals, group governance, GPO planning and staged rollout; not Entra, secrets, or local host administration |
 | Delivery and state | `iac-operations`, `cicd-operations`, `data-resilience-operations` | Reviewed plans, protected pipelines, restore-proven data operations |
 | Edge and networks | `network-edge-operations`, `cloudflare-operations`, `enterprise-networking` | DNS/TLS/HTTP, Cloudflare control plane, VPN/BGP/hybrid routing |
 | Cloud | `cloud-generic`, `cloud-aws`, `cloud-gcp`, `cloud-azure`, `cloud-selectel` | Provider discovery and bounded control-plane operations using current official docs |
@@ -76,6 +77,7 @@ Managed-service boundaries are normative in the [control-plane ownership matrix]
 | `core` | Planning, policy, validation, and safe handoff |
 | `web-linux` | Linux + Docker + HTTP edge + Cloudflare + reliability |
 | `hybrid-server` | Linux/Windows hosts + Docker + HTTP edge + reliability |
+| `identity-directory` | Active Directory and GPO work with Windows-host, privileged-access, and reliability handoffs |
 | `delivery` | IaC, CI/CD, and secret/access boundaries |
 | `data-safe` | Backup, restore, migration, reliability, and access controls |
 | `cloud-foundation` | Provider-neutral cloud foundation with IaC, edge, reliability, and access |
@@ -83,7 +85,7 @@ Managed-service boundaries are normative in the [control-plane ownership matrix]
 | `aws-platform`, `gcp-platform`, `azure-platform`, `selectel-platform` | Named provider plus IaC, CI/CD, containers, Kubernetes, data, network, access, and reliability handoffs |
 | `hybrid-network` | Linux/Windows endpoints plus HTTP edge, VPN/BGP/hybrid networking, access, and reliability |
 | `assurance` | Evidence-led security governance with access and reliability evidence sources |
-| `all` | All 20 modules, including named provider and enterprise packs |
+| `all` | All 21 modules, including directory identity, named provider, and enterprise packs |
 
 Profiles are dependency-closed and validated against the embedded release catalog. `all` is intentionally broad; `devops-core` still loads the smallest capability set for each operation.
 
@@ -102,7 +104,7 @@ python devops-platform-contracts/scripts/validate_platform.py
 python tools/install.py --profile web-linux
 ```
 
-A successful validation reports `20/20 compatible installed skills`. The installer then prints each proposed destination and ends with `Dry-run only`. Review the [architecture](docs/architecture.md) next, or run the [shipped synthetic portfolio demo](examples/portfolio-demo/README.md) without connecting to a real target.
+A successful validation reports `21/21 compatible installed skills`. The installer then prints each proposed destination and ends with `Dry-run only`. Review the [architecture](docs/architecture.md) next, or run the [shipped synthetic portfolio demo](examples/portfolio-demo/README.md) without connecting to a real target.
 
 `tools/install.py` is dry-run by default. `--apply` writes to the selected skills directory, and `--apply --force` can replace existing skills; neither option is part of this safe evaluation.
 

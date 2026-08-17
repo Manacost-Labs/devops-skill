@@ -6,7 +6,8 @@
     "devops-platform-contracts": {"version": "0.3.0", "role": "policy-and-validation"},
     "devops-core": {"version": "0.3.0", "role": "coordinator"},
     "linux-operations": {"version": "0.2.0", "role": "executor"},
-    "windows-server-operations": {"version": "0.2.0", "role": "executor"},
+    "windows-server-operations": {"version": "0.3.0", "role": "executor"},
+    "identity-directory-operations": {"version": "0.3.0", "role": "executor"},
     "docker-operations": {"version": "0.2.0", "role": "executor"},
     "network-edge-operations": {"version": "0.2.0", "role": "executor"},
     "reliability-operations": {"version": "0.2.0", "role": "executor"},
@@ -45,6 +46,14 @@
       "windows-server-operations",
       "docker-operations",
       "network-edge-operations",
+      "reliability-operations"
+    ],
+    "identity-directory": [
+      "devops-platform-contracts",
+      "devops-core",
+      "windows-server-operations",
+      "identity-directory-operations",
+      "secrets-access-operations",
       "reliability-operations"
     ],
     "delivery": [
@@ -161,6 +170,7 @@
       "devops-core",
       "linux-operations",
       "windows-server-operations",
+      "identity-directory-operations",
       "docker-operations",
       "network-edge-operations",
       "reliability-operations",

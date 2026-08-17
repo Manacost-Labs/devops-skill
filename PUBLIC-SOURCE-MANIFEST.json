@@ -85,8 +85,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "sha256:99add28dff3199581edf264a67dcec85f6d6916cc495f27f7f6391f71b72d19d",
-      "size": 11544
+      "sha256": "sha256:229bd9e6238f53f0a49d58b02799e22875ada9becbc739e02cebe434b1a0a9bc",
+      "size": 11888
     },
     {
       "path": "SECURITY.md",
@@ -100,8 +100,8 @@
     },
     {
       "path": "catalog.json",
-      "sha256": "sha256:03aca7c9ded4d6506cf601623708ddd0226c0dad71a81728dd101f9dd9d8c142",
-      "size": 5544
+      "sha256": "sha256:b784828c0ae754be4bac9b7fb77fc520260491b61baaa2197b6f565384a4a987",
+      "size": 5893
     },
     {
       "path": "cicd-operations/SKILL.md",
@@ -300,13 +300,13 @@
     },
     {
       "path": "devops-core/references/capability-routing.md",
-      "sha256": "sha256:57496ffb3caf7bd313d474d49958164ad7c990c53bbd42f1417b22701da1bab6",
-      "size": 3427
+      "sha256": "sha256:f20149496123aee2bceb8dd6cf9c5372fb16336551650151417ce4d91f5b7c99",
+      "size": 3646
     },
     {
       "path": "devops-core/references/control-plane-ownership.md",
-      "sha256": "sha256:73e19759752bd956245f023187f046801604c37d27d01597dae7fa8b1de5097b",
-      "size": 4029
+      "sha256": "sha256:61dd41229c5ffa4fb862dc5828a614da5eebe875f1e0babc76c889f37d443770",
+      "size": 4567
     },
     {
       "path": "devops-core/references/enterprise-change-control.md",
@@ -375,8 +375,8 @@
     },
     {
       "path": "devops-platform-contracts/catalog.json",
-      "sha256": "sha256:03aca7c9ded4d6506cf601623708ddd0226c0dad71a81728dd101f9dd9d8c142",
-      "size": 5544
+      "sha256": "sha256:b784828c0ae754be4bac9b7fb77fc520260491b61baaa2197b6f565384a4a987",
+      "size": 5893
     },
     {
       "path": "devops-platform-contracts/module.yaml",
@@ -495,8 +495,8 @@
     },
     {
       "path": "docs/architecture.md",
-      "sha256": "sha256:a8276a5646d525bb9e755463afdb94b033a850935b5578a04c4a3a0851389c1d",
-      "size": 7052
+      "sha256": "sha256:af1278513332df438ef232fe7dcbf803571b65664c3baee12422d36741a90e4e",
+      "size": 7259
     },
     {
       "path": "docs/control-crosswalk.md",
@@ -622,6 +622,26 @@
       "path": "iac-operations/references/terraform-opentofu.md",
       "sha256": "sha256:775f455aae289a66f5c5d9c188e50e75c8d6f38c4504fa9d28e74ccd2982d0c9",
       "size": 2807
+    },
+    {
+      "path": "identity-directory-operations/SKILL.md",
+      "sha256": "sha256:84dfee834ae5640bf5b53e1fac5d19e2438f0c221672b04223b8c2c48f08104c",
+      "size": 5829
+    },
+    {
+      "path": "identity-directory-operations/agents/openai.yaml",
+      "sha256": "sha256:b506fefe393f8d36db61701508cd3d2c2f5c78cb09a788a91d6dc23319c0f6fc",
+      "size": 223
+    },
+    {
+      "path": "identity-directory-operations/module.yaml",
+      "sha256": "sha256:197fe7f77f7637367aa4a17c5fb4018716813df6aa0b280b2f4cd4dd990b4a99",
+      "size": 3802
+    },
+    {
+      "path": "identity-directory-operations/references/ad-gpo-safety.md",
+      "sha256": "sha256:16f26fbd118b5547dbb2ae91d7d241642cbec1a8d98776e8d470e1f2804711e9",
+      "size": 2379
     },
     {
       "path": "kubernetes-operations/SKILL.md",
@@ -815,8 +835,8 @@
     },
     {
       "path": "tests/test_platform.py",
-      "sha256": "sha256:7e673ca0d2eb24d5b5216e951bfaecc81a9c0c2ce4339051a423f018d96c4c79",
-      "size": 31534
+      "sha256": "sha256:07235c6b4e88c48d74ff73e15666e2857cf2a8d6e4776dff14738a1bb54ccad7",
+      "size": 32639
     },
     {
       "path": "tools/build_public_source.py",
@@ -840,8 +860,8 @@
     },
     {
       "path": "windows-server-operations/SKILL.md",
-      "sha256": "sha256:08faee474c32c7f67940401857f277b68f893d3833a35bae087da47b2e2fbb2c",
-      "size": 3192
+      "sha256": "sha256:40a34b9a74397b699f357877cd1ccf978b916b91c73b76e8d815b03eaf871fc2",
+      "size": 3264
     },
     {
       "path": "windows-server-operations/agents/openai.yaml",
@@ -850,13 +870,13 @@
     },
     {
       "path": "windows-server-operations/module.yaml",
-      "sha256": "sha256:c2ab85f3f5384d7c8d94bbbe9a9edd789cf9346a55fb7a748328171d809bfb70",
+      "sha256": "sha256:bd12c8f497a05352e12a6bc3aee496763b058378fa15e300b69993f7bd418a8d",
       "size": 601
     },
     {
       "path": "windows-server-operations/references/module-handoffs.md",
-      "sha256": "sha256:e9c88c711c6489cf4b90120f1920c939e41d5614b28b0fc4ebdfdf57329f6874",
-      "size": 505
+      "sha256": "sha256:e92d615c1b89bfbe22a9097be284531b798f362325454385fec5b89dc144aa88",
+      "size": 566
     },
     {
       "path": "windows-server-operations/references/services-events-recovery.md",

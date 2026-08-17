@@ -6,6 +6,7 @@ Select the smallest installed set that covers the confirmed task. Read a module 
 |---|---|
 | Linux hosts, SSH, systemd, ports, disks, logs | `linux-operations` |
 | Windows Server, WinRM/RDP, Windows services, Event Logs, Windows Firewall | `windows-server-operations` |
+| Active Directory DS, OUs, users, computers, groups, delegated administration, GPOs and policy links | `identity-directory-operations`; add Windows, access, reliability or Azure modules only for their owned boundary |
 | Docker, Compose, images, registries, volumes | `docker-operations` |
 | DNS, TLS, HTTP, reverse proxy, origin reachability | `network-edge-operations` |
 | Cloudflare DNS, WAF, Tunnel, Access, Workers | `cloudflare-operations` |
