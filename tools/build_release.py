@@ -85,7 +85,7 @@ def safe_tree_files(folder: Path) -> list[Path]:
             path = current / name
             require_regular_file(path, ROOT)
             files.append(path)
-    return sorted(files)
+    return sorted(files, key=lambda path: path.relative_to(ROOT).as_posix())
 
 
 def safe_read(path: Path) -> bytes:
@@ -120,7 +120,7 @@ def files_for_release(catalog: dict) -> list[Path]:
             if path.suffix.lower() not in ALLOWED_SUFFIXES and path.name not in {"host-audit"}:
                 raise ValueError(f"unexpected runtime file type: {path.relative_to(ROOT)}")
             files.append(path)
-    return files
+    return sorted(files, key=lambda path: path.relative_to(ROOT).as_posix())
 
 
 def main() -> int:
@@ -147,6 +147,7 @@ def main() -> int:
                 if pattern.search(data): raise ValueError(f"possible {label} in release file {relative}")
             payloads[relative] = data
             entries.append({"path": relative, "sha256": digest(data), "size": len(data)})
+        entries.sort(key=lambda item: item["path"])
         manifest = {
             "schema_version": "1.0",
             "name": catalog["name"],
@@ -162,11 +163,13 @@ def main() -> int:
         with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_STORED) as archive:
             for relative, data in sorted(payloads.items()):
                 info = zipfile.ZipInfo(relative, EPOCH)
+                info.create_system = 3
                 mode = 0o100755 if Path(relative).name == "host-audit" else 0o100644
                 info.external_attr = mode << 16
                 info.compress_type = zipfile.ZIP_STORED
                 archive.writestr(info, data)
             info = zipfile.ZipInfo("RELEASE-MANIFEST.json", EPOCH)
+            info.create_system = 3
             info.external_attr = 0o100644 << 16
             info.compress_type = zipfile.ZIP_STORED
             archive.writestr(info, manifest_bytes)

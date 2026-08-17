@@ -105,6 +105,7 @@ def main() -> int:
                 file_type = (info.external_attr >> 16) & 0o170000
                 permissions = (info.external_attr >> 16) & 0o777
                 expected_permissions = 0o755 if PurePosixPath(info.filename).name in SPECIAL_SKILL_FILES else 0o644
+                if info.create_system != 3: raise ValueError(f"archive member creator system is non-canonical: {info.filename}")
                 if info.is_dir() or file_type != 0o100000: raise ValueError(f"archive contains a non-regular file: {info.filename}")
                 if permissions != expected_permissions: raise ValueError(f"archive member permissions are invalid: {info.filename}")
                 if info.compress_type != zipfile.ZIP_STORED: raise ValueError(f"archive member compression is non-canonical: {info.filename}")
