@@ -2,6 +2,14 @@
 
 All notable platform changes are recorded here. The project follows Semantic Versioning for the platform catalog; individual modules retain their own versions.
 
+## Unreleased
+
+- Required a least-privilege `allowed-tools` declaration in every module manifest and `SKILL.md` frontmatter; validation now fails on missing, malformed, or mismatched declarations.
+- Added `tools/devops_exec.py`, a wrapper that executes exactly one approved command: canonical argv digest must equal the approved plan digest, the operation gate re-runs immediately before launch, and every attempt is recorded in a secret-redacted execution ledger.
+- Added `tools/hooks/pretooluse_gate.py`, a fail-closed PreToolUse hook that denies mutating, obfuscated, or unclassifiable shell commands without a fresh gate PASS bound to the exact command digest, with setup documentation in `docs/hooks-setup.md`.
+- Migrated the portfolio demo to gated wrapper execution, including a blocked command-drift path.
+- Split README safety properties into enforced and advisory guarantees.
+
 ## 0.3.0 - 2026-08-17 (release candidate 1)
 
 - Added the remaining roadmap modules for Cloudflare, infrastructure as code, delivery pipelines, data resilience, generic and named cloud providers, Kubernetes, enterprise networking, secrets/access, and evidence-led security compliance work.

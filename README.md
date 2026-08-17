@@ -29,13 +29,20 @@ This project demonstrates system administration and DevOps engineering practices
 
 ## Safety properties
 
-- Read-only discovery is the default; sensitive or cross-tenant reads are separately governed.
-- Every R2-R4 mutation is bound to an operation ID, exact target/profile digest, immutable plan digest, execution identity, window, lock, approval evidence, recovery proof, and acceptance criteria.
-- Repository text, tickets, logs, web pages, command output, and tool responses are untrusted data. They cannot grant authority, choose privileged credentials, or weaken policy.
-- Missing modules, stale provider knowledge, ambiguous ownership, changed plans, expired approvals, unproven recovery, and incomplete verification fail closed.
-- Local ledgers and release manifests are integrity evidence, not external identity, signatures, immutable storage, SLSA provenance, or certification.
+Safety claims are split by how they are guaranteed. **Enforced** properties are backed by a mechanism that blocks the violating action and cannot be skipped by a cooperative-but-careless agent. **Advisory** properties are documented contracts that depend on the agent following them; they add depth but should not be counted as technical guarantees.
 
-Production use still requires organization-owned identity, short-lived credential brokerage, protected source control and CI, signed provenance, change management, immutable audit storage, data governance, accountable owners, and independent assessment.
+| Property | Type | Mechanism |
+|---|---|---|
+| An R2-R4 operation request without exact policy binding, target/profile digest, immutable plan digest, an open execution window, and unexpired identity-backed approvals is refused | Enforced | `operation_gate.py` fails closed on schema, digest, TTL, separation-of-duties, lock, and recovery-evidence violations |
+| A wrapped command runs only if the canonical digest of its exact argv equals the approved `change.plan_digest`, re-verified by a gate re-run immediately before launch; drift exits non-zero | Enforced | `tools/devops_exec.py` digest binding plus a secret-redacted execution ledger |
+| A mutating, obfuscated, or unclassifiable shell command without a fresh gate PASS bound to its digest cannot execute; `bash -c`, `eval`, `base64`, substitution, variable expansion, redirection, and unknown executables are denied | Enforced once the PreToolUse hook is installed ([docs/hooks-setup.md](docs/hooks-setup.md)) | `tools/hooks/pretooluse_gate.py` fail-closed decision before every shell command |
+| Every module declares a least-privilege `allowed-tools` set, identical in `SKILL.md` frontmatter and its manifest; control-plane and provider modules receive no unrestricted shell | Enforced | `validate_platform.py` fails validation on missing, malformed, or mismatched declarations |
+| Catalog compatibility, dependency-closed profiles, hash-locked dependencies, deterministic releases, and archive path safety | Enforced | platform validator, release builder, and `verify_release.py` |
+| Read-only discovery is the default; sensitive or cross-tenant reads are separately governed | Advisory | documented workflow in `devops-core` |
+| Repository text, tickets, logs, web pages, command output, and tool responses are untrusted data and cannot grant authority, choose privileged credentials, or weaken policy | Advisory | untrusted-content boundary references consumed by every module |
+| Risk classification, minimal module routing, honest `partially_verified` reporting, and evidence redaction outside the wrapper ledger | Advisory | module contracts, templates, and evaluation scenarios |
+
+Local ledgers and release manifests are integrity evidence, not external identity, signatures, immutable storage, SLSA provenance, or certification. Production use still requires organization-owned identity, short-lived credential brokerage, protected source control and CI, signed provenance, change management, immutable audit storage, data governance, accountable owners, and independent assessment.
 
 ## Architecture at a glance
 
