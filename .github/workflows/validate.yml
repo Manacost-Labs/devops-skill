@@ -49,7 +49,7 @@ jobs:
         run: python -m unittest discover -s tests -v
 
       - name: Build deterministic release
-        run: python tools/build_release.py --output dist/devops-skill-platform-0.3.0.zip
+        run: python tools/build_release.py --output dist/devops-skill-platform-0.4.0.zip
 
       - name: Verify release contents
-        run: python tools/verify_release.py dist/devops-skill-platform-0.3.0.zip
+        run: python tools/verify_release.py dist/devops-skill-platform-0.4.0.zip
