@@ -1,6 +1,7 @@
 ---
 name: identity-directory-operations
 description: Safely assess, plan, provision, change, and recover on-premises Active Directory Domain Services and Group Policy. Use for AD DS discovery, OUs, users, computers, groups, delegated administration, privileged-group review, GPO inventory, GPO backup, security filtering, linking, staged policy rollout, and policy rollback. Do not use for Entra, cloud IAM, local Windows accounts, literal secrets, or unbounded directory changes.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Directory Identity Operations

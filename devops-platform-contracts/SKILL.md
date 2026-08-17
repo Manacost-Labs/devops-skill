@@ -1,6 +1,7 @@
 ---
 name: devops-platform-contracts
 description: Maintain shared DevOps skill-platform policies, capability contracts, compatibility rules, schemas, and evaluation scenarios. Use when creating, validating, versioning, packaging, installing, or reviewing DevOps modules and their cross-module safety behavior.
+allowed-tools: Read, Grep, Glob, Bash(python devops-platform-contracts/scripts/validate_platform.py:*), Bash(python devops-platform-contracts/scripts/operation_gate.py:*), Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*), Bash(python devops-platform-contracts/scripts/ledger_chain.py:*)
 ---
 
 # DevOps Platform Contracts

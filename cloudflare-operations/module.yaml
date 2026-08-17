@@ -1,6 +1,11 @@
 name: cloudflare-operations
 version: 0.3.0
 kind: executor
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(curl:*)
 requires:
   - devops-platform-contracts >= 0.3.0
   - devops-core >= 0.3.0

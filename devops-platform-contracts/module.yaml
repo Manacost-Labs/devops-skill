@@ -1,6 +1,14 @@
 name: devops-platform-contracts
 version: 0.3.0
 kind: policy-and-validation
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(python devops-platform-contracts/scripts/validate_platform.py:*)
+  - Bash(python devops-platform-contracts/scripts/operation_gate.py:*)
+  - Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
+  - Bash(python devops-platform-contracts/scripts/ledger_chain.py:*)
 capabilities:
   - module-registry
   - compatibility-validation

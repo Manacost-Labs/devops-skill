@@ -1,6 +1,7 @@
 ---
 name: cloud-selectel
 description: Assess, plan, execute, and verify bounded Selectel cloud control-plane operations under contract v2. Use for account and project discovery, IAM, cloud-server networking, compute, Managed Kubernetes control planes, Managed Databases routing, cost and quota impact, rollback, and evidence-driven production change handoff.
+allowed-tools: Read, Grep, Glob, Bash(openstack:*)
 ---
 
 # Selectel Cloud Operations

@@ -63,6 +63,34 @@ class PlatformTests(unittest.TestCase):
                 manifest = yaml.safe_load((ROOT / name / "module.yaml").read_text(encoding="utf-8-sig"))
                 dependencies = {item.split()[0] for item in manifest.get("requires", [])}
                 self.assertTrue(dependencies <= set(names), f"{profile} omits dependencies for {name}")
+    def test_every_module_declares_allowed_tools(self):
+        validator_path = ROOT / "devops-platform-contracts/scripts/validate_platform.py"
+        spec = importlib.util.spec_from_file_location("platform_validator_tools", validator_path)
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
+        read_only_modules = {
+            "devops-platform-contracts", "devops-core", "cloud-generic", "cloud-aws",
+            "cloud-gcp", "cloud-azure", "cloud-selectel", "cloudflare-operations",
+        }
+        for name in catalog["skills"]:
+            manifest = yaml.safe_load((ROOT / name / "module.yaml").read_text(encoding="utf-8-sig"))
+            tools = manifest.get("allowed_tools")
+            self.assertIsInstance(tools, list, name)
+            self.assertTrue(tools, name)
+            self.assertEqual(len(tools), len(set(tools)), name)
+            self.assertTrue(all(module.TOOL.fullmatch(tool) for tool in tools), name)
+            metadata = yaml.safe_load(module.FRONTMATTER.match((ROOT / name / "SKILL.md").read_text(encoding="utf-8-sig")).group(1))
+            self.assertEqual([item.strip() for item in metadata["allowed-tools"].split(",")], tools, name)
+            if name in read_only_modules:
+                for unbounded in ("Bash", "Write", "Edit"):
+                    self.assertNotIn(unbounded, tools, f"{name} must not grant unrestricted {unbounded}")
+        self.assertIn("allowed_tools", module.REQUIRED)
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / "SKILL.md").write_text("---\nname: sample\ndescription: sample module\n---\n\n# Sample\n", encoding="utf-8")
+            error = module.validate_skill("sample", folder, ["Read"])
+            self.assertIsNotNone(error)
+            self.assertIn("allowed-tools", error)
     def test_fast_moving_modules_declare_current_official_sources(self):
         expected = {
             "cloudflare-operations": {"developers.cloudflare.com"},

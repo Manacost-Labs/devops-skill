@@ -11,16 +11,17 @@ ROOT = PACKAGE_ROOT.parent
 SOURCE_LAYOUT = (ROOT / "catalog.json").is_file()
 CATALOG_PATH = ROOT / "catalog.json" if SOURCE_LAYOUT else PACKAGE_ROOT / "catalog.json"
 SECRET_KEYS = {"token", "password", "secret", "private_key", "private-key", "api_key", "api-key"}
-REQUIRED = {"name": str, "version": str, "kind": str, "capabilities": list}
+REQUIRED = {"name": str, "version": str, "kind": str, "capabilities": list, "allowed_tools": list}
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 REQ = re.compile(r"^([a-z0-9-]+)(?:\s*(>=|==)\s*(\d+\.\d+\.\d+))?$")
 NAME = re.compile(r"^[a-z0-9-]{1,63}$")
 TOKEN = re.compile(r"^[a-z0-9-]+$")
+TOOL = re.compile(r"^[A-Z][A-Za-z]*(\([^(),]+\))?$")
 POLICY_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,79}$")
 LOCKED_REQUIREMENT = re.compile(r"^[A-Za-z0-9_.-]+==[^\s]+(?:\s+--hash=sha256:[0-9a-f]{64})+$")
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 RESOURCE_LINK = re.compile(r"`((?:references|scripts|templates)/[^`\s]+)`")
-MANIFEST_KEYS = {"name", "version", "kind", "requires", "capabilities", "risk_domains", "platforms", "provides", "source_freshness"}
+MANIFEST_KEYS = {"name", "version", "kind", "requires", "capabilities", "allowed_tools", "risk_domains", "platforms", "provides", "source_freshness"}
 CATALOG_KEYS = {"name", "version", "contract_version", "skills", "profiles"}
 SKILL_META_KEYS = {"version", "role"}
 KINDS = {"coordinator", "executor", "policy-and-validation"}
@@ -83,15 +84,18 @@ def validate_freshness(name, data):
         if any(source not in sources for source in mapped_sources):
             return f"{name} capability {capability} references an undeclared official source"
     return None
-def validate_skill(name, folder):
+def validate_skill(name, folder, allowed_tools):
     skill_path = folder / "SKILL.md"
     text = skill_path.read_text(encoding="utf-8-sig")
     if "\r" in text: return f"{name} SKILL.md contains stray CR characters"
     match = FRONTMATTER.match(text)
     if not match: return f"{name} SKILL.md has invalid frontmatter"
     metadata = yaml.safe_load(match.group(1))
-    if not isinstance(metadata, dict) or set(metadata) != {"name", "description"}: return f"{name} SKILL.md frontmatter must contain only name and description"
+    if not isinstance(metadata, dict) or set(metadata) != {"name", "description", "allowed-tools"}: return f"{name} SKILL.md frontmatter must contain only name, description, and allowed-tools"
     if metadata.get("name") != name or not isinstance(metadata.get("description"), str): return f"{name} SKILL.md metadata mismatch"
+    declared = metadata.get("allowed-tools")
+    if not isinstance(declared, str) or not declared.strip(): return f"{name} SKILL.md must declare a non-empty allowed-tools list"
+    if [item.strip() for item in declared.split(",")] != allowed_tools: return f"{name} SKILL.md allowed-tools must match the manifest allowed_tools exactly"
     if len(text.splitlines()) > 500: return f"{name} SKILL.md exceeds 500 lines"
     for relative in RESOURCE_LINK.findall(text):
         clean = relative.rstrip(".,;:)")
@@ -182,7 +186,10 @@ def main() -> int:
         if data["name"] != name or not NAME.fullmatch(data["name"]) or version is None: return fail(f"invalid name/version for {name}")
         if data["kind"] not in KINDS or data["kind"] != meta["role"]: return fail(f"catalog/module role mismatch for {name}")
         if data["version"] != meta.get("version"): return fail(f"catalog/module version mismatch for {name}")
-        skill_error = validate_skill(name, folder)
+        tools = data["allowed_tools"]
+        if not tools or any(not isinstance(value, str) or not TOOL.fullmatch(value) for value in tools): return fail(f"{name} allowed_tools must be non-empty valid tool declarations")
+        if len(tools) != len(set(tools)): return fail(f"{name} allowed_tools contains duplicates")
+        skill_error = validate_skill(name, folder, tools)
         if skill_error: return fail(skill_error)
         freshness_error = validate_freshness(name, data)
         if freshness_error: return fail(freshness_error)

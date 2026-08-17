@@ -1,6 +1,7 @@
 ---
 name: network-edge-operations
 description: Safely diagnose, design, change, verify, and roll back service paths involving DNS, TLS, HTTP(S), public ports, reverse proxies, and upstream connectivity. Use for Caddy, Nginx, Traefik, redirects, certificates, DNS resolution, 502/504 errors, or origin exposure.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Network Edge Operations

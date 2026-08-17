@@ -1,6 +1,7 @@
 ---
 name: security-compliance-operations
 description: Build evidence-led security governance for threat assessment, control mapping, vulnerability ownership, findings, and time-bounded exceptions. Use for security reviews, audit evidence plans, control effectiveness checks, remediation ownership, compensating controls, and privacy-aware reporting without claiming certification or legal compliance.
+allowed-tools: Read, Grep, Glob, Write, Edit
 ---
 
 # Security Governance Operations

@@ -1,6 +1,7 @@
 ---
 name: cloud-generic
 description: Assess, bound, and route cloud operations without assuming a provider implementation. Use for unfamiliar or unsupported clouds, multi-cloud intake, provider identification, read-only scope inventory, contract-v2 change planning, and explicit handoff when no installed provider pack safely owns the requested mutation.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Generic Cloud Operations

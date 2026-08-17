@@ -1,6 +1,7 @@
 ---
 name: cloud-azure
 description: Assess, plan, execute, and verify bounded Microsoft Azure control-plane operations under contract v2. Use for tenant and subscription discovery, Azure RBAC, virtual networking, virtual machines, managed container control planes, managed database routing, cost and quota impact, rollback, and evidence-driven production change handoff.
+allowed-tools: Read, Grep, Glob, Bash(az:*)
 ---
 
 # Azure Cloud Operations

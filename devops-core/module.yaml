@@ -1,6 +1,14 @@
 name: devops-core
 version: 0.3.0
 kind: coordinator
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(python devops-core/scripts/profile_digest.py:*)
+  - Bash(python devops-core/scripts/validate_contracts.py:*)
+  - Bash(python devops-platform-contracts/scripts/operation_gate.py:*)
+  - Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
 capabilities:
   - task-normalization
   - risk-classification

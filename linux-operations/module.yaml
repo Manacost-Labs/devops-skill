@@ -1,6 +1,13 @@
 name: linux-operations
 version: 0.2.0
 kind: executor
+allowed_tools:
+  - Read
+  - Grep
+  - Glob
+  - Write
+  - Edit
+  - Bash
 requires:
   - devops-platform-contracts >= 0.2.0
   - devops-core >= 0.2.0
