@@ -482,7 +482,9 @@ class PlatformTests(unittest.TestCase):
         self.assertTrue({
             "terraform-saved-plan-substitution", "cicd-untrusted-production-runner", "cloudflare-origin-exposure",
             "postgres-restore-data-egress", "cloud-cross-tenant", "provider-source-stale", "kubernetes-context-drift",
-            "bgp-prefix-leak", "literal-secret-request", "compliance-certification-overclaim"
+            "bgp-prefix-leak", "literal-secret-request", "compliance-certification-overclaim",
+            "github-pr-comment-merge-injection", "github-workflow-log-disable-protection",
+            "github-api-fake-approval", "github-release-retag-substitution"
         } <= set(ids))
     def test_http_tools_block_loopback_without_override(self):
         result = self.command(ROOT / "network-edge-operations/scripts/http-path-check.py", "http://127.0.0.1/")
