@@ -28,6 +28,7 @@ ROOT_FILES = {
 }
 TOOL_FILES = {
     "tools/devops_exec.py",
+    "tools/devops_plan.py",
     "tools/hooks/pretooluse_gate.py",
     "tools/install.py",
     "tools/verify_release.py",

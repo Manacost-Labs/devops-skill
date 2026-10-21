@@ -1,0 +1,19 @@
+{
+  "name": "manacost-devops",
+  "owner": {
+    "name": "Manacost Labs",
+    "url": "https://github.com/Manacost-Labs"
+  },
+  "description": "Bounded, evidence-driven DevOps skills for agent-operated infrastructure work.",
+  "plugins": [
+    {
+      "name": "devops-skill-platform",
+      "source": "./",
+      "description": "Composable DevOps skills with a fail-closed change-control contract. Command execution enforcement is opt-in: see docs/hooks-setup.md.",
+      "version": "0.4.0",
+      "author": {
+        "name": "Manacost Labs"
+      }
+    }
+  ]
+}

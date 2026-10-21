@@ -27,11 +27,12 @@ ROOT_FILES = {
     "catalog.json",
     "requirements.txt",
 }
-PUBLIC_TREES = {".github", "docs", "evaluations", "examples", "tests"}
+PUBLIC_TREES = {".claude-plugin", ".github", "docs", "evaluations", "examples", "tests"}
 PUBLIC_TOOLS = {
     "tools/build_public_source.py",
     "tools/build_release.py",
     "tools/devops_exec.py",
+    "tools/devops_plan.py",
     "tools/hooks/pretooluse_gate.py",
     "tools/install.py",
     "tools/verify_release.py",
