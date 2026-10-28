@@ -43,6 +43,8 @@ runtimes that ignore the JSON body still block the call.
 | Mutating verbs (`terraform apply/destroy`, `kubectl apply/delete/patch/scale`, `docker compose up/down`, `systemctl restart/stop/disable`, `rm`, `dd`, `mkfs`, package installs, firewall changes, cloud create/update/delete, ...) | deny with the exact remediation |
 | Obfuscation: `bash -c`, `sh -c`, `eval`, `xargs`, `env` wrappers, `base64`, command substitution `$(...)`, backticks, variable expansion `$VAR`, multi-line commands, redirections, unknown executables | deny (fail closed) |
 
+**Production clock rule:** The protected `PreToolUse` hook always evaluates the real current UTC time. It rejects the `--at` flag on any wrapped command, even if the direct CLI accepts that flag for isolated, deterministic tests. This prevents an operator or agent from passing a historical time to revalidate an expired approval or execution window. Never run live infrastructure mutations outside the configured hook and approved execution path.
+
 The canonical command digest is `sha256` over the JSON encoding of the exact argv
 list, computed identically by the hook and by `tools/devops_exec.py`. Approving a
 plan therefore approves one exact command, not a family of similar commands.
