@@ -2,3 +2,6 @@
 # Exact rule/path/commit fingerprints only; any new leaked token will still fail CI.
 cbdbd50ad8f6505d7fce671fc0ade21a51f1325e:tests/test_enforcement.py:generic-api-key:81
 tests/test_enforcement.py:generic-api-key:82
+
+# Synthetic value accidentally repeated in the first baseline comment (historical commit only).
+6072fca105cc61745d98529694625af1e32332cd:.gitleaksignore:generic-api-key:1
