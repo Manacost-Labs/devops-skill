@@ -294,7 +294,7 @@ def verify_wrapper(argv: list[str], cwd: Path) -> tuple[bool, str]:
             return False, f"wrapper flag '{flag}' is malformed"
         values[flag] = flags[index + 1]
         index += 2
-    unknown = set(values) - {"--operation", "--policy", "--at", "--ledger", "--timeout-seconds"}
+    unknown = set(values) - {"--operation", "--policy", "--ledger", "--timeout-seconds"}
     if unknown:
         return False, "wrapper invocation carries unknown flags: " + ", ".join(sorted(unknown))
     if "--operation" not in values:
@@ -315,14 +315,13 @@ def verify_wrapper(argv: list[str], cwd: Path) -> tuple[bool, str]:
     execution = request.get("execution")
     if not isinstance(execution, dict):
         return False, "wrapper operation request has no execution window"
-    now = parse_rfc3339(values["--at"]) if "--at" in values else datetime.now(timezone.utc)
+    # The protected hook must use the real UTC clock; --at is for isolated CLI tests only.
+    now = datetime.now(timezone.utc)
     window_start = parse_rfc3339(str(execution.get("window_start")))
     window_end = parse_rfc3339(str(execution.get("window_end")))
     if not window_start <= now <= window_end:
         return False, "execution window is not currently open"
     gate_arguments = [sys.executable, str(GATE), "--request", str(operation_path), "--policy", values.get("--policy", "default-policy.json")]
-    if "--at" in values:
-        gate_arguments += ["--at", values["--at"]]
     gate = subprocess.run(gate_arguments, capture_output=True, text=True, check=False)
     if gate.returncode != 0 or not gate.stdout.startswith("ALLOWED:"):
         return False, "operation gate did not return a fresh PASS: " + (gate.stdout + gate.stderr).strip()[:400]
