@@ -1,5 +1,6 @@
 from __future__ import annotations
 import hashlib, json, subprocess, sys, tempfile, unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from test_platform import NOW, operation
 
@@ -338,12 +339,21 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decision, "allow", reason)
         self.assertEqual(returncode, 0)
 
-    def wrapper_command(self, request, directory, inner):
+    def wrapper_command(self, request, directory, inner, refresh_approvals=True):
+        # Hook authorization must be evaluated with the real wall clock, never --at.
+        now = datetime.now(timezone.utc)
+        stamp = lambda offset: (now + timedelta(minutes=offset)).isoformat().replace("+00:00", "Z")
+        request["execution"].update({
+            "requested_at": stamp(-20), "window_start": stamp(-10), "window_end": stamp(10),
+        })
+        if refresh_approvals:
+            for approval in request["approvals"]:
+                approval.update({"approved_at": stamp(-5), "expires_at": stamp(10)})
         request_path = Path(directory) / "operation.json"
         request_path.write_text(json.dumps(request), encoding="utf-8")
         return (
             f'python "{WRAPPER.as_posix()}" --operation "{request_path.as_posix()}" '
-            f"--policy default-policy.json --at {NOW} -- " + " ".join(inner)
+            "--policy default-policy.json -- " + " ".join(inner)
         )
 
     def test_hook_allows_wrapper_with_fresh_gate_pass(self):
@@ -354,6 +364,18 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decision, "allow", reason)
         self.assertEqual(returncode, 0)
         self.assertIn("gate PASS", reason)
+
+    def test_hook_rejects_caller_supplied_time_override(self):
+        inner = ["hypothetical-mutator", "--switch", "release-2"]
+        with tempfile.TemporaryDirectory() as directory:
+            command = self.wrapper_command(bound_operation(inner), directory, inner)
+            forged = command.replace("--policy default-policy.json -- ",
+                                     "--policy default-policy.json --at 2026-08-17T10:15:00Z -- ")
+            self.assertNotEqual(forged, command)
+            returncode, decision, reason = self.run_hook(forged)
+        self.assertNotEqual(returncode, 0)
+        self.assertEqual(decision, "deny")
+        self.assertIn("--at", reason)
 
     def test_hook_blocks_wrapper_with_digest_mismatch(self):
         approved = ["hypothetical-mutator", "--switch", "release-2"]
@@ -370,7 +392,7 @@ class HookTests(unittest.TestCase):
         for approval in request["approvals"]:
             approval["expires_at"] = "2026-08-17T10:05:00Z"
         with tempfile.TemporaryDirectory() as directory:
-            command = self.wrapper_command(request, directory, inner)
+            command = self.wrapper_command(request, directory, inner, refresh_approvals=False)
             returncode, decision, reason = self.run_hook(command)
         self.assertEqual(decision, "deny", reason)
         self.assertIn("gate", reason)
