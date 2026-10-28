@@ -5,3 +5,7 @@ tests/test_enforcement.py:generic-api-key:82
 
 # Synthetic value accidentally repeated in the first baseline comment (historical commit only).
 6072fca105cc61745d98529694625af1e32332cd:.gitleaksignore:generic-api-key:1
+
+# Synthetic redaction test after adding real-time authorization regression (exact fingerprints).
+229926270bbf10e0916215eacd73e141c6324027:tests/test_enforcement.py:generic-api-key:83
+tests/test_enforcement.py:generic-api-key:83
