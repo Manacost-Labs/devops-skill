@@ -12,3 +12,22 @@ operations/
 /tools/bootstrap-*-nocloud.ps1
 /tools/enable-codex-ssh-*.sh
 /tools/install-codex-key-*.sh
+# Local configuration and sensitive operator material
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.kubeconfig
+kubeconfig
+kubeconfig.*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+id_rsa*
+id_ed25519*
+secrets/
+credentials/
