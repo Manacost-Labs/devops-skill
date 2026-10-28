@@ -1,4 +1,4 @@
-# Reviewed synthetic test fixture: api_key: k-1234567890 in secret-redaction unit test.
+# Reviewed synthetic invalid API-key fixture in the secret-redaction unit test.
 # Exact rule/path/commit fingerprints only; any new leaked token will still fail CI.
 cbdbd50ad8f6505d7fce671fc0ade21a51f1325e:tests/test_enforcement.py:generic-api-key:81
 tests/test_enforcement.py:generic-api-key:82
