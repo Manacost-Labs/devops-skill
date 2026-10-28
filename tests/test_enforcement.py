@@ -80,7 +80,7 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual([record["status"] for record in records], ["blocked_gate"])
 
     def test_wrapper_redacts_secrets_in_ledger_and_output(self):
-        command = [PYTHON, "-c", "print('password=hunter2-literal'); print('api_' + 'key: k-1234567890')"]
+        command = [PYTHON, "-c", "print('password=hunter2-literal'); print('api_key: k-1234567890')"]
         with tempfile.TemporaryDirectory() as directory:
             result, records = self.run_wrapper(bound_operation(command), directory, command)
             ledger_text = (Path(directory) / "ledger.jsonl").read_text(encoding="utf-8")
