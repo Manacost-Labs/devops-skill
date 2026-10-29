@@ -14,7 +14,7 @@ Select the smallest installed set that covers the confirmed task. Read a module 
 | Terraform/OpenTofu, Ansible, cloud-init, drift | `iac-operations` |
 | GitHub Actions, artifact pipeline, deploy gates | `cicd-operations` |
 | PostgreSQL/MySQL/MariaDB connections, waits, performance, routine maintenance | `database-operations`; compose application/host/provider owners at their boundaries |
-| PostgreSQL/Redis backups, restores, PITR, migrations and failover | `data-resilience-operations`; MySQL/MariaDB recovery needs a separately confirmed specialist capability/runbook |
+| PostgreSQL/Redis recovery; MySQL/MariaDB logical/binlog restore, MariaDB physical full/incremental recovery, standard asynchronous cutover | `data-resilience-operations` 0.4.0+; verify method/version/topology. MySQL physical products, cross-vendor migration and cluster surgery need a specialist runbook |
 | Secret references, workload identity, JIT access, rotation, break-glass | `secrets-access-operations` |
 | Generic, unfamiliar, or unsupported VPS/cloud account | `cloud-generic` |
 | AWS account, Organizations, IAM, VPC, EC2/ECS/EKS/RDS control plane | `cloud-aws` plus the narrow technical module |

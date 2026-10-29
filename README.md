@@ -1,6 +1,6 @@
 # DevOps Skill Platform
 
-**Portfolio project · release candidate 0.5.0**
+**Portfolio project · release candidate 0.6.0**
 
 A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 23 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, the GitHub control plane, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
 
@@ -118,9 +118,9 @@ Provider packs do not replace the technical modules. For example, an EKS migrati
 
 Managed-service boundaries are normative in the [control-plane ownership matrix](devops-core/references/control-plane-ownership.md): provider packs own provider APIs, while IaC state, Kubernetes resources, data recovery, identity lifecycle, network paths, release trust, and service acceptance remain with their specialist modules.
 
-## Operations depth in 0.5.0
+## Operations depth in 0.6.0
 
-Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedures for cgroups/OOM, packages, storage/boot, networking and mandatory access controls. Reliability covers Prometheus/Alertmanager, Grafana, Loki/OTel, missing data, burn rates, capacity and release acceptance. The new database module separates everyday PostgreSQL/MySQL/MariaDB diagnosis from recovery. Read the [scope, examples and validation limits](docs/operations-depth.md).
+Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedures for cgroups/OOM, packages, storage/boot, networking and mandatory access controls. Reliability covers Prometheus/Alertmanager, Grafana, Loki/OTel, missing data, burn rates, capacity and release acceptance. The database module separates everyday PostgreSQL/MySQL/MariaDB diagnosis from recovery. Data resilience now includes [MySQL/MariaDB backup, PITR and isolated restore drills](docs/mysql-mariadb-recovery.md). Read the [scope, examples and validation limits](docs/operations-depth.md).
 
 ## Install profiles
 
@@ -203,8 +203,8 @@ The following commands require a source checkout. Runtime release archives inten
 python devops-platform-contracts/scripts/validate_platform.py
 python -m unittest discover -s tests -v
 python tools/build_public_source.py --output ..\devops-skill-platform-public
-python tools/build_release.py --output dist/devops-skill-platform-0.5.0.zip
-python tools/verify_release.py dist/devops-skill-platform-0.5.0.zip
+python tools/build_release.py --output dist/devops-skill-platform-0.6.0.zip
+python tools/verify_release.py dist/devops-skill-platform-0.6.0.zip
 ```
 
 `PUBLIC-SOURCE-MANIFEST.json` is generated only in a fresh public-source export, not maintained as a stale receipt in the development tree. `build_public_source.py` creates a fresh allowlisted source tree without Git history, private operation records, lab artifacts, release archives, credentials, or target-specific tools. Use that clean tree—not an export of a private operations repository—as the source of a new public portfolio repository.

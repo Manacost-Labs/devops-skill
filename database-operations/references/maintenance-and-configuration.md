@@ -7,7 +7,7 @@ A local file, PostgreSQL ALTER SYSTEM, MySQL SET GLOBAL/SET PERSIST and managed 
 ## Procedure
 
 1. Confirm target/topology, exact setting or maintenance operation, data/availability risk and acceptable window.
-2. Establish usable engine-specific recovery and application compatibility. For MySQL/MariaDB stateful work this must be a confirmed specialist runbook/owner; the existing recovery module does not cover them.
+2. Establish usable engine-specific recovery and application compatibility. For MySQL/MariaDB use the installed data-resilience 0.4.0+ procedure matching the method/topology, or a verified specialist runbook when unsupported.
 3. Predict locks, I/O, CPU, temporary disk/WAL/binlog growth, replication delay and restart/client drain. Review alternatives with smaller impact.
 4. Rehearse on representative isolated data; preserve original values/config and an executable reversal or recovery plan. Some maintenance cannot be undone by restoring a setting.
 5. Gate the exact plan; stage/canary where meaningful. Observe agreed abort thresholds and stop on topology/plan drift.

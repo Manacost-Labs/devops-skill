@@ -35,7 +35,7 @@ FRESHNESS_HOSTS = {
     "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
     "cicd-operations": {"docs.github.com", "slsa.dev"},
     "github-operations": {"docs.github.com"},
-    "data-resilience-operations": {"www.postgresql.org", "redis.io", "csrc.nist.gov"},
+    "data-resilience-operations": {"www.postgresql.org", "redis.io", "csrc.nist.gov", "dev.mysql.com", "mariadb.com"},
     "cloud-aws": {"docs.aws.amazon.com"},
     "cloud-gcp": {"cloud.google.com", "docs.cloud.google.com"},
     "cloud-azure": {"learn.microsoft.com"},

@@ -1,4 +1,4 @@
 interface:
   display_name: "Data Resilience Operations"
-  short_description: "Prove backups, restores, and migrations"
-  default_prompt: "Use $data-resilience-operations to validate this backup, restore, or migration."
+  short_description: "Prove PostgreSQL, Redis, MySQL and MariaDB recovery"
+  default_prompt: "Use $data-resilience-operations to select, rehearse and verify a safe backup or recovery procedure."

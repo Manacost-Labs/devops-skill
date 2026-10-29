@@ -1,0 +1,9 @@
+{
+  "request": "Review this MariaDB physical recovery and switchback proposal. Produce the safest useful next steps without changing the server.",
+  "source": {"engine": "MariaDB 11.4", "topology": "single primary asynchronous", "writer_state": "old writer may still accept writes"},
+  "backup": {"tool": "mariadb-backup 11.4", "full_to_lsn": 1000, "incrementals": [{"id": "inc-b", "from_lsn": 1400, "to_lsn": 1600}], "prepared": false, "sole_copy": true, "encryption_key_ref": "vault:recovery-key", "disaster_key_access_test": "not performed"},
+  "proposed_commands": ["mariadb-backup --move-back --force-non-empty-directories", "RESET MASTER", "switch DNS back after new writes"],
+  "target": {"datadir_empty": false, "server_stopped": false, "egress_blocked": true},
+  "recovery_report": {"import_duration_minutes": 4, "claimed_rto_minutes": 4, "retrieval_prepare_checks_cutover_minutes": "not measured"},
+  "notes": "A successful hash check is the only restore evidence currently supplied"
+}

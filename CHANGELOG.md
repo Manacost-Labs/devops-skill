@@ -4,6 +4,13 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.6.0 — 2026-10-29
+
+- Extend data resilience to MySQL/MariaDB logical/binlog recovery, MariaDB physical full/incremental preparation and standard asynchronous cutover planning.
+- Add quarantine, transaction-boundary, GTID, key/retention and application recovery evidence procedures, plus a bounded offline artifact-chain checker.
+- Add real isolated logical/PITR and physical incremental restore drills on pinned engines, adversarial receipt tests and updated routing/source/profile documentation.
+
+
 ## 0.5.0 — 2026-10-29
 
 - Expand Linux operations with RHEL-family procedures, cgroup/resource diagnosis, storage/boot, networking, access and SELinux/AppArmor boundaries. Make the local audit report missing evidence without claiming health or running package discovery.

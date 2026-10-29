@@ -6,7 +6,7 @@ The platform now has 23 modules. This package deepens three connected layers wit
 |---|---|---|
 | Linux | Debian/Ubuntu and confirmed RHEL/Rocky/Alma procedures; package transactions, cgroup/CPU/memory/OOM/I/O diagnosis, storage/LVM/filesystems, boot/reboot, resolver/routing/firewalls, SSH/sudo and SELinux/AppArmor | Host changes remain release-specific and require access/recovery evidence; containers and managed APIs keep their owners |
 | Reliability | Prometheus queries/rules, Alertmanager routes, Grafana semantics/access, Loki labels, OTel pipelines/privacy, SLO burn windows, missing data, capacity and release/incident acceptance | Telemetry does not authorize repairs or notifications; actual component tooling and end-to-end evidence remain required |
-| Database operations | Separate PostgreSQL/MySQL/MariaDB diagnostic SQL, waits/connections/capacity, replica consistency, maintenance/configuration planning | Application/schema changes need their owner; PostgreSQL/Redis recovery stays in data resilience; MySQL/MariaDB recovery requires a separate verified specialist runbook |
+| Database operations | Separate PostgreSQL/MySQL/MariaDB diagnostic SQL, waits/connections/capacity, replica consistency, maintenance/configuration planning | Application/schema changes need their owner; PostgreSQL/Redis recovery stays in data resilience; MySQL/MariaDB recovery is covered by data-resilience 0.4.0+ for documented methods; unsupported physical products/cluster topologies require specialists |
 
 ## Use and installation
 
