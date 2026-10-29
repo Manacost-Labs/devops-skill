@@ -80,7 +80,20 @@ def coordinate(value):
     return match.group(1), match.group(2), int(match.group(2))
 
 
+def check_root(root, expected=None, canonical=None):
+    for parent in [*reversed(root.parents), root]:
+        if not stat.S_ISDIR(no_link(parent).st_mode):
+            raise ValueError("artifact root")
+    current = no_link(root)
+    if expected and (current.st_dev, current.st_ino) != (expected.st_dev, expected.st_ino):
+        raise ValueError("artifact root changed")
+    if canonical is not None and root.resolve(strict=True) != canonical:
+        raise ValueError("artifact root path changed")
+    return current
+
+
 def open_artifact(root, relative, root_info, canonical_root):
+    check_root(root, root_info, canonical_root)
     if os.name == "nt":
         import ctypes
         import msvcrt
@@ -115,7 +128,7 @@ def open_artifact(root, relative, root_info, canonical_root):
             child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
             os.close(directory)
             directory = child
-        return os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+        return os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
     finally:
         os.close(directory)
 
@@ -151,10 +164,9 @@ def verify(data, root, max_bytes=1 << 30):
     if total > max_bytes:
         raise ValueError("I/O budget")
     root = Path(root).absolute()
-    for parent in [*reversed(root.parents), root]:
-        if not stat.S_ISDIR(no_link(parent).st_mode):
-            raise ValueError("artifact root")
-    root_info, canonical_root = no_link(root), root.resolve(strict=True)
+    root_info = check_root(root)
+    canonical_root = root.resolve(strict=True)
+    check_root(root, root_info, canonical_root)
     paths, aliases, checked = [], set(), set()
     for record in records:
         path, info = artifact(root, record)
@@ -168,7 +180,7 @@ def verify(data, root, max_bytes=1 << 30):
         descriptor = open_artifact(root, record["file"], root_info, canonical_root)
         with os.fdopen(descriptor, "rb") as source:
             opened = os.fstat(source.fileno())
-            if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino) or opened.st_nlink != 1:
+            if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino) or opened.st_nlink != 1:
                 raise ValueError("artifact changed")
             digest, remaining = hashlib.sha256(), record["size"]
             first = source.read(min(4, remaining)); remaining -= len(first); digest.update(first)
@@ -190,6 +202,7 @@ def verify(data, root, max_bytes=1 << 30):
             if os.name != "nt": ctime_changed |= after.st_ctime_ns != current.st_ctime_ns
             if ctime_changed or fingerprint(opened) != fingerprint(after) or fingerprint(after) != fingerprint(current):
                 raise ValueError("artifact changed")
+            check_root(root, root_info, canonical_root)
     return {"status": "integrity_verified_replay_unproven", "engine": data["engine"],
             "artifact_count": len(records), "log_count": len(logs), "bytes_hashed": total,
             "required_next": "native decoding, transaction-boundary proof, isolated restore and core authorization"}

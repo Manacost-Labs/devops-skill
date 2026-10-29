@@ -131,7 +131,8 @@ def logical_pitr(engine):
         assert_data(target, 100, 0)
         positions = [f"--start-position={start[1]}", f"--stop-position={stop[1]}"]
         if engine == "mysql":
-            if not source.sql("SELECT VERSION();").stdout.strip().startswith(TOOL_VERSION + " ") and source.sql("SELECT VERSION();").stdout.strip() != TOOL_VERSION:
+            engine_version = source.sql("SELECT VERSION();").stdout.strip()
+            if engine_version != TOOL_VERSION:
                 raise RuntimeError("pinned Oracle decoder and engine patch versions differ")
             decoder = provision(artifacts/"mysql-tools")
             tool_env = dict(os.environ, LD_LIBRARY_PATH=str(decoder.parent.parent/"lib/private"))

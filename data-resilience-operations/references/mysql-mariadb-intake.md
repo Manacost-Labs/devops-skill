@@ -2,6 +2,8 @@
 
 Confirm server vendor/version, backup/client tool version, managed/self-hosted owner, source fingerprint, writer/replica/proxy role, database scope, storage engines, table sizes, transaction rate, DDL activity, encryption, replication/GTID mode and application invariants. Protocol compatibility is not backup compatibility.
 
+Check backup, decoder and restore-client availability before the window. Minimal runtime images can omit mysqlbinlog; use a vetted compatible tool environment rather than installing packages or substituting a different vendor's decoder during recovery. Our CI stages a matching version/hash-pinned Oracle binary bundle; that is test provisioning, not a production installation recipe.
+
 | Method | Appropriate when | Required evidence / limits |
 |---|---|---|
 | MySQL logical dump | Reviewed schema/data scope and acceptable import time | InnoDB snapshot plus matching log coordinates; separate accounts/config/keys and object inventory |

@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT/"data-resilience-operations/scripts/verify-binlog-chain.py"
@@ -28,6 +29,23 @@ def fixture(root):
 
 
 class RecoveryReceiptTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "POSIX FIFO race")
+    def test_swapped_fifo_cannot_block_artifact_open(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); data = fixture(root)
+            original_open = CHECK.os.open
+            swapped = False
+            def replace_before_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if path == "base.sql" and not swapped:
+                    swapped = True
+                    (root/"base.sql").unlink()
+                    os.mkfifo(root/"base.sql")
+                return original_open(path, flags, *args, **kwargs)
+            with mock.patch.object(CHECK.os, "open", side_effect=replace_before_open):
+                with self.assertRaises(ValueError): CHECK.verify(data, root)
+            self.assertTrue(swapped)
+
     def test_valid_artifact_bytes_do_not_claim_replay_proof(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); data = fixture(root)
