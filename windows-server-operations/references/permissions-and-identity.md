@@ -4,6 +4,8 @@ Record the exact local object and parent chain, owner SID, inheritance/protectio
 
 Distinguish a null DACL (unrestricted by that DACL) from an empty DACL (no grants from that DACL). ACE order and requested rights matter; “deny always wins” is too coarse, especially across explicit/inherited entries. Ownership permits security administration in many contexts but is not ordinary data access. Share ACLs, token groups, deny-only SIDs, UAC filtering, central access policy, privileges, EFS and application authorization can alter the result.
 
+Conditional, callback and object ACEs cannot safely be flattened into ordinary allow/deny grants. Preserve the raw descriptor and required claims/resource context for specialist review under approved sensitive-evidence handling. The helper detects these ACE types and explicitly omits the simplified rule list; a populated DACL remains populated even when its projection is omitted.
+
 Use `scripts/inspect-file-access.ps1` for bounded descriptor inventory on one approved local object. It does not evaluate a remote token, walk a tree, include SACL evidence or follow reparse points. For effective access, use the supported effective-access tooling plus actual intended-identity allowed/denied tests at the UNC/application path. An administrator's test is not the user's test.
 
 ## Change and rollback
@@ -17,4 +19,4 @@ Use `scripts/inspect-file-access.ps1` for bounded descriptor inventory on one ap
 
 Do not collect broad account/group dumps or enable audit privilege just to make a report look complete. SACL omission means audit policy is unverified. A DACL export does not preserve EFS decryption keys, share permissions, owner, streams or data.
 
-Sources: [Get-Acl](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-acl?view=powershell-5.1), [ACE order](https://learn.microsoft.com/en-us/windows/win32/secauthz/order-of-aces-in-a-dacl), [icacls](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls).
+Sources: [Get-Acl](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-acl?view=powershell-5.1), [ACE order](https://learn.microsoft.com/en-us/windows/win32/secauthz/order-of-aces-in-a-dacl), [conditional ACEs](https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-definition-language-for-conditional-aces-), [icacls](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls).

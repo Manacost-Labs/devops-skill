@@ -34,6 +34,9 @@ try {
     $file=Join-Path $source 'payload.txt'
     [IO.File]::WriteAllText($file,'known-good-data')
     $expectedHash=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
+    # Let Windows normalize inheritance bookkeeping on this new fixture before
+    # capturing the exact rollback baseline; never relax the later comparison.
+    Set-Acl -LiteralPath $file -AclObject (Get-Acl -LiteralPath $file)
     $savedAcl=Get-Acl -LiteralPath $file
     $savedEvidence=Get-WindowsFileSecurityEvidence $file -IncludeSddl
     $deny=[Security.AccessControl.FileSystemAccessRule]::new($identity.User,[Security.AccessControl.FileSystemRights]::WriteData,[Security.AccessControl.AccessControlType]::Deny)

@@ -13,6 +13,16 @@ $descriptor = Get-WindowsFileSecurityEvidence -LiteralPath $path -IncludeSddl
 Assert-True ($descriptor.effective_access -eq 'not_evaluated' -and $descriptor.sacl -eq 'not_collected') 'descriptor must not assert effective access'
 Assert-True ($descriptor.descriptor_sha256 -match '^[0-9a-f]{64}$' -and $descriptor.owner_sid -match '^S-') 'native descriptor identity/hash missing'
 Assert-True ([string]::IsNullOrEmpty((Get-WindowsFileSecurityEvidence -LiteralPath $path).owner_group_dacl_sddl)) 'SDDL should be opt-in'
+# An in-memory descriptor exercises conditional ACEs without changing file ACLs.
+$script:ConditionalAcl = [Security.AccessControl.FileSecurity]::new()
+$script:ConditionalAcl.SetSecurityDescriptorSddlForm('O:SYG:SYD:(XA;;FR;;;WD;(@User.foo == "bar"))')
+function Get-Acl { [CmdletBinding()] param([string]$LiteralPath) return $script:ConditionalAcl }
+try {
+    $conditional = Get-WindowsFileSecurityEvidence -LiteralPath $path
+    Assert-True ($conditional.rule_projection -eq 'omitted_requires_complex_ace_review' -and $conditional.rules.Count -eq 0) 'conditional ACE flattened into an ordinary grant'
+    Assert-True ($conditional.ace_count -eq 1 -and $conditional.complex_ace_types -contains 'AccessAllowedCallback' -and $conditional.dacl_kind -eq 'populated') 'complex descriptor semantics missing'
+    Assert-True (($conditional | ConvertTo-Json -Depth 8) -notmatch 'bar') 'conditional expression leaked without SDDL opt-in'
+} finally { Remove-Item Function:\Get-Acl }
 foreach ($bad in @('Registry::HKEY_LOCAL_MACHINE\x','C:\example:stream','\\server\share\file')) {
     $rejected = $false
     try { Get-WindowsLocalEvidenceItem $bad | Out-Null } catch { $rejected = $true }
@@ -27,11 +37,14 @@ Assert-True (($summary | ConvertTo-Json -Depth 8) -notmatch 'secret-marker') 'ta
 $invalidEnum = $xml.Replace('HighestAvailable','secret-marker').Replace('S4U','secret-marker')
 $hidden = Get-WindowsTaskXmlEvidence -Bytes ([Text.Encoding]::UTF8.GetBytes($invalidEnum))
 Assert-True (($hidden | ConvertTo-Json -Depth 8) -notmatch 'secret-marker') 'invalid enum leaked'
-foreach ($badXml in @('<!DOCTYPE Task [<!ENTITY x SYSTEM "file:///C:/never-read">]><Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">&x;</Task>', '<Task xmlns="urn:wrong"/>', '<Task>', ('x'*262145))) {
+foreach ($badXml in @('<!DOCTYPE Task [<!ENTITY x SYSTEM "file:///C:/never-read">]><Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">&x;</Task>', '<Task xmlns="urn:wrong"/>', '<task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"/>', '<Task xmlns="HTTP://schemas.microsoft.com/windows/2004/02/mit/task"/>', '<Task>', ('x'*262145))) {
     $rejected = $false
     try { Get-WindowsTaskXmlEvidence -Bytes ([Text.Encoding]::UTF8.GetBytes($badXml)) | Out-Null } catch { $rejected = $true }
     Assert-True $rejected 'invalid/DTD/oversized XML accepted'
 }
+$manyEnums = '<Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"><Principals><Principal>' + ('<RunLevel>LeastPrivilege</RunLevel>'*33) + '</Principal></Principals></Task>'
+$boundedEnums = Get-WindowsTaskXmlEvidence -Bytes ([Text.Encoding]::UTF8.GetBytes($manyEnums))
+Assert-True ($boundedEnums.truncated -and $boundedEnums.run_levels.Count -eq 32) 'enum-node truncation was not reported'
 
 $rsa = [Security.Cryptography.RSA]::Create(2048)
 $certificate = $null

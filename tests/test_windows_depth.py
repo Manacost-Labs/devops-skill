@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import subprocess
 import tempfile
@@ -31,3 +32,33 @@ class WindowsEvidenceTests(unittest.TestCase):
         executable = shutil.which("pwsh")
         if not executable: self.skipTest("PowerShell 7 unavailable")
         self.run_checks(executable)
+
+    def test_installed_windows_profile_and_blackbox_entrypoints(self):
+        import sys
+        with tempfile.TemporaryDirectory(prefix="windows-unit-", dir=WORK) as directory:
+            folder = Path(directory)
+            self.assertTrue(folder.resolve().is_relative_to(WORK.resolve()))
+            installed = folder/"skills"
+            result = subprocess.run([sys.executable, str(ROOT/"tools/install.py"), "--profile", "windows-server", "--destination", str(installed), "--apply"], capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            environment = dict(os.environ, PSModulePath=str(Path(os.environ["WINDIR"])/"System32/WindowsPowerShell/v1.0/Modules"))
+            scripts = installed/"windows-server-operations/scripts"
+            def invoke(name, *arguments):
+                return subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(scripts/name), *arguments], env=environment, capture_output=True, text=True, timeout=30)
+            source = folder/"fixture.txt"; source.write_text("synthetic", encoding="utf-8")
+            result = invoke("inspect-file-access.ps1", "-LiteralPath", str(source))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["effective_access"], "not_evaluated")
+            xml = folder/"task.xml"
+            xml.write_text('<Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"><Actions><Exec><Command>confidential-marker</Command></Exec></Actions></Task>', encoding="utf-8")
+            result = invoke("inspect-task-definition.ps1", "-LiteralPath", str(xml))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(json.loads(result.stdout)["execution_authorized"])
+            self.assertNotIn("confidential-marker", result.stdout + result.stderr)
+            xml.write_text('<!DOCTYPE Task [<!ENTITY x SYSTEM "file:///never-read">]><Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">&x;</Task>', encoding="utf-8")
+            result = invoke("inspect-task-definition.ps1", "-LiteralPath", str(xml))
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["status"], "unknown")
+            result = invoke("inspect-certificate.ps1", "-StoreLocation", "CurrentUser", "-Thumbprint", "0" * 40)
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["status"], "unknown")

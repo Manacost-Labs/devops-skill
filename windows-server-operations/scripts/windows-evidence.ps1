@@ -94,7 +94,16 @@ function Get-WindowsFileSecurityEvidence {
     $sections = [Security.AccessControl.AccessControlSections]::Access -bor [Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Group
     $sddl = $acl.GetSecurityDescriptorSddlForm($sections)
     $raw = [Security.AccessControl.RawSecurityDescriptor]::new($sddl)
-    $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+    # GetAccessRules can flatten callback/conditional ACEs into ordinary grants.
+    # Inspect raw types first and omit that projection if any semantics need context.
+    $aceCount = 0; $complexTypes = @(); $rules = @()
+    if ($null -ne $raw.DiscretionaryAcl) {
+        $aceCount = $raw.DiscretionaryAcl.Count
+        $complexTypes = @($raw.DiscretionaryAcl | Where-Object { $_.AceType -notin [Security.AccessControl.AceType]::AccessAllowed,[Security.AccessControl.AceType]::AccessDenied } | ForEach-Object { [string]$_.AceType } | Select-Object -Unique)
+    }
+    $projection = 'ordinary_allow_deny'
+    if ($complexTypes.Count -gt 0) { $projection = 'omitted_requires_complex_ace_review' }
+    else { $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) }
     $kind = 'populated'
     if ($null -eq $raw.DiscretionaryAcl) { $kind = 'null_unrestricted_by_dacl' }
     elseif ($raw.DiscretionaryAcl.Count -eq 0) { $kind = 'empty_no_dacl_grants' }
@@ -105,7 +114,8 @@ function Get-WindowsFileSecurityEvidence {
         owner_sid = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
         group_sid = $acl.GetGroup([Security.Principal.SecurityIdentifier]).Value
         dacl_kind = $kind; inheritance_protected = $acl.AreAccessRulesProtected; canonical = $acl.AreAccessRulesCanonical
-        descriptor_sha256 = $digest; truncated = $rules.Count -gt $Limit
+        descriptor_sha256 = $digest; ace_count = $aceCount; rule_projection = $projection
+        complex_ace_types = @($complexTypes | Select-Object -First $Limit); truncated = $aceCount -gt $Limit
         rules = @($rules | Select-Object -First $Limit | ForEach-Object { [pscustomobject]@{ sid = $_.IdentityReference.Value; type = [string]$_.AccessControlType; rights = [string]$_.FileSystemRights; inherited = $_.IsInherited; inheritance = [string]$_.InheritanceFlags; propagation = [string]$_.PropagationFlags } })
     }
     if ($IncludeSddl) { $result['owner_group_dacl_sddl'] = $sddl }
@@ -127,18 +137,20 @@ function Get-WindowsTaskXmlEvidence {
     } finally { if ($reader) { $reader.Dispose() }; $stream.Dispose() }
     $ns = [Xml.XmlNamespaceManager]::new($document.NameTable)
     $ns.AddNamespace('t','http://schemas.microsoft.com/windows/2004/02/mit/task')
-    if ($document.DocumentElement.LocalName -ne 'Task' -or $document.DocumentElement.NamespaceURI -ne $ns.LookupNamespace('t')) { throw 'unsupported task XML' }
+    if ($document.DocumentElement.LocalName -cne 'Task' -or $document.DocumentElement.NamespaceURI -cne $ns.LookupNamespace('t')) { throw 'unsupported task XML' }
     $principals = @($document.SelectNodes('/t:Task/t:Principals/t:Principal', $ns))
     $actions = @($document.SelectNodes('/t:Task/t:Actions/*', $ns))
     $triggers = @($document.SelectNodes('/t:Task/t:Triggers/*', $ns))
-    $runLevels = @($document.SelectNodes('/t:Task/t:Principals/t:Principal/t:RunLevel',$ns) | Select-Object -First 32 | ForEach-Object { if ($_.InnerText -cin @('LeastPrivilege','HighestAvailable')) { $_.InnerText } else { 'unknown_or_invalid' } })
-    $logons = @($document.SelectNodes('/t:Task/t:Principals/t:Principal/t:LogonType',$ns) | Select-Object -First 32 | ForEach-Object { if ($_.InnerText -cin @('Password','S4U','InteractiveToken','Group','ServiceAccount','InteractiveTokenOrPassword','None')) { $_.InnerText } else { 'unknown_or_invalid' } })
+    $runLevelNodes = @($document.SelectNodes('/t:Task/t:Principals/t:Principal/t:RunLevel',$ns))
+    $logonNodes = @($document.SelectNodes('/t:Task/t:Principals/t:Principal/t:LogonType',$ns))
+    $runLevels = @($runLevelNodes | Select-Object -First 32 | ForEach-Object { if ($_.InnerText -cin @('LeastPrivilege','HighestAvailable')) { $_.InnerText } else { 'unknown_or_invalid' } })
+    $logons = @($logonNodes | Select-Object -First 32 | ForEach-Object { if ($_.InnerText -cin @('Password','S4U','InteractiveToken','Group','ServiceAccount','InteractiveTokenOrPassword','None')) { $_.InnerText } else { 'unknown_or_invalid' } })
     return [pscustomobject]@{
         status = 'structure_observed'; schema_validated = $false; execution_authorized = $false
         principal_count = $principals.Count; run_levels = $runLevels; logon_types = $logons
         action_count = $actions.Count; action_types = @($actions | Select-Object -First 32 | ForEach-Object { if ($_.NamespaceURI -ceq $ns.LookupNamespace('t') -and $_.LocalName -cin @('Exec','ComHandler','SendEmail','ShowMessage')) { $_.LocalName } else { 'unknown_or_invalid' } })
         trigger_count = $triggers.Count; trigger_types = @($triggers | Select-Object -First 32 | ForEach-Object { if ($_.NamespaceURI -ceq $ns.LookupNamespace('t') -and $_.LocalName -cin @('CalendarTrigger','TimeTrigger','BootTrigger','LogonTrigger','EventTrigger','IdleTrigger','RegistrationTrigger','SessionStateChangeTrigger')) { $_.LocalName } else { 'unknown_or_invalid' } })
-        truncated = $principals.Count -gt 32 -or $actions.Count -gt 32 -or $triggers.Count -gt 32
+        truncated = $principals.Count -gt 32 -or $actions.Count -gt 32 -or $triggers.Count -gt 32 -or $runLevelNodes.Count -gt 32 -or $logonNodes.Count -gt 32
         action_and_identity_text = 'omitted; inspect under approved sensitive-evidence handling'
     }
 }
