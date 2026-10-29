@@ -1,8 +1,8 @@
 # DevOps Skill Platform
 
-**Portfolio project · release candidate 0.4.1**
+**Portfolio project · release candidate 0.5.0**
 
-A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 22 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, the GitHub control plane, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
+A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 23 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, the GitHub control plane, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
 
 This project demonstrates system administration and DevOps engineering practices: decomposing operational ownership, classifying risk, planning recovery, constraining privileged changes, validating packages, and collecting verification evidence. It is not a certification, a managed service, or an autonomous administrator.
 
@@ -13,7 +13,7 @@ This project demonstrates system administration and DevOps engineering practices
 /plugin install devops-skill-platform@manacost-devops
 ```
 
-This enables the 22 skill instructions. The plugin does not enable execution protection automatically. Use a stable execution runtime and explicitly configure the optional Claude Code gate when operating infrastructure; see [hook setup and its trust boundary](docs/hooks-setup.md). The manifest is also validated with Claude Code 2.1.207.
+This enables the 23 skill instructions. The plugin does not enable execution protection automatically. Use a stable execution runtime and explicitly configure the optional Claude Code gate when operating infrastructure; see [hook setup and its trust boundary](docs/hooks-setup.md). The manifest is also validated with Claude Code 2.1.207.
 
 ## Choose an installation
 
@@ -21,7 +21,7 @@ This enables the 22 skill instructions. The plugin does not enable execution pro
 |---|---|---|
 | Claude Code plugin | Skill instructions and their packaged supporting files | Optional; configure the hook explicitly |
 | Codex skill profile | Selected skill folders in the skills directory | Guidance and local validators; no Codex hook adapter is supplied |
-| Full execution runtime | Planner, executor, optional Claude hook, verifier, documentation and all 22 modules in one stable folder | Wrapper checks apply to commands run through it; automatic tool interception requires the configured Claude hook |
+| Full execution runtime | Planner, executor, optional Claude hook, verifier, documentation and all 23 modules in one stable folder | Wrapper checks apply to commands run through it; automatic tool interception requires the configured Claude hook |
 
 For a complete runtime, start from a source checkout or a verified runtime archive with Python 3.13 and the hash-locked requirements installed:
 
@@ -59,7 +59,7 @@ These pieces have different responsibilities: a successful package check proves 
 
 | DevOps competency | Repository evidence |
 |---|---|
-| Platform design | Capability-based routing across 22 dependency-closed modules |
+| Platform design | Capability-based routing across 23 dependency-closed modules |
 | Linux and workload operations | Linux, Windows Server, Docker, Kubernetes, network-edge, and reliability modules |
 | Delivery and state safety | IaC plan binding, CI/CD trust boundaries, backup/restore and rollback requirements |
 | Cloud engineering | Provider-neutral routing plus AWS, Google Cloud, Azure, Selectel, and Cloudflare packs |
@@ -109,6 +109,7 @@ flowchart LR
 | Hosts and workloads | `linux-operations`, `windows-server-operations`, `docker-operations`, `kubernetes-operations` | OS and workload lifecycle; Kubernetes is selected only when justified |
 | Directory identity | `identity-directory-operations` | AD DS, OUs, principals, group governance, GPO planning and staged rollout; not Entra, secrets, or local host administration |
 | Delivery and state | `iac-operations`, `cicd-operations`, `github-operations`, `data-resilience-operations` | Reviewed plans, protected pipelines, GitHub protections/environments/releases, restore-proven data operations |
+| Daily database operations | `database-operations` | PostgreSQL/MySQL/MariaDB waits, connection budgets, replication diagnosis and maintenance planning; recovery stays with a confirmed engine-specific owner |
 | Edge and networks | `network-edge-operations`, `cloudflare-operations`, `enterprise-networking` | DNS/TLS/HTTP, Cloudflare control plane, VPN/BGP/hybrid routing |
 | Cloud | `cloud-generic`, `cloud-aws`, `cloud-gcp`, `cloud-azure`, `cloud-selectel` | Provider discovery and bounded control-plane operations using current official docs |
 | Trust and assurance | `secrets-access-operations`, `reliability-operations`, `security-compliance-operations` | JIT access, service health, incidents, controls, exceptions, evidence—not certification |
@@ -116,6 +117,10 @@ flowchart LR
 Provider packs do not replace the technical modules. For example, an EKS migration normally needs `cloud-aws`, `kubernetes-operations`, `data-resilience-operations`, `secrets-access-operations`, and `reliability-operations`, selected only for the layers actually affected.
 
 Managed-service boundaries are normative in the [control-plane ownership matrix](devops-core/references/control-plane-ownership.md): provider packs own provider APIs, while IaC state, Kubernetes resources, data recovery, identity lifecycle, network paths, release trust, and service acceptance remain with their specialist modules.
+
+## Operations depth in 0.5.0
+
+Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedures for cgroups/OOM, packages, storage/boot, networking and mandatory access controls. Reliability covers Prometheus/Alertmanager, Grafana, Loki/OTel, missing data, burn rates, capacity and release acceptance. The new database module separates everyday PostgreSQL/MySQL/MariaDB diagnosis from recovery. Read the [scope, examples and validation limits](docs/operations-depth.md).
 
 ## Install profiles
 
@@ -126,13 +131,13 @@ Managed-service boundaries are normative in the [control-plane ownership matrix]
 | `hybrid-server` | Linux/Windows hosts + Docker + HTTP edge + reliability |
 | `identity-directory` | Active Directory and GPO work with Windows-host, privileged-access, and reliability handoffs |
 | `delivery` | IaC, CI/CD, GitHub control plane, and secret/access boundaries |
-| `data-safe` | Backup, restore, migration, reliability, and access controls |
+| `data-safe` | Database diagnosis, connection budgets, supported recovery, reliability and access controls |
 | `cloud-foundation` | Provider-neutral cloud foundation with IaC, edge, reliability, and access |
 | `kubernetes` | Kubernetes workload operations with Docker, edge, reliability, and access |
 | `aws-platform`, `gcp-platform`, `azure-platform`, `selectel-platform` | Named provider plus IaC, CI/CD, containers, Kubernetes, data, network, access, and reliability handoffs |
 | `hybrid-network` | Linux/Windows endpoints plus HTTP edge, VPN/BGP/hybrid networking, access, and reliability |
 | `assurance` | Evidence-led security governance with access and reliability evidence sources |
-| `all` | All 22 modules, including directory identity, GitHub, named provider, and enterprise packs |
+| `all` | All 23 modules, including directory identity, GitHub, named provider, and enterprise packs |
 
 Profiles are dependency-closed and validated against the embedded release catalog. `all` is intentionally broad; `devops-core` still loads the smallest capability set for each operation.
 
@@ -151,7 +156,7 @@ python devops-platform-contracts/scripts/validate_platform.py
 python tools/install.py --profile web-linux
 ```
 
-A successful validation reports `22/22 compatible installed skills`. The installer then prints each proposed destination and ends with `Dry-run only`. Review the [architecture](docs/architecture.md) next, or run the [shipped synthetic portfolio demo](examples/portfolio-demo/README.md) without connecting to a real target.
+A successful validation reports `23/23 compatible installed skills`. The installer then prints each proposed destination and ends with `Dry-run only`. Review the [architecture](docs/architecture.md) next, or run the [shipped synthetic portfolio demo](examples/portfolio-demo/README.md) without connecting to a real target.
 
 `tools/install.py` is dry-run by default. `--apply` writes to the selected skills directory, and `--apply --force` can replace existing skills; neither option is part of this safe evaluation.
 
@@ -188,7 +193,7 @@ The digest covers the command arguments. Protect working directories, executable
 
 ## Provider freshness
 
-Cloudflare, IaC, CI/CD, GitHub operations, data-resilience, AWS, Google Cloud, Azure, Selectel, and Kubernetes manifests declare official documentation sources, map every capability to those sources, and record `last_verified`. Validation rejects missing capability coverage, unapproved source hosts, future dates, and release metadata older than 183 days. This does not make memorized behavior safe: a material change must refresh the exact official operation page and run read-only discovery against the actual account, project, subscription, cluster, tool, or database topology.
+Linux, reliability, database operations, Cloudflare, IaC, CI/CD, GitHub operations, data-resilience, AWS, Google Cloud, Azure, Selectel, and Kubernetes manifests declare official documentation sources, map every capability to those sources, and record `last_verified`. Validation rejects missing capability coverage, unapproved source hosts, future dates, and release metadata older than 183 days. This does not make memorized behavior safe: a material change must refresh the exact official operation page and run read-only discovery against the actual account, project, subscription, cluster, tool, or database topology.
 
 ## Development and release
 
@@ -198,8 +203,8 @@ The following commands require a source checkout. Runtime release archives inten
 python devops-platform-contracts/scripts/validate_platform.py
 python -m unittest discover -s tests -v
 python tools/build_public_source.py --output ..\devops-skill-platform-public
-python tools/build_release.py --output dist/devops-skill-platform-0.4.1.zip
-python tools/verify_release.py dist/devops-skill-platform-0.4.1.zip
+python tools/build_release.py --output dist/devops-skill-platform-0.5.0.zip
+python tools/verify_release.py dist/devops-skill-platform-0.5.0.zip
 ```
 
 `PUBLIC-SOURCE-MANIFEST.json` is generated only in a fresh public-source export, not maintained as a stale receipt in the development tree. `build_public_source.py` creates a fresh allowlisted source tree without Git history, private operation records, lab artifacts, release archives, credentials, or target-specific tools. Use that clean tree—not an export of a private operations repository—as the source of a new public portfolio repository.

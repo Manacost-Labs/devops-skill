@@ -4,8 +4,8 @@ Interpret signals in context; one transient sample is not an incident.
 
 | Signal | Investigate when | First safe action | Handoff |
 |---|---|---|---|
-| Disk capacity | Any critical filesystem above agreed threshold; default warning 80%, critical 90% | Identify top directories/files and ownership; do not delete | Docker for container data; data-resilience for DB data |
-| Inodes | Above 80%, critical 90% | Find small-file producer and retention policy | Reliability for alert design |
+| Disk capacity | Any critical filesystem above agreed threshold; use owner-defined thresholds and growth rate; the audit does not assign defaults | Identify top directories/files and ownership; do not delete | Docker for container data; data-resilience for DB data |
+| Inodes | Above the agreed threshold or growing abnormally | Find small-file producer and retention policy | Reliability for alert design |
 | Memory/swap | OOM events, sustained swap, service eviction | Inspect cgroup/service limits and recent journal | Docker or application owner as applicable |
 | Load/CPU | Sustained saturation with latency or queue symptoms | Identify processes and correlate with service logs | Reliability for correlation/SLO impact |
 | Failed units | Any expected service failed or restart loop | Capture `systemctl status` and recent `journalctl` | Owning module/service team |

@@ -3,8 +3,8 @@
 ## Before changing remote access
 
 - Confirm hostname/IP and environment; production targets require R3 approval.
-- Keep the current session open and establish a second verified session or provider console path.
-- Record current effective settings with `sshd -T`; configuration may be split across `sshd_config.d`.
+- Keep the current session, test a second login and prove independent console/alternate recovery. Two sessions alone cannot recover a disconnected host.
+- Record effective settings with version-matched `sshd -T` and the relevant `-C` Match context; configuration may be split across `sshd_config.d`. Read `access-and-security.md`.
 - Know the intended operator account, public key source, management port, source network, and rollback command.
 
 ## Safe sequence

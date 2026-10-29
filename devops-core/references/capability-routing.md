@@ -13,7 +13,8 @@ Select the smallest installed set that covers the confirmed task. Read a module 
 | Metrics, logs, traces, SLOs, alerts, incidents | `reliability-operations` |
 | Terraform/OpenTofu, Ansible, cloud-init, drift | `iac-operations` |
 | GitHub Actions, artifact pipeline, deploy gates | `cicd-operations` |
-| PostgreSQL/Redis, backups, restores, migrations | `data-resilience-operations` |
+| PostgreSQL/MySQL/MariaDB connections, waits, performance, routine maintenance | `database-operations`; compose application/host/provider owners at their boundaries |
+| PostgreSQL/Redis backups, restores, PITR, migrations and failover | `data-resilience-operations`; MySQL/MariaDB recovery needs a separately confirmed specialist capability/runbook |
 | Secret references, workload identity, JIT access, rotation, break-glass | `secrets-access-operations` |
 | Generic, unfamiliar, or unsupported VPS/cloud account | `cloud-generic` |
 | AWS account, Organizations, IAM, VPC, EC2/ECS/EKS/RDS control plane | `cloud-aws` plus the narrow technical module |

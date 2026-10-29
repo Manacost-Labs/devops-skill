@@ -28,6 +28,9 @@ KINDS = {"coordinator", "executor", "policy-and-validation"}
 POLICY_KEYS = {"version", "policy_id", "risk_classes", "approval_ttl_minutes", "minimum_approvals", "require_separation_of_duties", "require_change_lock", "require_plan_digest", "always_require_approval", "require_recovery_evidence", "deny_by_default", "completion_statuses", "exceptions", "ledger", "data"}
 POLICY_LIST_FIELDS = ("require_change_lock", "require_plan_digest", "always_require_approval", "require_recovery_evidence", "deny_by_default")
 FRESHNESS_HOSTS = {
+    "linux-operations": {"manpages.debian.org", "www.openssh.org", "www.freedesktop.org", "docs.kernel.org", "docs.redhat.com", "dnf.readthedocs.io", "firewalld.org", "wiki.nftables.org", "networkmanager.dev", "documentation.ubuntu.com"},
+    "reliability-operations": {"prometheus.io", "sre.google", "opentelemetry.io", "grafana.com"},
+    "database-operations": {"www.postgresql.org", "dev.mysql.com", "mariadb.com", "www.pgbouncer.org"},
     "cloudflare-operations": {"developers.cloudflare.com"},
     "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
     "cicd-operations": {"docs.github.com", "slsa.dev"},

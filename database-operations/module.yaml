@@ -1,0 +1,73 @@
+name: database-operations
+version: 0.1.0
+kind: executor
+allowed_tools:
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
+requires:
+- devops-platform-contracts >= 0.4.0
+- devops-core >= 0.4.0
+risk_domains:
+- database-availability
+- data-consistency
+- telemetry-data-exposure
+- engine-configuration
+- connection-capacity
+platforms:
+- postgresql
+- mysql
+- mariadb
+capabilities:
+- postgresql-engine-diagnosis
+- mysql-mariadb-engine-diagnosis
+- database-connection-capacity
+- database-maintenance-planning
+- database-engine-configuration-review
+- database-replication-diagnosis
+source_freshness:
+  last_verified: '2026-10-29'
+  refresh_before_change: true
+  official_sources:
+  - https://www.postgresql.org/docs/18/monitoring-stats.html
+  - https://www.postgresql.org/docs/18/monitoring-locks.html
+  - https://www.postgresql.org/docs/18/sql-explain.html
+  - https://dev.mysql.com/doc/refman/8.4/en/performance-schema-threads-table.html
+  - https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-lock-waits-table.html
+  - https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html
+  - https://mariadb.com/docs/server/reference/system-tables/information-schema/information-schema-tables/information-schema-processlist-table
+  - https://mariadb.com/docs/server/reference/system-tables/information-schema/information-schema-tables/information-schema-innodb-tables/information-schema-innodb_lock_waits-table
+  - https://www.postgresql.org/docs/18/runtime-config-connection.html
+  - https://www.pgbouncer.org/config.html
+  - https://www.postgresql.org/docs/18/routine-vacuuming.html
+  - https://dev.mysql.com/doc/refman/8.4/en/persisted-system-variables.html
+  - https://mariadb.com/docs/server/ha-and-performance/optimization-and-tuning/system-variables/server-system-variables
+  - https://dev.mysql.com/doc/refman/8.4/en/replication-administration-status.html
+  - https://mariadb.com/docs/server/reference/sql-statements/administrative-sql-statements/show/show-replica-status
+  capability_sources:
+    postgresql-engine-diagnosis:
+    - https://www.postgresql.org/docs/18/monitoring-stats.html
+    - https://www.postgresql.org/docs/18/monitoring-locks.html
+    - https://www.postgresql.org/docs/18/sql-explain.html
+    mysql-mariadb-engine-diagnosis:
+    - https://dev.mysql.com/doc/refman/8.4/en/performance-schema-threads-table.html
+    - https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-lock-waits-table.html
+    - https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html
+    - https://mariadb.com/docs/server/reference/system-tables/information-schema/information-schema-tables/information-schema-processlist-table
+    - https://mariadb.com/docs/server/reference/system-tables/information-schema/information-schema-tables/information-schema-innodb-tables/information-schema-innodb_lock_waits-table
+    database-connection-capacity:
+    - https://www.postgresql.org/docs/18/runtime-config-connection.html
+    - https://www.pgbouncer.org/config.html
+    - https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html
+    database-maintenance-planning:
+    - https://www.postgresql.org/docs/18/routine-vacuuming.html
+    database-engine-configuration-review:
+    - https://dev.mysql.com/doc/refman/8.4/en/persisted-system-variables.html
+    - https://mariadb.com/docs/server/ha-and-performance/optimization-and-tuning/system-variables/server-system-variables
+    database-replication-diagnosis:
+    - https://www.postgresql.org/docs/18/monitoring-stats.html
+    - https://dev.mysql.com/doc/refman/8.4/en/replication-administration-status.html
+    - https://mariadb.com/docs/server/reference/sql-statements/administrative-sql-statements/show/show-replica-status

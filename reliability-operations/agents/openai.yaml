@@ -1,4 +1,4 @@
 interface:
   display_name: "Reliability Operations"
-  short_description: "Evidence-driven observability and incident operations"
-  default_prompt: "Use $reliability-operations to design observability and verify service health."
+  short_description: "Operate telemetry, alerts, SLOs and incident evidence"
+  default_prompt: "Use $reliability-operations to diagnose telemetry and verify user-visible service reliability."

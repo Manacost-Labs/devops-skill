@@ -39,7 +39,7 @@ PUBLIC_TOOLS = {
     "tools/install.py",
     "tools/verify_release.py",
 }
-ALLOWED_SUFFIXES = {".md", ".yaml", ".yml", ".json", ".py", ".ps1", ".sh", ".txt"}
+ALLOWED_SUFFIXES = {".sql", ".md", ".yaml", ".yml", ".json", ".py", ".ps1", ".sh", ".txt"}
 SPECIAL_FILES = {"host-audit", "CODEOWNERS"}
 FORBIDDEN_PARTS = {".git", "dist", "lab-artifacts", "operations", "__pycache__", ".pytest_cache", ".devops-skill-backups"}
 TARGET_TOOL_PATTERNS = {
