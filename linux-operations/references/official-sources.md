@@ -55,4 +55,3 @@ The manifest maps every capability to the following official sources. A source m
 
 - [docs.redhat.com](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_selinux/index)
 - [documentation.ubuntu.com](https://documentation.ubuntu.com/server/how-to/security/apparmor/)
-

@@ -144,6 +144,7 @@ class HostAuditTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertLessEqual(result.stdout.count("X"), 16384)
             self.assertIn("at most 16 KiB", result.stdout)
+            self.assertIn("output may be truncated; completeness not verified", result.stdout)
 
     def test_os_release_is_untrusted_data_not_shell_code(self):
         with tempfile.TemporaryDirectory() as directory:

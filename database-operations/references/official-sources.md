@@ -40,4 +40,3 @@ The manifest maps every capability to the following official sources. A source m
 - [www.postgresql.org](https://www.postgresql.org/docs/18/monitoring-stats.html)
 - [dev.mysql.com](https://dev.mysql.com/doc/refman/8.4/en/replication-administration-status.html)
 - [mariadb.com](https://mariadb.com/docs/server/reference/sql-statements/administrative-sql-statements/show/show-replica-status)
-

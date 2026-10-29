@@ -22,7 +22,7 @@ probe() {
   if ! have timeout || ! have head || ! have "$1"; then missing "$label"; return; fi
   line "$label" 'bounded output follows (at most 16 KiB / 60 lines)'
   if timeout --kill-after=1s 4s "$@" 2>/dev/null | head -c 16384 | head -n 60; then
-    line "${label}_status" 'completed; empty output is not a health verdict'
+    line "${label}_status" 'command succeeded; output may be truncated; completeness not verified'
   else
     # Pipefail also catches SIGPIPE on truncation; partial evidence stays unknown.
     missing "${label}_status"
@@ -77,5 +77,6 @@ line backup_monitoring 'not inferred from process/timer presence; require end-to
 
 section 'Summary'
 line unavailable_checks "$unknown"
+line output_completeness 'all bounded observations may omit records, even after command success'
 line overall 'discovery only; available observations do not prove health or safety to change'
 line next 'identify affected service/cgroup and interval; follow the matching procedure before remediation'

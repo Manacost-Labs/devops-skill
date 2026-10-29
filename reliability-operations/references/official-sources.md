@@ -50,4 +50,3 @@ The manifest maps every capability to the following official sources. A source m
 
 - [prometheus.io](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
 - [grafana.com](https://grafana.com/docs/loki/latest/get-started/labels/cardinality/)
-
