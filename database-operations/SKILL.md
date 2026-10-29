@@ -38,6 +38,6 @@ SELECT is not a universal sandbox: functions, extensions, external access and re
 
 Never kill all sessions, increase connection limits blindly, delete WAL/binlogs/data files, disable durability, repair live tables or promote a replica to clear an alert. Do not add indexes or change application queries opportunistically.
 
-Database operations owns engine diagnosis/maintenance; the provider pack owns managed APIs/parameter groups; Linux/container owners own runtime; application owners own queries/schema/client pools. Data-resilience supports PostgreSQL/Redis backup/restore/PITR/migration/failover. It does not currently supply MySQL/MariaDB recovery: those changes require a separately confirmed engine-specific recovery owner/runbook. Stop rather than invent missing capability.
+Database operations owns engine diagnosis/maintenance; the provider pack owns managed APIs/parameter groups; Linux/container owners own runtime; application owners own queries/schema/client pools. Data-resilience 0.4.0+ supports PostgreSQL/Redis recovery and documented MySQL/MariaDB logical/binlog recovery, MariaDB physical full/incremental recovery and standard asynchronous cutover. Read its manifest and exact engine procedure before handoff; MySQL physical products, cross-vendor migration and cluster surgery require a verified specialist runbook.
 
 Report `verified`, `partially_verified`, `rolled_back` or `blocked` against the stated acceptance criteria. A successful query, backup job or running replica thread does not alone prove health or recoverability.

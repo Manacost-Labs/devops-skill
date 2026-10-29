@@ -1,24 +1,23 @@
 name: devops-core
-version: 0.4.0
+version: 0.4.1
 kind: coordinator
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash(python devops-core/scripts/profile_digest.py:*)
-  - Bash(python devops-core/scripts/validate_contracts.py:*)
-  - Bash(python devops-platform-contracts/scripts/operation_gate.py:*)
-  - Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
+- Read
+- Grep
+- Glob
+- Bash(python devops-core/scripts/profile_digest.py:*)
+- Bash(python devops-core/scripts/validate_contracts.py:*)
+- Bash(python devops-platform-contracts/scripts/operation_gate.py:*)
+- Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
 capabilities:
-  - task-normalization
-  - risk-classification
-  - module-routing
-  - change-control
-  - evidence-and-handoff
+- task-normalization
+- risk-classification
+- module-routing
+- change-control
+- evidence-and-handoff
 provides:
-  - safety-contract-v2
-  - operation-ledger-v2
-  - untrusted-content-boundary-v1
-
+- safety-contract-v2
+- operation-ledger-v2
+- untrusted-content-boundary-v1
 requires:
-  - devops-platform-contracts >= 0.3.0
+- devops-platform-contracts >= 0.3.0

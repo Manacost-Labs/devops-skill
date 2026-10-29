@@ -1,5 +1,5 @@
 name: database-operations
-version: 0.1.0
+version: 0.1.1
 kind: executor
 allowed_tools:
 - Read

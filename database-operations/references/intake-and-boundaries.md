@@ -20,8 +20,9 @@ Run one short sample, close the session/transaction, then a second sample with U
 | Managed instance size, parameter group, maintenance API | Named provider pack, with engine validation |
 | Credentials/role lifecycle | secrets-access with engine/provider executor |
 | PostgreSQL/Redis backup, restore, PITR, migration, failover | data-resilience-operations |
-| MySQL/MariaDB backup, restore, migration, failover or Galera/InnoDB Cluster surgery | Confirmed engine-specific recovery owner/runbook; unsupported here |
+| MySQL/MariaDB logical/binlog recovery, MariaDB physical full/incremental recovery, standard asynchronous cutover | data-resilience-operations 0.4.0+ with confirmed versions, topology and recovery proof |
+| MySQL physical products, cross-vendor migration, Galera/InnoDB Cluster surgery | Verified product/topology specialist; no generic fallback |
 
-Recovery capability is not inferred from generic wording or a provider API. Missing MySQL recovery is a blocker for stateful work, not for bounded diagnosis. Shared/reused credentials do not authorize every database visible to the account.
+Recovery capability is not inferred from generic wording or a provider API. Missing installed recovery capability or unsupported topology blocks stateful work, not bounded diagnosis. Shared/reused credentials do not authorize every database visible to the account.
 
 Return evidence and its privilege/coverage limits, hypotheses/contradictions, the next discriminating probe, change owner and acceptance. When a role or topology remains unknown, stop mutation and preserve safe discovery findings.

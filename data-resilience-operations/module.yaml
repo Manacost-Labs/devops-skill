@@ -1,72 +1,134 @@
 name: data-resilience-operations
-version: 0.3.1
+version: 0.4.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+- devops-platform-contracts >= 0.3.0
+- devops-core >= 0.3.0
 capabilities:
-  - postgresql-operations
-  - redis-operations
-  - backup-inventory
-  - isolated-restore-testing
-  - recovery-objective-validation
-  - point-in-time-recovery
-  - data-migration
-  - data-failover
-  - retention-enforcement
-  - data-masking
+- postgresql-operations
+- redis-operations
+- backup-inventory
+- isolated-restore-testing
+- recovery-objective-validation
+- point-in-time-recovery
+- data-migration
+- data-failover
+- retention-enforcement
+- data-masking
+- mysql-backup-and-recovery
+- mariadb-backup-and-recovery
+- binlog-recovery-chain-validation
+- mysql-mariadb-asynchronous-cutover
 risk_domains:
-  - production-state
-  - destructive-change
-  - data-confidentiality
-  - service-availability
+- production-state
+- destructive-change
+- data-confidentiality
+- service-availability
 platforms:
-  - PostgreSQL
-  - Redis
+- PostgreSQL
+- Redis
+- MySQL
+- MariaDB
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-29'
   refresh_before_change: true
   official_sources:
-    - https://www.postgresql.org/docs/current/maintenance.html
-    - https://www.postgresql.org/docs/current/backup-dump.html
-    - https://www.postgresql.org/docs/current/continuous-archiving.html
-    - https://www.postgresql.org/docs/current/warm-standby.html
-    - https://www.postgresql.org/docs/current/logical-replication.html
-    - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
-    - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
-    - https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/
-    - https://csrc.nist.gov/pubs/sp/800/188/final
+  - https://www.postgresql.org/docs/current/maintenance.html
+  - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+  - https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/
+  - https://www.postgresql.org/docs/current/backup-dump.html
+  - https://dev.mysql.com/doc/refman/8.4/en/backup-methods.html
+  - https://dev.mysql.com/doc/refman/8.4/en/mysqldump.html
+  - https://mariadb.com/docs/server/clients-and-utilities/backup-restore-and-import-clients/mariadb-dump
+  - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup
+  - https://dev.mysql.com/doc/refman/8.4/en/reloading-sql-format-dumps.html
+  - https://www.postgresql.org/docs/current/continuous-archiving.html
+  - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+  - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-binlog.html
+  - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/point-in-time-recovery-pitr-mariadb-backup
+  - https://www.postgresql.org/docs/current/logical-replication.html
+  - https://www.postgresql.org/docs/current/warm-standby.html
+  - https://dev.mysql.com/doc/refman/8.4/en/replication-solutions-switch.html
+  - https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html
+  - https://mariadb.com/docs/server/ha-and-performance/standard-replication/gtid
+  - https://mariadb.com/docs/server/ha-and-performance/standard-replication/setting-up-replication
+  - https://dev.mysql.com/doc/refman/8.4/en/purge-binary-logs.html
+  - https://mariadb.com/docs/server/server-management/server-monitoring-logs/binary-log
+  - https://csrc.nist.gov/pubs/sp/800/188/final
+  - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/incremental-backup-and-restore-with-mariadb-backup
+  - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/files-created-by-mariadb-backup
+  - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/mariadb-backup-options
+  - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html
+  - https://dev.mysql.com/doc/refman/8.4/en/mysqlbinlog.html
+  - https://mariadb.com/docs/server/clients-and-utilities/logging-tools/mariadb-binlog/mariadb-binlog-options
   capability_sources:
     postgresql-operations:
-      - https://www.postgresql.org/docs/current/maintenance.html
+    - https://www.postgresql.org/docs/current/maintenance.html
     redis-operations:
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/
     backup-inventory:
-      - https://www.postgresql.org/docs/current/backup-dump.html
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://www.postgresql.org/docs/current/backup-dump.html
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://dev.mysql.com/doc/refman/8.4/en/backup-methods.html
+    - https://dev.mysql.com/doc/refman/8.4/en/mysqldump.html
+    - https://mariadb.com/docs/server/clients-and-utilities/backup-restore-and-import-clients/mariadb-dump
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup
     isolated-restore-testing:
-      - https://www.postgresql.org/docs/current/backup-dump.html
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://www.postgresql.org/docs/current/backup-dump.html
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://dev.mysql.com/doc/refman/8.4/en/reloading-sql-format-dumps.html
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup
     recovery-objective-validation:
-      - https://www.postgresql.org/docs/current/continuous-archiving.html
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+    - https://www.postgresql.org/docs/current/continuous-archiving.html
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+    - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-binlog.html
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/point-in-time-recovery-pitr-mariadb-backup
     point-in-time-recovery:
-      - https://www.postgresql.org/docs/current/continuous-archiving.html
+    - https://www.postgresql.org/docs/current/continuous-archiving.html
+    - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-binlog.html
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/point-in-time-recovery-pitr-mariadb-backup
     data-migration:
-      - https://www.postgresql.org/docs/current/logical-replication.html
+    - https://www.postgresql.org/docs/current/logical-replication.html
     data-failover:
-      - https://www.postgresql.org/docs/current/warm-standby.html
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+    - https://www.postgresql.org/docs/current/warm-standby.html
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+    - https://dev.mysql.com/doc/refman/8.4/en/replication-solutions-switch.html
+    - https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html
+    - https://mariadb.com/docs/server/ha-and-performance/standard-replication/gtid
+    - https://mariadb.com/docs/server/ha-and-performance/standard-replication/setting-up-replication
     retention-enforcement:
-      - https://www.postgresql.org/docs/current/continuous-archiving.html
-      - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://www.postgresql.org/docs/current/continuous-archiving.html
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://dev.mysql.com/doc/refman/8.4/en/purge-binary-logs.html
+    - https://mariadb.com/docs/server/server-management/server-monitoring-logs/binary-log
     data-masking:
-      - https://csrc.nist.gov/pubs/sp/800/188/final
+    - https://csrc.nist.gov/pubs/sp/800/188/final
+    mysql-backup-and-recovery:
+    - https://dev.mysql.com/doc/refman/8.4/en/backup-methods.html
+    - https://dev.mysql.com/doc/refman/8.4/en/mysqldump.html
+    - https://dev.mysql.com/doc/refman/8.4/en/reloading-sql-format-dumps.html
+    - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-binlog.html
+    mariadb-backup-and-recovery:
+    - https://mariadb.com/docs/server/clients-and-utilities/backup-restore-and-import-clients/mariadb-dump
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/incremental-backup-and-restore-with-mariadb-backup
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/files-created-by-mariadb-backup
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/mariadb-backup-options
+    binlog-recovery-chain-validation:
+    - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html
+    - https://dev.mysql.com/doc/refman/8.4/en/mysqlbinlog.html
+    - https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/point-in-time-recovery-pitr-mariadb-backup
+    - https://mariadb.com/docs/server/clients-and-utilities/logging-tools/mariadb-binlog/mariadb-binlog-options
+    mysql-mariadb-asynchronous-cutover:
+    - https://dev.mysql.com/doc/refman/8.4/en/replication-solutions-switch.html
+    - https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html
+    - https://mariadb.com/docs/server/ha-and-performance/standard-replication/gtid
+    - https://mariadb.com/docs/server/ha-and-performance/standard-replication/setting-up-replication
