@@ -1,7 +1,7 @@
 ---
 name: github-operations
 description: Safely discover, plan, change, and verify GitHub control-plane state under contract v2. Use for branch protection and rulesets, deployment environments and required reviewers, Actions run and runner administration, releases and tags, repository settings, and token-permission scoping. Do not use for workflow design, pipeline trust, or secrets values.
-allowed-tools: Read, Grep, Glob, Bash(gh:*), Bash(python tools/devops_exec.py:*)
+allowed-tools: Read, Grep, Glob, Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh repo view:*), Bash(python tools/devops_exec.py:*)
 ---
 
 # GitHub Operations
@@ -20,7 +20,7 @@ Own the GitHub control plane: the settings, protections, gates, runs, and releas
 2. Perform read-only discovery with `gh` view/list commands and `gh api` GET calls, or `scripts/repo-protection-audit.py` for a structured protection audit. Read `references/github-permission-model.md` before touching permissions and `references/failure-modes.md` before planning any mutation.
 3. Produce an immutable plan naming every rule, ruleset ID, environment, reviewer set, bypass actor, runner, or release tag to be changed, with the before-state captured. Draft `templates/github-change-card.md` for R2-R4 work.
 4. Classify risk: read-only discovery is R0-R1; repository settings and non-default-branch rules are at least R2; changing protection of a default or release branch, environment reviewer sets, bypass lists, runner trust, or org-level rulesets is at least R3 because it weakens or reshapes a security control; deleting a repository, branch with unmerged history, ruleset that gates production, or moving a published release tag is R4 with recovery evidence.
-5. Gate every mutation through the platform contract: create the v2 operation request, bind `change.plan_digest` to the canonical digest of the exact command, obtain approvals, and execute only through `python tools/devops_exec.py --operation <request> -- gh ...`. Direct mutating `gh` calls are denied by the PreToolUse hook.
+5. Gate every mutation through the platform contract: create the v2 operation request, bind `change.plan_digest` to the canonical digest of the exact command, obtain approvals, and execute only through `python tools/devops_exec.py --operation <request> -- gh ...`. In an explicitly protected Claude session, direct mutating calls are denied by the configured hook. First confirm the stable execution-runtime location; a skill-only installation does not contain top-level `tools/`. Use an absolute wrapper path from another project. Metadata pre-approvals do not themselves prohibit other tools.
 6. Execute one bounded change at a time. Stop on any drift: an unexpected ruleset in the diff, an unknown bypass actor, an environment that lost its reviewers, or an API response that differs from the planned before-state.
 7. Verify from the authoritative side: re-read the protection or ruleset via the API, confirm a denied-path check (for example, an unauthorized merge attempt is rejected), confirm the environment still gates its workflows, and record redacted evidence with `verified`, `partially_verified`, `rolled_back`, or `blocked`.
 

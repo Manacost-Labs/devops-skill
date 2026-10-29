@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {
+    ".gitleaksignore",
     ".gitattributes",
     ".gitignore",
     "CHANGELOG.md",
@@ -29,6 +30,7 @@ ROOT_FILES = {
 }
 PUBLIC_TREES = {".claude-plugin", ".github", "docs", "evaluations", "examples", "tests"}
 PUBLIC_TOOLS = {
+    "tools/runtime_lock.py",
     "tools/build_public_source.py",
     "tools/build_release.py",
     "tools/devops_exec.py",

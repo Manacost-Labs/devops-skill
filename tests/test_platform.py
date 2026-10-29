@@ -47,7 +47,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.4.0")
+        self.assertEqual(catalog["version"], "0.4.1")
         self.assertEqual(len(catalog["skills"]), 22)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
@@ -153,7 +153,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(plugin["name"], "devops-skill-platform")
         self.assertEqual(plugin["version"], catalog["version"])
         self.assertEqual(plugin["license"], "Apache-2.0")
-        self.assertEqual(plugin["skills"], ".")
+        self.assertEqual(plugin["skills"], "./")
         for name in catalog["skills"]:
             self.assertTrue((ROOT / name / "SKILL.md").is_file(), name)
         self.assertNotIn("hooks", plugin, "installing the plugin must not silently enable the command gate")
@@ -209,6 +209,83 @@ class PlatformTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             result = self.command(ROOT / "tools/install.py", "--destination", directory)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr); self.assertIn("Dry-run only", result.stdout); self.assertEqual(list(Path(directory).iterdir()), [])
+    def test_runtime_install_is_previewed_and_self_contained(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "runtime"
+            installer = ROOT / "tools/install.py"
+            preview = self.command(installer, "--runtime", "--destination", destination)
+            self.assertEqual(preview.returncode, 0, preview.stdout + preview.stderr)
+            self.assertFalse(destination.exists())
+            applied = self.command(installer, "--runtime", "--destination", destination, "--apply")
+            self.assertEqual(applied.returncode, 0, applied.stdout + applied.stderr)
+            for name in ("devops_plan.py", "devops_exec.py", "hooks/pretooluse_gate.py", "install.py", "verify_release.py"):
+                self.assertTrue((destination / "tools" / name).is_file(), name)
+            self.assertFalse((destination / ".git").exists())
+            self.assertFalse((destination / "tests").exists())
+            validation = self.command(destination / "devops-platform-contracts/scripts/validate_platform.py")
+            self.assertEqual(validation.returncode, 0, validation.stdout + validation.stderr)
+            profile = destination / "devops-platform-contracts/templates/target-profile.yaml"
+            planned = self.command(destination / "tools/devops_plan.py", "--target-profile", profile,
+                "--action", "container_rollout", "--risk", "R2", "--objective", "Synthetic runtime check",
+                "--scope", "service:fixture", "--verify", "fixture is healthy", "--external-side-effects",
+                "--at", NOW, "--", "echo", "runtime-probe")
+            self.assertEqual(planned.returncode, 0, planned.stdout + planned.stderr)
+            request = Path(directory) / "unauthorized.json"
+            request.write_text(planned.stdout, encoding="utf-8")
+            blocked = self.command(destination / "tools/devops_exec.py", "--operation", request,
+                "--at", NOW, "--ledger", Path(directory) / "ledger.jsonl", "--", "echo", "runtime-probe")
+            self.assertEqual(blocked.returncode, 3, blocked.stdout)
+
+    def test_runtime_upgrade_preserves_operations_and_a_recovery_copy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "runtime"
+            installer = ROOT / "tools/install.py"
+            arguments = [installer, "--runtime", "--destination", destination, "--apply"]
+            self.assertEqual(self.command(*arguments).returncode, 0)
+            journal = destination / "operations/local-history.jsonl"
+            journal.parent.mkdir()
+            journal.write_text("synthetic history\n", encoding="utf-8")
+            self.assertNotEqual(self.command(*arguments).returncode, 0)
+            upgraded = self.command(*arguments, "--force")
+            self.assertEqual(upgraded.returncode, 0, upgraded.stdout + upgraded.stderr)
+            self.assertEqual(journal.read_text(encoding="utf-8"), "synthetic history\n")
+            backups = list((Path(directory) / ".devops-skill-backups").glob("runtime-*/previous/operations/local-history.jsonl"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), journal.read_bytes())
+
+    def test_runtime_refuses_source_and_unrelated_destinations(self):
+        installer = ROOT / "tools/install.py"
+        self.assertEqual(self.command(installer, "--runtime").returncode, 2)
+        self.assertEqual(self.command(installer, "--runtime", "--destination", ROOT).returncode, 2)
+        with tempfile.TemporaryDirectory() as directory:
+            unrelated = Path(directory) / "notes.txt"
+            unrelated.write_text("keep me", encoding="utf-8")
+            result = self.command(installer, "--runtime", "--destination", directory, "--apply", "--force")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep me")
+
+    def test_runtime_upgrade_restores_previous_copy_on_commit_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "runtime"
+            installer = ROOT / "tools/install.py"
+            self.assertEqual(self.command(installer, "--runtime", "--destination", destination, "--apply").returncode, 0)
+            marker = destination / "operations/owner-record.txt"
+            marker.parent.mkdir()
+            marker.write_text("preserve local history", encoding="utf-8")
+            spec = importlib.util.spec_from_file_location("runtime_installer_failure", installer)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            real_replace = module.os.replace
+            def fail_new_runtime(source, target):
+                if Path(source).name == "runtime" and Path(source).parent.name.startswith(".devops-runtime-stage-"):
+                    raise OSError("injected runtime commit failure")
+                return real_replace(source, target)
+            argv = [str(installer), "--runtime", "--destination", str(destination), "--apply", "--force"]
+            with mock.patch.object(module.os, "replace", side_effect=fail_new_runtime), mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(module.main(), 1)
+            self.assertTrue((destination / "tools/devops_exec.py").is_file())
+            self.assertEqual(marker.read_text(encoding="utf-8"), "preserve local history")
+
     def test_installer_force_preserves_recoverable_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             installer = ROOT / "tools/install.py"
@@ -442,7 +519,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.4.0")
+                self.assertEqual(manifest["version"], "0.4.1")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)

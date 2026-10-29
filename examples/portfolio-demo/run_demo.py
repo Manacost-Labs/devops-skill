@@ -238,7 +238,7 @@ def run_demo(output: Path | None) -> dict[str, Any]:
             raise RuntimeError("rollback drill failed to restore the pre-change state")
 
         ledger_records = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines()]
-        if [record["status"] for record in ledger_records] != ["blocked_digest_mismatch", "executed"]:
+        if [record["status"] for record in ledger_records] != ["blocked_digest_mismatch", "launch_intent", "executed"]:
             raise RuntimeError("execution ledger does not record the blocked drift and the gated execution")
 
         evidence = {

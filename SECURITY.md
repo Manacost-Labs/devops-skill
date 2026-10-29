@@ -8,7 +8,7 @@ The repository settings checklist in docs/github-repository-settings.md records 
 
 ## Supported versions
 
-Before the first tagged RC, no public version is supported. After publication, only the latest 0.3.x release candidate receives best-effort security fixes. Contract v1 remains planning-only and must not authorize R2-R4 execution.
+Before the first tagged RC, no public version is supported. After publication, only the latest 0.4.x release candidate receives best-effort security fixes. Contract v1 remains planning-only and must not authorize R2-R4 execution.
 
 ## Report a vulnerability
 

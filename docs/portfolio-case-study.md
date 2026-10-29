@@ -103,7 +103,7 @@ No step authorizes production access, customer-data access, or unrelated remedia
 
 Recommended wording after publishing the repository:
 
-> Designed and validated a 20-module DevOps skill platform with capability-based routing, fail-closed change gates, deterministic packaging, recovery requirements, and evidence-led verification.
+> Co-developed and validated a 22-module DevOps skill platform with capability-based routing, fail-closed change gates, deterministic packaging, recovery requirements, and evidence-led verification.
 
 Add a pilot outcome only after it happened and the evidence was reviewed. Replace general claims with measured facts such as the number of inventoried services, restore duration, alert coverage, or rollback time. Do not imply endorsement by the operator, enterprise certification, or production deployment.
 

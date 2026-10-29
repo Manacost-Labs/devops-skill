@@ -27,6 +27,7 @@ ROOT_FILES = {
     "CHANGELOG.md",
 }
 TOOL_FILES = {
+    "tools/runtime_lock.py",
     "tools/devops_exec.py",
     "tools/devops_plan.py",
     "tools/hooks/pretooluse_gate.py",

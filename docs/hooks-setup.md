@@ -1,26 +1,23 @@
-# Enforcement hook setup
+# Protected operator sessions
 
-`tools/hooks/pretooluse_gate.py` turns the operation gate from a convention into a
-mechanism. Without it, `operation_gate.py` is advisory: an agent that skips the gate
-can still execute a mutating command. With the hook installed, the agent runtime
-consults the hook before every shell command, and the hook denies anything that is
-not provably read-only and not bound to a fresh gate PASS.
+The optional Claude Code hook checks tool calls before execution. It accepts a bounded inspection grammar or a command passed through the approved executor. Unknown commands and options are refused. Enable it explicitly for operator sessions; ordinary development and CI sessions typically leave it disabled.
+
+This is a command and tool filter, not an operating-system sandbox. It assumes trusted, protected hook settings, runtime files, interpreter, PATH and CLI configuration. A CLI can invoke plugins or credential helpers from its configuration. Keep those outside agent write access. Do not expose privileged credentials through an unguarded alternate tool.
 
 ## Install
 
-Add the hook to the Claude Code settings of the workspace that operates infrastructure
-(`.claude/settings.json` in the checkout, or the user-level settings file):
+Install a complete runtime using the README instructions. Place this configuration in trusted Claude Code settings, replacing both example paths with absolute paths. The all-tool matcher is required: a Bash-only matcher would leave direct file edits, alternate shells and connector tools outside the gate.
 
 ```json
 {
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python tools/hooks/pretooluse_gate.py"
+            "command": "\"/absolute/path/to/python\" \"/absolute/path/to/devops-runtime/tools/hooks/pretooluse_gate.py\""
           }
         ]
       }
@@ -29,33 +26,51 @@ Add the hook to the Claude Code settings of the workspace that operates infrastr
 }
 ```
 
-The hook reads the standard PreToolUse JSON payload on stdin and answers with a
-`permissionDecision` of `allow` or `deny`. A deny also exits with status 2 so that
-runtimes that ignore the JSON body still block the call.
+Use forward slashes and quoted absolute paths on Windows too. An absolute command path keeps the check working when the shell changes its working directory. Installing a plugin or skill profile does not modify these settings.
 
-## Decision rules
+The hook returns a tool permission decision and exits 2 on a refusal. It allows Read, Grep, Glob, Skill and AskUserQuestion. Direct Write, Edit, NotebookEdit, PowerShell and unregistered tools are refused. Connector tools need their own reviewed adapter before use in this protected mode; they are denied by default.
 
-| Command class | Decision |
-|---|---|
-| Provably read-only segments (`ls`, `cat`, `grep`, `systemctl status`, `kubectl get/describe/logs`, `terraform plan/validate/show`, `docker ps/inspect/logs`, `git status/log/diff`, `aws/gcloud/az/openstack` describe/list/get/show, `gh` view/list/checks and `gh api` without a method or body, plain `curl` GET probes, ...) | allow |
-| Registered platform scripts, verified by resolved path (validators, `operation_gate.py`, `resolve_capabilities.py`, `ledger_chain.py`, digest tools, preflight and verification scripts, the portfolio demo runner) | allow |
-| `python tools/devops_exec.py --operation <request> -- <command>` | allow only after the hook re-verifies that `change.plan_digest` equals the canonical digest of the exact wrapped command, the execution window is open, and `operation_gate.py` returns a fresh PASS for that request |
-| Mutating verbs (`terraform apply/destroy`, `kubectl apply/delete/patch/scale`, `docker compose up/down`, `systemctl restart/stop/disable`, `rm`, `dd`, `mkfs`, package installs, firewall changes, cloud create/update/delete, ...) | deny with the exact remediation |
-| Obfuscation: `bash -c`, `sh -c`, `eval`, `xargs`, `env` wrappers, `base64`, command substitution `$(...)`, backticks, variable expansion `$VAR`, multi-line commands, redirections, unknown executables | deny (fail closed) |
+## Inspection grammar
 
-The canonical command digest is `sha256` over the JSON encoding of the exact argv
-list, computed identically by the hook and by `tools/devops_exec.py`. Approving a
-plan therefore approves one exact command, not a family of similar commands.
+The hook checks complete options, not just executable names. Simple inspection pipelines are accepted only when every segment is allowed. Control operators, redirection, subshells, shell expansion, unknown options and explicit paths to arbitrary executables are refused. Conservative refusals can include harmless quoted expressions; do not weaken the filter to guess at full shell semantics.
 
-## Properties and limits
+Examples: `ls -la`, `systemctl status nginx`, `kubectl get pods -A`, `docker ps`, `git status`, `uniq` with at most one input operand, bounded GitHub view/list calls and a repository `gh api` GET without body or method flags. Curl inspection requires `-q` first to disable its user configuration, one HTTP(S) URL and known inspection options.
 
-- Fail closed: a command the hook cannot classify is treated as mutating; a hook
-  crash denies the call.
-- The wrapper re-runs the gate itself immediately before launch, so editing the
-  operation file between the hook check and execution does not help an attacker.
-- The hook governs shell commands. File edits and other tools are constrained by
-  the per-module `allowed-tools` declarations validated by
-  `devops-platform-contracts/scripts/validate_platform.py`.
-- The hook only protects sessions where it is installed. CI and development
-  sessions that run the repository's own test suite typically omit it; operator
-  sessions that can reach real infrastructure must not.
+Terraform planning/validation, arbitrary cloud commands, find actions and other operations outside the grammar require the wrapper. Planning may execute providers or external programs, so its name alone does not prove an inspection.
+
+Registered validators and diagnostic scripts are allowed by resolved runtime path. Ledger scripts may only verify, not append. The planner can print a request or save it under the runtime's `operations/plans/` as JSON; it cannot overwrite settings or programs. Planner option abbreviations are disabled. The synthetic demo runs in a development session, not as an unrestricted operator helper.
+
+## Approved execution
+
+Use an absolute executor path when working outside the runtime directory:
+
+```text
+python /absolute/runtime/tools/devops_exec.py --operation /absolute/request.json -- command arguments
+```
+
+The hook checks the exact command digest, real current UTC execution window and a fresh gate result. It rejects unknown or duplicate wrapper flags. An explicit journal path must remain under runtime `operations/` with a `.jsonl` suffix. The executor rechecks the request before launch and durably records launch intent.
+
+The protected hook never accepts `--at`. That flag remains available only to direct CLIs for isolated deterministic tests. Historical time must never authorize live work.
+
+An argv digest covers arguments, not executable bytes, environment, working directory or referenced files. Protect and verify those inputs separately. Approval records and lock references are local contract data; they are not authenticated identities or an acquired external lock.
+
+## Local writer coordination
+
+The executor holds a native exclusive lock through the complete command and final journal write. The planner and runtime installer use the same lock. Upgrade takes it before inspecting/copying local operation records and holds it through replacement, so a live executor cannot append into a recovery copy. A busy or unavailable lock refuses the competing operation.
+
+Lock files stay in the runtime parent's `.devops-skill-locks/` directory under a key derived from the canonical runtime path. Protect this directory from deletion/replacement and provide the execution identity access to its existing lock file. The operating system releases a process's native lock when it exits; lock files remain as stable coordination points. They are local coordination metadata, not credentials or target lock approvals. Use a filesystem that supports the native lock primitives. Before upgrading a legacy runtime that does not take this lock, stop all of its writers.
+
+On POSIX, the journal syncs the file, containing directory, and parents of any newly created directories before launch. A directory-sync error blocks the command. This uses the filesystem's durability guarantees and is not a claim about faulty storage hardware. See [Linux fsync semantics](https://man7.org/linux/man-pages/man2/fsync.2.html).
+
+## Journal outcomes
+
+- `launch_intent`: intent was durably saved before launch; this alone does not prove a process started.
+- `executed`: the child finished; its exit code and service acceptance still need interpretation.
+- `timed_out` or `outcome_unknown`: the process started and may have made changes; verify the target before retrying.
+- `AUDIT ERROR` / exit 74: execution started but its final record could not be saved. The output never describes this as a pre-launch block.
+
+Pre-launch refusals use `BLOCKED` / exit 3. A child may independently return those same numeric codes; distinguish the outcome message and journal record rather than treating a number alone as proof that nothing ran. Timeout kills the direct child; descendants and remote effects still require investigation. An intent without a completion record is an unresolved operation, not permission to retry.
+
+## Other runtimes
+
+The supplied interception adapter targets Claude Code. Codex skill profiles contain guidance and validators; no equivalent automatic Codex hook adapter is supplied. Run commands through the executor under independently enforced permissions. Skill `allowed-tools` metadata grants Claude pre-approval and does not remove tools from its pool. See the official [skill permission semantics](https://code.claude.com/docs/en/skills#pre-approve-tools-for-a-skill).

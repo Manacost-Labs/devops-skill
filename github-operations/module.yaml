@@ -1,11 +1,15 @@
 name: github-operations
-version: 0.1.0
+version: 0.1.1
 kind: executor
 allowed_tools:
   - Read
   - Grep
   - Glob
-  - Bash(gh:*)
+  - Bash(gh pr view:*)
+  - Bash(gh pr list:*)
+  - Bash(gh run view:*)
+  - Bash(gh run list:*)
+  - Bash(gh repo view:*)
   - Bash(python tools/devops_exec.py:*)
 requires:
   - devops-platform-contracts >= 0.3.0

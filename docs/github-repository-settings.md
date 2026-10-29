@@ -1,6 +1,6 @@
 # GitHub repository settings checklist
 
-Repository files can recommend these controls but cannot prove that GitHub enforces them. The owner must configure and verify each item after the remote repository exists. Current intended repository owner: @Shpuntyara.
+Repository files can recommend these controls but cannot prove that GitHub enforces them. The owner must configure and verify each item after the remote repository exists. Current repository: `Manacost-Labs/devops-skill`. Administrative settings and required reviewers must be verified by the repository maintainers.
 
 ## Before pushing project content publicly
 
@@ -37,7 +37,7 @@ Create a ruleset or branch protection rule targeting main:
   - Python 3.13 / ubuntu-24.04
   - Python 3.13 / windows-2025
   - Dependency review
-- [ ] Do not require the manual Verify 0.3.0 RC candidate job for ordinary pull requests.
+- [ ] Do not require the manual Verify 0.4.1 RC candidate job for ordinary pull requests.
 
 CODEOWNERS currently names one account. That is enough to route portfolio maintenance review, but it does not implement separation of duties. Production or enterprise use requires adding a second qualified identity and configuring the ruleset so the author cannot satisfy their own required approval.
 
