@@ -8,6 +8,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import time
 import uuid
 from pathlib import Path
 
@@ -76,7 +77,11 @@ sys.exit(23 if resolved else 24)
 """
 
 
-def command(argv, *, environment=None, timeout=120, input=None, expected=0):
+def command(argv, *, environment=None, timeout=120, input=None, expected=0, deadline=None):
+    if deadline is not None:
+        timeout = min(timeout, deadline-time.monotonic())
+        if timeout <= 0:
+            raise TimeoutError("fixture observation deadline exceeded")
     result = subprocess.run(argv, env=environment, input=input, capture_output=True, text=True, timeout=timeout)
     if expected is not None and result.returncode != expected:
         raise RuntimeError("fixture command failed: "+str(argv[:3])+" "+result.stderr[-1500:])
@@ -115,6 +120,11 @@ class DockerFixture:
             if info.get("OSType") != "linux" or not info.get("ID"):
                 raise RuntimeError("Linux daemon identity required")
             self.daemon_id = info["ID"]
+            components = json.loads(self.docker("version", "--format", "{{json .Server.Components}}").stdout)
+            self.runtime_versions = {item["Name"]: item["Version"] for item in components
+                                     if item.get("Name") in {"Engine", "containerd", "runc", "docker-init"}
+                                     and isinstance(item.get("Version"), str)
+                                     and re.fullmatch(r"[A-Za-z0-9.+_:-]{1,128}", item["Version"])}
             self.docker("pull", IMAGE, timeout=240)
             self.image_id = self.inspect("image", IMAGE)["Id"]
         except Exception:
@@ -123,18 +133,18 @@ class DockerFixture:
 
     def docker(self, *args, **kwargs):
         if self.daemon_id is not None and args[0] != "info":
-            self.check_daemon()
+            self.check_daemon(deadline=kwargs.get("deadline"))
         return command(["docker", "--host", "unix:///var/run/docker.sock", "--config",
                         str(self.folder/"docker-config"), *args], environment=self.environment, **kwargs)
 
-    def inspect(self, kind, identity):
-        items = json.loads(self.docker(kind, "inspect", identity).stdout)
+    def inspect(self, kind, identity, *, deadline=None):
+        items = json.loads(self.docker(kind, "inspect", identity, deadline=deadline).stdout)
         if not isinstance(items, list) or len(items) != 1:
             raise RuntimeError("exact fixture object required")
         return items[0]
 
-    def check_daemon(self):
-        current = json.loads(self.docker("info", "--format", "{{json .}}").stdout)
+    def check_daemon(self, *, deadline=None):
+        current = json.loads(self.docker("info", "--format", "{{json .}}", deadline=deadline).stdout)
         if current.get("ID") != self.daemon_id or current.get("OSType") != "linux":
             raise RuntimeError("daemon identity changed")
 
@@ -166,8 +176,8 @@ class DockerFixture:
         self.owned_container(identity)
         return identity
 
-    def owned_container(self, identity):
-        value = self.inspect("container", identity)
+    def owned_container(self, identity, *, deadline=None):
+        value = self.inspect("container", identity, deadline=deadline)
         if value.get("Id") != identity or value.get("Config", {}).get("Labels", {}).get(OWNER) != self.tag:
             raise RuntimeError("fixture container ownership changed")
         return value

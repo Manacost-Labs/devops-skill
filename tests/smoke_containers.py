@@ -3,21 +3,49 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 
 from container_fixture import APP, HTTP, REQUEST, ROOT, DockerFixture, command
 
 
-def snapshot(fixture, identity):
-    raw = fixture.docker("container", "inspect", identity).stdout
-    result = command([sys.executable, str(ROOT/"docker-operations/scripts/inspect-container-state.py"), "--id", identity], input=raw)
+def snapshot(fixture, identity, *, deadline=None):
+    # Summarize the same inspection that passed full ID and owner-label checks.
+    raw = json.dumps(fixture.owned_container(identity, deadline=deadline))
+    result = command([sys.executable, str(ROOT/"docker-operations/scripts/inspect-container-state.py"), "--id", identity],
+                     input=raw, deadline=deadline)
     return json.loads(result.stdout)
+
+
+def wait_for_oom_report(fixture, identity, *, timeout=10, clock=time.monotonic, sleep=time.sleep):
+    # Docker wait observes exit; OOM bookkeeping is a separate runtime event.
+    # Only re-read this lifecycle. Never repeat allocation or infer OOM from137.
+    deadline = clock()+timeout
+    last = None
+    while clock() < deadline:
+        last = snapshot(fixture, identity, deadline=deadline)
+        if (last.get("container_id") != identity or last.get("state") != "exited"
+                or last.get("running") is not False or type(last.get("exit_code")) is not int
+                or last["exit_code"] != 137 or type(last.get("oom_killed")) is not bool):
+            raise RuntimeError("invalid or changed exited-container evidence")
+        # A late sample cannot satisfy the observation budget.
+        if clock() >= deadline:
+            break
+        if last["oom_killed"] is True:
+            return last
+        sleep(min(.25, max(0, deadline-clock())))
+    print(json.dumps({"status": "oom_evidence_not_observed", "container_id": identity,
+                      "last_state": None if last is None else last["state"],
+                      "last_exit_code": None if last is None else last["exit_code"],
+                      "last_oom_killed": None if last is None else last["oom_killed"],
+                      "runtime_versions": fixture.runtime_versions}, sort_keys=True), flush=True)
+    raise RuntimeError("explicit runtime OOM evidence not observed within budget")
 
 
 def main():
     fixture = DockerFixture()
     try:
         identity, _ = fixture.execute("block=bytearray(256*1024*1024)", expected=137)
-        report = snapshot(fixture, identity)
+        report = wait_for_oom_report(fixture, identity)
         assert report["oom_killed"] is True and report["exit_code"] == 137
         # Namespace PID1 has special signal rules: kill from its owning daemon.
         killed = fixture.create("import time; time.sleep(60)")
