@@ -46,7 +46,9 @@ class KubernetesFixture(DockerFixture):
         existing = command([str(self.folder/"kind"), "get", "clusters"], environment=self.environment).stdout.splitlines()
         if self.tag in existing:
             raise RuntimeError("cluster name collision")
-        self.cluster_network_id = self.network()
+        # kind's pinned node entrypoint needs a default gateway for DNS setup.
+        # Keep a unique owned bridge with normal routing; API binds only loopback.
+        self.cluster_network_id = self.network(internal=False)
         self.environment["KIND_EXPERIMENTAL_DOCKER_NETWORK"] = self.tag
         network = self.inspect("network", self.cluster_network_id)
         if network.get("Name") != self.tag or network.get("Labels", {}).get("devops.fixture.owner") != self.tag:
@@ -139,8 +141,12 @@ class KubernetesFixture(DockerFixture):
                          input=json.dumps(value))
         return json.loads(result.stdout)
 
-    def check_nodes(self):
+    def check_nodes(self, *, allow_empty=False):
         names = command([str(self.folder/"kind"), "get", "nodes", "--name", self.tag], environment=self.environment).stdout.splitlines()
+        # kind removes partial nodes itself on a failed create. Never treat a
+        # missing node from an already captured successful cluster as that case.
+        if not names and allow_empty and self.node_ids is None:
+            return {}
         if names != [self.tag+"-control-plane"]:
             raise RuntimeError("unexpected fixture node set")
         nodes = {}
@@ -158,7 +164,9 @@ class KubernetesFixture(DockerFixture):
     def cleanup_cluster(self):
         if getattr(self, "cluster_attempted", False):
             self.check_daemon()
-            self.check_nodes()
+            nodes = self.check_nodes(allow_empty=True)
+            if not nodes:
+                return
             if self.namespace_uid:
                 self.check_cluster()
                 self.kubectl("delete", "namespace", self.tag, "--wait=true", "--timeout=60s", timeout=90)

@@ -206,6 +206,17 @@ class ComposeAndInstallationTests(unittest.TestCase):
 
 
 class NativeFixtureBoundaryTests(unittest.TestCase):
+    def test_partial_kind_creation_cleanup_only_accepts_empty_before_identity_capture(self):
+        import smoke_kubernetes as native
+        fixture = object.__new__(native.KubernetesFixture)
+        fixture.tag = "devops-owned"; fixture.folder = Path("/synthetic-owned"); fixture.environment = {}
+        fixture.node_ids = None
+        with mock.patch.object(native, "command", return_value=SimpleNamespace(stdout="")):
+            self.assertEqual(fixture.check_nodes(allow_empty=True), {})
+            with self.assertRaises(RuntimeError): fixture.check_nodes()
+            fixture.node_ids = {"devops-owned-control-plane": IDENTITY}
+            with self.assertRaises(RuntimeError): fixture.check_nodes(allow_empty=True)
+
     def test_fixture_environment_pins_runtime_network_selection_and_kubeconfig(self):
         import container_fixture as native
         folder = Path("owned-scratch")

@@ -144,8 +144,9 @@ class DockerFixture:
         self.volumes.append(name)
         return name
 
-    def network(self):
-        identity = self.docker("network", "create", "--internal", "--label", OWNER+"="+self.tag, self.tag).stdout.strip()
+    def network(self, *, internal=True):
+        options = ["--internal"] if internal else []
+        identity = self.docker("network", "create", *options, "--label", OWNER+"="+self.tag, self.tag).stdout.strip()
         self.networks.append(identity)
         return identity
 
