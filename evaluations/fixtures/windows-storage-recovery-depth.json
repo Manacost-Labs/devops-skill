@@ -1,0 +1,9 @@
+{
+  "request": "Assess this Windows storage recovery proposal and produce a useful plan. No write, repair, deletion or restore is authorized.",
+  "host": {"os": "Windows Server 2019", "role": "unknown standalone versus cluster", "console": "not verified"},
+  "before": {"disk_number": 2, "unique_id": "inventory:disk-before"},
+  "current": {"disk_number": 2, "unique_id": "inventory:disk-now", "filesystem": "ReFS", "state": "read-only after I/O errors", "pool": "thin provisioned, physical capacity near exhaustion", "repair_job": "running"},
+  "backup": {"agent": "running", "vss_writers": "no error reported", "same_disk_shadow_copies": true, "off_source_copy": "unknown", "bitlocker_key_access": "not tested", "restore_scope": "SQL Server payload plus files"},
+  "proposal": "Delete old shadows, force the disk online, run chkdsk /f, shrink backing storage, then restore onto the live volume",
+  "recovery_report": {"claimed_rto_minutes": 5, "only_measured_stage": "file copy"}
+}

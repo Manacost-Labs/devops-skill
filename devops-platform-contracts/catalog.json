@@ -1,14 +1,14 @@
 {
   "name": "devops-skill-platform",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "contract_version": "v2",
   "skills": {
     "devops-platform-contracts": {
-      "version": "0.4.1",
+      "version": "0.4.2",
       "role": "policy-and-validation"
     },
     "devops-core": {
-      "version": "0.4.1",
+      "version": "0.4.2",
       "role": "coordinator"
     },
     "linux-operations": {
@@ -16,7 +16,7 @@
       "role": "executor"
     },
     "windows-server-operations": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "identity-directory-operations": {
@@ -266,6 +266,13 @@
       "kubernetes-operations",
       "enterprise-networking",
       "security-compliance-operations"
+    ],
+    "windows-server": [
+      "devops-platform-contracts",
+      "devops-core",
+      "windows-server-operations",
+      "secrets-access-operations",
+      "reliability-operations"
     ]
   }
 }

@@ -1,6 +1,6 @@
 # DevOps Skill Platform
 
-**Portfolio project · release candidate 0.6.0**
+**Portfolio project · release candidate 0.7.0**
 
 A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 23 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, the GitHub control plane, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
 
@@ -118,9 +118,13 @@ Provider packs do not replace the technical modules. For example, an EKS migrati
 
 Managed-service boundaries are normative in the [control-plane ownership matrix](devops-core/references/control-plane-ownership.md): provider packs own provider APIs, while IaC state, Kubernetes resources, data recovery, identity lifecycle, network paths, release trust, and service acceptance remain with their specialist modules.
 
-## Operations depth in 0.6.0
+## Operations depth in 0.7.0
 
 Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedures for cgroups/OOM, packages, storage/boot, networking and mandatory access controls. Reliability covers Prometheus/Alertmanager, Grafana, Loki/OTel, missing data, burn rates, capacity and release acceptance. The database module separates everyday PostgreSQL/MySQL/MariaDB diagnosis from recovery. Data resilience now includes [MySQL/MariaDB backup, PITR and isolated restore drills](docs/mysql-mariadb-recovery.md). Read the [scope, examples and validation limits](docs/operations-depth.md).
+
+## Windows Server depth in 0.7.0
+
+Windows operations now covers SMB/NTFS, host certificates/keys, Task Scheduler, standalone storage and file/host recovery with focused procedures and read-only evidence helpers. The [scope and native-test limits](docs/windows-server-depth.md) distinguish configuration inventory from effective access, trust and restore proof.
 
 ## Install profiles
 
@@ -128,6 +132,7 @@ Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedur
 |---|---|
 | `core` | Planning, policy, validation, and safe handoff |
 | `web-linux` | Linux + Docker + HTTP edge + Cloudflare + reliability |
+| `windows-server` | Windows host, SMB/NTFS, certificates, tasks, storage/recovery, access and reliability |
 | `hybrid-server` | Linux/Windows hosts + Docker + HTTP edge + reliability |
 | `identity-directory` | Active Directory and GPO work with Windows-host, privileged-access, and reliability handoffs |
 | `delivery` | IaC, CI/CD, GitHub control plane, and secret/access boundaries |
@@ -193,7 +198,7 @@ The digest covers the command arguments. Protect working directories, executable
 
 ## Provider freshness
 
-Linux, reliability, database operations, Cloudflare, IaC, CI/CD, GitHub operations, data-resilience, AWS, Google Cloud, Azure, Selectel, and Kubernetes manifests declare official documentation sources, map every capability to those sources, and record `last_verified`. Validation rejects missing capability coverage, unapproved source hosts, future dates, and release metadata older than 183 days. This does not make memorized behavior safe: a material change must refresh the exact official operation page and run read-only discovery against the actual account, project, subscription, cluster, tool, or database topology.
+Windows Server, Linux, reliability, database operations, Cloudflare, IaC, CI/CD, GitHub operations, data-resilience, AWS, Google Cloud, Azure, Selectel, and Kubernetes manifests declare official documentation sources, map every capability to those sources, and record `last_verified`. Validation rejects missing capability coverage, unapproved source hosts, future dates, and release metadata older than 183 days. This does not make memorized behavior safe: a material change must refresh the exact official operation page and run read-only discovery against the actual account, project, subscription, cluster, tool, or database topology.
 
 ## Development and release
 
@@ -203,8 +208,8 @@ The following commands require a source checkout. Runtime release archives inten
 python devops-platform-contracts/scripts/validate_platform.py
 python -m unittest discover -s tests -v
 python tools/build_public_source.py --output ..\devops-skill-platform-public
-python tools/build_release.py --output dist/devops-skill-platform-0.6.0.zip
-python tools/verify_release.py dist/devops-skill-platform-0.6.0.zip
+python tools/build_release.py --output dist/devops-skill-platform-0.7.0.zip
+python tools/verify_release.py dist/devops-skill-platform-0.7.0.zip
 ```
 
 `PUBLIC-SOURCE-MANIFEST.json` is generated only in a fresh public-source export, not maintained as a stale receipt in the development tree. `build_public_source.py` creates a fresh allowlisted source tree without Git history, private operation records, lab artifacts, release archives, credentials, or target-specific tools. Use that clean tree—not an export of a private operations repository—as the source of a new public portfolio repository.

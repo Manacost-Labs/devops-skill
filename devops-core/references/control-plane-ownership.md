@@ -17,6 +17,7 @@ Select modules by the state and API being changed. A tool, repository, or creden
 | Release pipeline and protected deployment | `cicd-operations` | Every target executor verifies its own plan fragment and final state; `reliability-operations` owns user-path acceptance and observation window |
 | Active Directory DS OUs, users, computers, groups, membership, delegation and GPO objects/links | `identity-directory-operations` | `secrets-access-operations` owns privileged-session, JIT/revocation and break-glass controls; `windows-server-operations` owns host membership and client-side policy result |
 | GPO-driven production configuration or security baseline | `identity-directory-operations` | Owning host/workload executor validates safe application; `reliability-operations` verifies the service path and observation window |
+| Standalone Windows SMB/files/NTFS, host certificate/key installation, tasks and storage/file recovery | `windows-server-operations` | Directory/secrets owners govern identity intent; PKI owner governs issuance/CA; edge/application validates TLS/client path; provider/IaC owns backing resources; cluster/DFS and SQL Server/Exchange recovery need specialist runbooks |
 
 ## Combined-operation rules
 

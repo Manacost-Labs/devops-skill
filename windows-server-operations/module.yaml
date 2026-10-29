@@ -1,30 +1,120 @@
 name: windows-server-operations
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
 requires:
-  - devops-platform-contracts >= 0.2.0
-  - devops-core >= 0.2.0
+- devops-platform-contracts >= 0.2.0
+- devops-core >= 0.2.0
 capabilities:
-  - windows-server-host-audit
-  - winrm-rdp-access-operations
-  - windows-service-operations
-  - windows-firewall-operations
-  - windows-update-reboot-planning
-  - controlled-windows-recovery
+- windows-server-host-audit
+- winrm-rdp-access-operations
+- windows-service-operations
+- windows-firewall-operations
+- windows-update-reboot-planning
+- controlled-windows-recovery
+- windows-smb-file-services
+- windows-ntfs-permissions
+- windows-host-certificates
+- windows-scheduled-task-operations
+- windows-storage-operations
+- windows-file-host-backup-recovery
+- windows-host-security-review
 risk_domains:
-  - winrm-and-rdp-access
-  - local-administrators-and-service-accounts
-  - windows-firewall-and-networking
-  - updates-and-reboots
-  - windows-host-configuration
+- winrm-and-rdp-access
+- local-administrators-and-service-accounts
+- windows-firewall-and-networking
+- updates-and-reboots
+- windows-host-configuration
+- file-security-and-sharing
+- private-keys-and-bindings
+- scheduled-task-execution
+- storage-and-file-recovery
 platforms:
-  - windows-server-2019
-  - windows-server-2022
-  - windows-server-2025
+- windows-server-2019
+- windows-server-2022
+- windows-server-2025
+source_freshness:
+  last_verified: '2026-10-29'
+  refresh_before_change: true
+  official_sources:
+  - https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
+  - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-5.1
+  - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/winrm-security?view=powershell-7.5
+  - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-service?view=powershell-5.1
+  - https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/shutdown
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wbadmin-start-recovery
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/vssadmin-list-writers
+  - https://learn.microsoft.com/en-us/windows-server/storage/file-server/file-server-smb-overview
+  - https://learn.microsoft.com/en-us/powershell/module/smbshare/new-smbshare?view=windowsserver2025-ps
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy
+  - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-acl?view=powershell-5.1
+  - https://learn.microsoft.com/en-us/windows/win32/secauthz/order-of-aces-in-a-dacl
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls
+  - https://learn.microsoft.com/en-us/powershell/module/pki/export-pfxcertificate?view=windowsserver2025-ps
+  - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/about/about_certificate_provider?view=powershell-5.1
+  - https://learn.microsoft.com/en-us/windows-server/security/tls/manage-tls
+  - https://learn.microsoft.com/en-us/powershell/module/scheduledtasks/export-scheduledtask?view=windowsserver2025-ps
+  - https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-schema
+  - https://learn.microsoft.com/en-us/windows/win32/taskschd/security-contexts-for-running-tasks
+  - https://learn.microsoft.com/en-us/windows/win32/taskschd/principal-logontype
+  - https://learn.microsoft.com/en-us/windows/win32/taskschd/task-security-hardening
+  - https://learn.microsoft.com/en-us/powershell/module/storage/get-partitionsupportedsize?view=windowsserver2025-ps
+  - https://learn.microsoft.com/en-us/powershell/module/storage/get-storagejob?view=windowsserver2025-ps
+  - https://learn.microsoft.com/en-us/powershell/module/storage/repair-volume?view=windowsserver2025-ps
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/chkdsk
+  - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/manage-bde-protectors
+  - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/forest-recovery-guide/ad-forest-recovery-backing-up-system-state
+  - https://learn.microsoft.com/en-us/powershell/scripting/security/security-features?view=powershell-7.5
+  capability_sources:
+    windows-server-host-audit:
+    - https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
+    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-5.1
+    winrm-rdp-access-operations:
+    - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/winrm-security?view=powershell-7.5
+    windows-service-operations:
+    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-service?view=powershell-5.1
+    windows-firewall-operations:
+    - https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/
+    windows-update-reboot-planning:
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/shutdown
+    controlled-windows-recovery:
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wbadmin-start-recovery
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/vssadmin-list-writers
+    windows-smb-file-services:
+    - https://learn.microsoft.com/en-us/windows-server/storage/file-server/file-server-smb-overview
+    - https://learn.microsoft.com/en-us/powershell/module/smbshare/new-smbshare?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy
+    windows-ntfs-permissions:
+    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-acl?view=powershell-5.1
+    - https://learn.microsoft.com/en-us/windows/win32/secauthz/order-of-aces-in-a-dacl
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls
+    windows-host-certificates:
+    - https://learn.microsoft.com/en-us/powershell/module/pki/export-pfxcertificate?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/about/about_certificate_provider?view=powershell-5.1
+    - https://learn.microsoft.com/en-us/windows-server/security/tls/manage-tls
+    windows-scheduled-task-operations:
+    - https://learn.microsoft.com/en-us/powershell/module/scheduledtasks/export-scheduledtask?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-schema
+    - https://learn.microsoft.com/en-us/windows/win32/taskschd/security-contexts-for-running-tasks
+    - https://learn.microsoft.com/en-us/windows/win32/taskschd/principal-logontype
+    - https://learn.microsoft.com/en-us/windows/win32/taskschd/task-security-hardening
+    windows-storage-operations:
+    - https://learn.microsoft.com/en-us/powershell/module/storage/get-partitionsupportedsize?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/storage/get-storagejob?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/storage/repair-volume?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/chkdsk
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/manage-bde-protectors
+    windows-file-host-backup-recovery:
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wbadmin-start-recovery
+    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/vssadmin-list-writers
+    - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/forest-recovery-guide/ad-forest-recovery-backing-up-system-state
+    windows-host-security-review:
+    - https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/
+    - https://learn.microsoft.com/en-us/powershell/scripting/security/security-features?view=powershell-7.5

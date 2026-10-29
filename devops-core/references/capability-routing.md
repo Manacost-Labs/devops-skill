@@ -5,7 +5,7 @@ Select the smallest installed set that covers the confirmed task. Read a module 
 | Confirmed concern | Module |
 |---|---|
 | Linux hosts, SSH, systemd, ports, disks, logs | `linux-operations` |
-| Windows Server, WinRM/RDP, Windows services, Event Logs, Windows Firewall | `windows-server-operations` |
+| Windows Server, SMB/NTFS, host certificates/keys, tasks, storage/file recovery, WinRM/RDP, services/events/firewall | `windows-server-operations`; AD/GPO, PKI authority, clusters and application recovery retain their owners |
 | Active Directory DS, OUs, users, computers, groups, delegated administration, GPOs and policy links | `identity-directory-operations`; add Windows, access, reliability or Azure modules only for their owned boundary |
 | Docker, Compose, images, registries, volumes | `docker-operations` |
 | DNS, TLS, HTTP, reverse proxy, origin reachability | `network-edge-operations` |
