@@ -461,6 +461,17 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decision, "deny")
         self.assertIn("--at", reason)
 
+    def test_hook_accepts_literal_tilde_inside_an_approved_path(self):
+        inner = ["hypothetical-mutator", "--switch", "release-2"]
+        with tempfile.TemporaryDirectory() as directory:
+            short_path = Path(directory) / "RUNNER~1"
+            short_path.mkdir()
+            command = self.wrapper_command(bound_operation(inner), short_path, inner)
+            returncode, decision, reason = self.run_hook(command)
+        self.assertEqual(returncode, 0, reason)
+        self.assertEqual(decision, "allow", reason)
+        self.assert_blocked("cat ~/private-config")
+
     def test_hook_blocks_wrapper_with_digest_mismatch(self):
         approved = ["hypothetical-mutator", "--switch", "release-2"]
         tampered = ["hypothetical-mutator", "--switch", "release-3"]

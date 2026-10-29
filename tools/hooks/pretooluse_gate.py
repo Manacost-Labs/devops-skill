@@ -245,7 +245,7 @@ def evaluate(payload):
     command = inputs.get("command") if isinstance(inputs, dict) else None
     if not isinstance(command, str) or not command.strip():
         return False, "BLOCKED: no shell command was provided"
-    if any(character in command for character in "\n\r$*?[]{}~" + chr(96)):
+    if any(character in command for character in "\n\r$*?[]{}" + chr(96)):
         return False, "BLOCKED: shell expansion or multi-line input requires the wrapper"
     lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>()")
     lexer.whitespace_split = True
@@ -253,6 +253,10 @@ def evaluate(payload):
     tokens = list(lexer)
     if not tokens:
         return False, "BLOCKED: empty command"
+    # A tilde inside a Windows 8.3 path (RUNNER~1) is literal. Bash home
+    # expansion begins a word; refuse that form, including conservative quotes.
+    if any(token.startswith("~") for token in tokens):
+        return False, "BLOCKED: home expansion requires a literal absolute path"
     if any(("<" in token or ">" in token) or (token != "|" and all(character in ";&|<>()" for character in token)) for token in tokens):
         return False, "BLOCKED: control operators, subshells and redirection require an approved literal command"
     segments = [[]]
