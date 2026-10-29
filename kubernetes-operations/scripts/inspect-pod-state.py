@@ -11,7 +11,8 @@ import uuid
 MAX_BYTES = 1048576
 MAX_ITEMS = 32
 LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?")
-QUANTITY = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+|[numkKMGTP]|[KMGTPE]i)?")
+SUBDOMAIN = re.compile(r"[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9](?:[-a-z0-9]*[a-z0-9])?)*")
+QUANTITY = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+|[numkMGTPE]|[KMGTPE]i)?")
 REASONS = {"OOMKilled", "Error", "Completed", "ContainerCannotRun", "StartError", "CrashLoopBackOff",
            "ImagePullBackOff", "ErrImagePull", "CreateContainerConfigError", "CreateContainerError",
            "ContainerCreating", "RunContainerError", "InvalidImageName", "PodInitializing",
@@ -106,7 +107,7 @@ def container_state(value):
 
 def summarize(data, namespace, name, expected_uid):
     label(namespace)
-    if not isinstance(name, str) or len(name) > 253 or any(not LABEL.fullmatch(part) for part in name.split(".")):
+    if not isinstance(name, str) or len(name) > 253 or not SUBDOMAIN.fullmatch(name):
         raise ValueError("invalid Pod name")
     if str(uuid.UUID(expected_uid)) != expected_uid:
         raise ValueError("canonical UID required")

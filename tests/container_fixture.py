@@ -83,10 +83,21 @@ def command(argv, *, environment=None, timeout=120, input=None, expected=0):
     return result
 
 
+def fixture_environment(original, folder):
+    environment = {key: value for key, value in original.items()
+                   if not key.startswith(("DOCKER_", "KIND_")) and key != "KUBECONFIG"}
+    environment["DOCKER_HOST"] = "unix:///var/run/docker.sock"
+    environment["DOCKER_CONFIG"] = str(folder/"docker-config")
+    environment["KUBECONFIG"] = str(folder/"kubeconfig")
+    environment["KIND_EXPERIMENTAL_PROVIDER"] = "docker"
+    return environment
+
+
 class DockerFixture:
     def __init__(self):
-        if os.name != "posix" or os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_OS") != "Linux":
-            raise RuntimeError("dedicated disposable GitHub Linux runner required")
+        if (os.name != "posix" or os.environ.get("GITHUB_ACTIONS") != "true"
+                or os.environ.get("RUNNER_OS") != "Linux" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted"):
+            raise RuntimeError("disposable GitHub-hosted Linux runner required")
         parent = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
         if not stat.S_ISSOCK(Path("/var/run/docker.sock").stat().st_mode):
             raise RuntimeError("local Docker socket required")
@@ -94,22 +105,25 @@ class DockerFixture:
         if self.folder.parent.resolve() != parent:
             raise RuntimeError("fixture path escaped runner workspace")
         self.tag = "devops-" + uuid.uuid4().hex
-        self.environment = {key: value for key, value in os.environ.items()
-                            if not key.startswith("DOCKER_") and key != "KUBECONFIG"}
-        self.environment["DOCKER_HOST"] = "unix:///var/run/docker.sock"
-        self.environment["DOCKER_CONFIG"] = str(self.folder/"docker-config")
+        self.environment = fixture_environment(os.environ, self.folder)
         (self.folder/"docker-config").mkdir(mode=0o700)
         self.containers, self.networks, self.volumes = [], [], []
         self.image_tag = None
         self.daemon_id = None
-        info = json.loads(self.docker("info", "--format", "{{json .}}").stdout)
-        if info.get("OSType") != "linux" or not info.get("ID"):
-            raise RuntimeError("Linux daemon identity required")
-        self.daemon_id = info["ID"]
-        self.docker("pull", IMAGE, timeout=240)
-        self.image_id = self.inspect("image", IMAGE)["Id"]
+        try:
+            info = json.loads(self.docker("info", "--format", "{{json .}}").stdout)
+            if info.get("OSType") != "linux" or not info.get("ID"):
+                raise RuntimeError("Linux daemon identity required")
+            self.daemon_id = info["ID"]
+            self.docker("pull", IMAGE, timeout=240)
+            self.image_id = self.inspect("image", IMAGE)["Id"]
+        except Exception:
+            self.cleanup_files()
+            raise
 
     def docker(self, *args, **kwargs):
+        if self.daemon_id is not None and args[0] != "info":
+            self.check_daemon()
         return command(["docker", "--host", "unix:///var/run/docker.sock", "--config",
                         str(self.folder/"docker-config"), *args], environment=self.environment, **kwargs)
 
@@ -184,6 +198,9 @@ class DockerFixture:
             if self.inspect("image", self.image_tag)["Id"] != self.image_id:
                 raise RuntimeError("fixture image tag identity changed")
             self.docker("image", "rm", self.image_tag)
+        self.cleanup_files()
+
+    def cleanup_files(self):
         resolved = self.folder.resolve(strict=True)
         parent = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
         if resolved != self.folder or resolved.parent != parent or not resolved.name.startswith("devops-container-"):

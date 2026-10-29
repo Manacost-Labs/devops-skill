@@ -19,7 +19,12 @@ def main():
         identity, _ = fixture.execute("block=bytearray(256*1024*1024)", expected=137)
         report = snapshot(fixture, identity)
         assert report["oom_killed"] is True and report["exit_code"] == 137
-        killed, _ = fixture.execute("import os, signal; os.kill(os.getpid(),signal.SIGKILL)", expected=137)
+        # Namespace PID1 has special signal rules: kill from its owning daemon.
+        killed = fixture.create("import time; time.sleep(60)")
+        fixture.docker("start", killed)
+        fixture.owned_container(killed)
+        fixture.docker("kill", "--signal", "KILL", killed)
+        assert int(fixture.docker("wait", killed).stdout.strip()) == 137
         assert snapshot(fixture, killed)["oom_killed"] is False
         print("OK: actual cgroup OOM distinguished from non-OOM SIGKILL")
 

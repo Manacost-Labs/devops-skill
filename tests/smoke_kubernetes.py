@@ -46,6 +46,11 @@ class KubernetesFixture(DockerFixture):
         existing = command([str(self.folder/"kind"), "get", "clusters"], environment=self.environment).stdout.splitlines()
         if self.tag in existing:
             raise RuntimeError("cluster name collision")
+        self.cluster_network_id = self.network()
+        self.environment["KIND_EXPERIMENTAL_DOCKER_NETWORK"] = self.tag
+        network = self.inspect("network", self.cluster_network_id)
+        if network.get("Name") != self.tag or network.get("Labels", {}).get("devops.fixture.owner") != self.tag:
+            raise RuntimeError("fixture cluster network ownership changed")
         config = self.folder/"cluster.json"
         config.write_text(json.dumps({"kind": "Cluster", "apiVersion": "kind.x-k8s.io/v1alpha4",
                                      "networking": {"apiServerAddress": "127.0.0.1"},
@@ -143,6 +148,8 @@ class KubernetesFixture(DockerFixture):
             value = self.inspect("container", name)
             if value.get("Config", {}).get("Labels", {}).get("io.x-k8s.kind.cluster") != self.tag:
                 raise RuntimeError("fixture node ownership changed")
+            if value.get("NetworkSettings", {}).get("Networks", {}).get(self.tag, {}).get("NetworkID") != self.cluster_network_id:
+                raise RuntimeError("fixture node network identity changed")
             nodes[name] = value["Id"]
         if self.node_ids is not None and nodes != self.node_ids:
             raise RuntimeError("fixture node identity changed")
@@ -155,7 +162,8 @@ class KubernetesFixture(DockerFixture):
             if self.namespace_uid:
                 self.check_cluster()
                 self.kubectl("delete", "namespace", self.tag, "--wait=true", "--timeout=60s", timeout=90)
-            command([str(self.folder/"kind"), "delete", "cluster", "--name", self.tag],
+            command([str(self.folder/"kind"), "delete", "cluster", "--name", self.tag,
+                     "--kubeconfig", str(self.folder/"kubeconfig")],
                     environment=self.environment, timeout=120)
 
 
@@ -181,7 +189,7 @@ def main():
         fixture.execute("client", REQUEST, ["peer"])
         fixture.execute("client-missing", REQUEST, ["no-endpoint"], expected=23)
         slices = json.loads(fixture.kubectl("get", "endpointslices", "-l", "kubernetes.io/service-name=no-endpoint", "-o", "json").stdout)
-        assert sum(len(item.get("endpoints", [])) for item in slices["items"]) == 0
+        assert sum(len(item.get("endpoints") or []) for item in slices["items"]) == 0
         print("OK: Service DNS/request and DNS-resolved missing-endpoint failure; no NetworkPolicy enforcement claim")
 
         for name in ("data", "backup", "restored"):

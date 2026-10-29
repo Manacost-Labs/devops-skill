@@ -107,6 +107,17 @@ class DockerSnapshotTests(unittest.TestCase):
 
 
 class PodSnapshotTests(unittest.TestCase):
+    def test_api_dns_subdomain_names_and_quantity_units(self):
+        for name in ("a"*64, "a"*253, "api.example"):
+            data = pod(); data["metadata"]["name"] = name
+            self.assertEqual(K.summarize(data, "fixture", name, UID)["pod_name"], name)
+        for name in ("a"*254, "a..b", ".a", "a.", "a_B", "-api"):
+            data = pod(); data["metadata"]["name"] = name
+            with self.assertRaises(ValueError): K.summarize(data, "fixture", name, UID)
+        for quantity in ("1E", "1Ei", "100m", "1e+6", "0", "0.5Gi"):
+            data = pod(); data["spec"]["resources"]["limits"]["memory"] = quantity
+            self.assertEqual(K.summarize(data, "fixture", "api", UID)["pod_resources"]["limits"]["memory"], quantity)
+
     def test_previous_oom_and_current_backoff_are_separate(self):
         result = K.summarize(pod(), "fixture", "api", UID)
         row = result["containers"]["containers"][0]
@@ -195,10 +206,41 @@ class ComposeAndInstallationTests(unittest.TestCase):
 
 
 class NativeFixtureBoundaryTests(unittest.TestCase):
+    def test_fixture_environment_pins_runtime_network_selection_and_kubeconfig(self):
+        import container_fixture as native
+        folder = Path("owned-scratch")
+        result = native.fixture_environment({"DOCKER_HOST": "tcp://unrelated", "DOCKER_CONTEXT": "prod",
+                 "KUBECONFIG": "unrelated", "KIND_EXPERIMENTAL_PROVIDER": "podman",
+                 "KIND_EXPERIMENTAL_DOCKER_NETWORK": "unrelated", "PATH": "trusted-path"}, folder)
+        self.assertEqual(result["DOCKER_HOST"], "unix:///var/run/docker.sock")
+        self.assertEqual(result["KIND_EXPERIMENTAL_PROVIDER"], "docker")
+        self.assertNotIn("KIND_EXPERIMENTAL_DOCKER_NETWORK", result)
+        self.assertNotIn("DOCKER_CONTEXT", result)
+        self.assertEqual(result["KUBECONFIG"], str(folder/"kubeconfig"))
+        self.assertEqual(result["PATH"], "trusted-path")
+
     def test_fixture_refuses_operating_environment_before_any_docker_call(self):
         import container_fixture as native
         with mock.patch.dict(native.os.environ, {}, clear=True), mock.patch.object(native, "command") as command:
             with self.assertRaises(RuntimeError): native.DockerFixture()
+            command.assert_not_called()
+
+    def test_fixture_rejects_self_hosted_and_missing_runner_environment(self):
+        import container_fixture as native
+        for environment in ("self-hosted", None):
+            values = {"GITHUB_ACTIONS": "true", "RUNNER_OS": "Linux"}
+            if environment is not None: values["RUNNER_ENVIRONMENT"] = environment
+            with mock.patch.dict(native.os.environ, values, clear=True), mock.patch.object(native, "command") as command:
+                with self.assertRaises(RuntimeError): native.DockerFixture()
+                command.assert_not_called()
+
+    def test_daemon_drift_stops_docker_command_before_mutation(self):
+        import container_fixture as native
+        fixture = object.__new__(native.DockerFixture)
+        fixture.daemon_id = "original"
+        fixture.check_daemon = mock.Mock(side_effect=RuntimeError("daemon changed"))
+        with mock.patch.object(native, "command") as command:
+            with self.assertRaises(RuntimeError): fixture.docker("volume", "rm", "synthetic")
             command.assert_not_called()
 
     def test_cleanup_rejects_foreign_containers_networks_and_volumes(self):
@@ -220,8 +262,10 @@ class NativeFixtureBoundaryTests(unittest.TestCase):
         import smoke_kubernetes as native
         fixture = object.__new__(native.KubernetesFixture)
         fixture.tag = "devops-owned"; fixture.folder = Path("/synthetic-owned"); fixture.environment = {}
+        fixture.cluster_network_id = "network-owned"
         fixture.node_ids = {"devops-owned-control-plane": IDENTITY}
-        fixture.inspect = mock.Mock(return_value={"Id": "b"*64, "Config": {"Labels": {"io.x-k8s.kind.cluster": "devops-owned"}}})
+        fixture.inspect = mock.Mock(return_value={"Id": "b"*64, "Config": {"Labels": {"io.x-k8s.kind.cluster": "devops-owned"}},
+                                   "NetworkSettings": {"Networks": {"devops-owned": {"NetworkID": "network-owned"}}}})
         with mock.patch.object(native, "command", return_value=SimpleNamespace(stdout="devops-owned-control-plane\n")) as command:
             with self.assertRaises(RuntimeError): fixture.check_nodes()
             self.assertEqual(command.call_count, 1)
