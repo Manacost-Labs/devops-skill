@@ -408,6 +408,15 @@ class HookTests(unittest.TestCase):
             self.assertEqual(result[1], "allow", result)
         self.assert_blocked("python tools/devops_plan.py --output operations/plans/../../settings.json")
 
+    def test_hook_rejects_uniq_output_operands(self):
+        for command in (
+            "uniq input.txt overwritten.txt",
+            "uniq -- input.txt overwritten.txt",
+            "echo hello | uniq /dev/stdin overwritten.txt",
+        ):
+            self.assert_blocked(command)
+        self.assertEqual(self.run_hook("uniq -c input.txt")[1], "allow")
+
     def test_hook_rejects_alternate_mutation_tools(self):
         for tool in ("Write", "Edit", "NotebookEdit", "PowerShell", "mcp__unknown__execute"):
             result = self.run_hook(payload={"tool_name": tool, "tool_input": {}})

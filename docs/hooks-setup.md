@@ -34,7 +34,7 @@ The hook returns a tool permission decision and exits 2 on a refusal. It allows 
 
 The hook checks complete options, not just executable names. Simple inspection pipelines are accepted only when every segment is allowed. Control operators, redirection, subshells, shell expansion, unknown options and explicit paths to arbitrary executables are refused. Conservative refusals can include harmless quoted expressions; do not weaken the filter to guess at full shell semantics.
 
-Examples: `ls -la`, `systemctl status nginx`, `kubectl get pods -A`, `docker ps`, `git status`, bounded GitHub view/list calls and a repository `gh api` GET without body or method flags. Curl inspection requires `-q` first to disable its user configuration, one HTTP(S) URL and known inspection options.
+Examples: `ls -la`, `systemctl status nginx`, `kubectl get pods -A`, `docker ps`, `git status`, `uniq` with at most one input operand, bounded GitHub view/list calls and a repository `gh api` GET without body or method flags. Curl inspection requires `-q` first to disable its user configuration, one HTTP(S) URL and known inspection options.
 
 Terraform planning/validation, arbitrary cloud commands, find actions and other operations outside the grammar require the wrapper. Planning may execute providers or external programs, so its name alone does not prove an inspection.
 
@@ -53,6 +53,14 @@ The hook checks the exact command digest, real current UTC execution window and 
 The protected hook never accepts `--at`. That flag remains available only to direct CLIs for isolated deterministic tests. Historical time must never authorize live work.
 
 An argv digest covers arguments, not executable bytes, environment, working directory or referenced files. Protect and verify those inputs separately. Approval records and lock references are local contract data; they are not authenticated identities or an acquired external lock.
+
+## Local writer coordination
+
+The executor holds a native exclusive lock through the complete command and final journal write. The planner and runtime installer use the same lock. Upgrade takes it before inspecting/copying local operation records and holds it through replacement, so a live executor cannot append into a recovery copy. A busy or unavailable lock refuses the competing operation.
+
+Lock files stay in the runtime parent's `.devops-skill-locks/` directory under a key derived from the canonical runtime path. Protect this directory from deletion/replacement and provide the execution identity access to its existing lock file. The operating system releases a process's native lock when it exits; lock files remain as stable coordination points. They are local coordination metadata, not credentials or target lock approvals. Use a filesystem that supports the native lock primitives. Before upgrading a legacy runtime that does not take this lock, stop all of its writers.
+
+On POSIX, the journal syncs the file, containing directory, and parents of any newly created directories before launch. A directory-sync error blocks the command. This uses the filesystem's durability guarantees and is not a claim about faulty storage hardware. See [Linux fsync semantics](https://man7.org/linux/man-pages/man2/fsync.2.html).
 
 ## Journal outcomes
 

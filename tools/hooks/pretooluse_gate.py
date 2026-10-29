@@ -158,6 +158,8 @@ def classify_segment(argv, cwd):
             return False, f"{name} option is outside the inspection grammar"
         if name == "hostname" and positional:
             return False, "hostname arguments can change the hostname"
+        if name == "uniq" and len(positional) > 1:
+            return False, "uniq's second operand is an output file"
         if name == "date" and any(not item.startswith("+") for item in positional):
             return False, "date arguments can change the clock"
         return True, name

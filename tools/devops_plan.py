@@ -36,6 +36,9 @@ from typing import Any
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+_support_spec = importlib.util.spec_from_file_location("planning_runtime_support", ROOT / "tools/runtime_lock.py")
+_support = importlib.util.module_from_spec(_support_spec)
+_support_spec.loader.exec_module(_support)
 GATE = ROOT / "devops-platform-contracts" / "scripts" / "operation_gate.py"
 PROFILE_DIGEST_TOOL = ROOT / "devops-core" / "scripts" / "profile_digest.py"
 RISK_ORDER = ("R0", "R1", "R2", "R3", "R4")
@@ -191,7 +194,7 @@ def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tu
     return request, todo
 
 
-def main() -> int:
+def build_plan() -> int:
     arguments = sys.argv[1:]
     if "--" not in arguments:
         print("BLOCKED: no command was provided after --")
@@ -264,6 +267,14 @@ def main() -> int:
     print("\n".join(summary), file=sys.stderr)
     return 0
 
+
+def main() -> int:
+    try:
+        with _support.runtime_lock(ROOT):
+            return build_plan()
+    except _support.RuntimeLockError as error:
+        print(f"BLOCKED: {error}")
+        return 2
 
 if __name__ == "__main__":
     raise SystemExit(main())

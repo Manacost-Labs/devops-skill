@@ -36,6 +36,8 @@ python ../devops-runtime/tools/install.py --profile web-linux --apply
 
 Runtime installation requires an explicit destination outside the source tree. Replacing it requires `--apply --force`; the installer retains a recovery copy and preserves `operations/` plans and journal records. It refuses to replace an unrelated nonempty directory. The runtime keeps all modules so its catalog remains self-contained; the skill profile selects which instructions the agent discovers.
 
+Execution, planning and runtime replacement share a native process lock. An upgrade refuses a busy runtime, and a competing execution does not start. The lock lives in a stable sibling `.devops-skill-locks/` directory so replacing the runtime cannot replace its lock. Provision that directory and its lock file for the operator identity, and protect them from deletion or replacement. Native locking must be supported by the chosen filesystem. This local coordination does not acquire an infrastructure target lock. Stop old, uncoordinated runtime versions before their first upgrade.
+
 Use absolute paths to runtime programs when working in another project. The relative command examples below assume your current directory is the runtime or source root. Installing a skill profile alone does not install the top-level execution programs.
 
 ## How the pieces fit together
@@ -169,7 +171,7 @@ python tools/devops_exec.py --operation change.json -- docker compose up -d
 
 The wrapper re-runs the gate immediately before launch and refuses command-digest drift. Planning never grants authority. Local approval records are validated data; an adopting organization must authenticate approvers and evidence independently.
 
-The journal records `launch_intent` before starting the process and `executed` with its exit code afterwards, joined by an execution ID. An intent without a final record requires investigation. Exit 3 means refused before launch; exit 74 means execution started but the final journal record could not be saved; exit 124 means a timeout after launch. An executed child can also return a nonzero exit code, so interpret the result message and journal status together. Verify target state before retrying an interrupted or incompletely recorded operation.
+The journal flushes the intent file before launch and, on POSIX, also syncs its containing directory and any newly created directory entries. It records `launch_intent` before starting the process and `executed` with its exit code afterwards, joined by an execution ID. An intent without a final record requires investigation. Exit 3 means refused before launch; exit 74 means execution started but the final journal record could not be saved; exit 124 means a timeout after launch. An executed child can also return a nonzero exit code, so interpret the result message and journal status together. Verify target state before retrying an interrupted or incompletely recorded operation.
 
 The digest covers the command arguments. Protect working directories, executable contents, environment, configuration and referenced plan files separately; unchanged arguments do not prove those inputs stayed unchanged.
 

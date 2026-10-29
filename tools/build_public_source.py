@@ -30,6 +30,7 @@ ROOT_FILES = {
 }
 PUBLIC_TREES = {".claude-plugin", ".github", "docs", "evaluations", "examples", "tests"}
 PUBLIC_TOOLS = {
+    "tools/runtime_lock.py",
     "tools/build_public_source.py",
     "tools/build_release.py",
     "tools/devops_exec.py",

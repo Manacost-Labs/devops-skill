@@ -4,6 +4,8 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+- Independent review follow-up: reject output operands in the inspection form of `uniq`; coordinate runtime execution/planning/upgrades with a native process lock outside the replaceable directory; sync POSIX journal directory entries before launch.
+
 - Prepare RC 0.4.1 with a conservative command grammar: reject unknown options, attached shell operators, arbitrary output paths, alternate shells and direct editing tools in explicitly protected Claude sessions. Preserve the real-time approval checks from the security hardening PR.
 - Persist an fsynced launch intent before execution; distinguish pre-launch refusals, process results, timeouts, unknown outcomes and post-launch audit failures.
 - Add explicit, preview-first complete runtime installation with recovery copies and preservation of local operation records. Keep skill-only installation separate and clearly labeled.

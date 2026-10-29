@@ -6,11 +6,16 @@ hook. Exit 3 means blocked before launch; 74 means execution began but its final
 audit record could not be saved. A timeout (124) may already have changed state.
 """
 from __future__ import annotations
-import argparse, hashlib, json, os, re, subprocess, sys, uuid
+import argparse, hashlib, importlib.util, json, os, re, subprocess, sys, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+_support_spec = importlib.util.spec_from_file_location("execution_runtime_support", ROOT / "tools/runtime_lock.py")
+_support = importlib.util.module_from_spec(_support_spec)
+_support_spec.loader.exec_module(_support)
+runtime_lock = _support.runtime_lock
+sync_directory = _support.sync_directory
 GATE = ROOT / "devops-platform-contracts/scripts/operation_gate.py"
 DEFAULT_LEDGER = ROOT / "operations/execution-ledger.jsonl"
 BLOCKED_EXIT = 3
@@ -37,6 +42,11 @@ def tail(text):
     return text[-OUTPUT_TAIL_CHARS:]
 
 def append_ledger(ledger_path, entry):
+    missing = []
+    parent = ledger_path.parent
+    while not parent.exists():
+        missing.append(parent)
+        parent = parent.parent
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     if ledger_path.is_symlink():
         raise OSError("execution ledger must not be a symlink")
@@ -45,6 +55,9 @@ def append_ledger(ledger_path, entry):
         handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
+    # A file fsync alone does not persist its directory entry on POSIX.
+    for directory in dict.fromkeys([ledger_path.parent, *(path.parent for path in missing)]):
+        sync_directory(directory)
 
 def blocked(reason, ledger_path, entry, status):
     print(f"BLOCKED: {redact(reason)}")
@@ -65,7 +78,7 @@ def finish(ledger_path, entry, status, code, reason=None):
         return AUDIT_ERROR_EXIT
     return code
 
-def main():
+def execute():
     arguments = sys.argv[1:]
     if "--" not in arguments:
         print("BLOCKED: no command was provided after --")
@@ -137,6 +150,14 @@ def main():
             print("EXECUTION UNCERTAIN: the command already started. Verify the target before retrying.")
             return finish(args.ledger, entry, "outcome_unknown", 4, f"post-launch error ({type(error).__name__})")
         return blocked(f"invalid execution input ({type(error).__name__})", args.ledger, entry, "blocked_error")
+
+def main():
+    try:
+        with runtime_lock(ROOT):
+            return execute()
+    except _support.RuntimeLockError as error:
+        print(f"BLOCKED: {error}; no command was launched")
+        return BLOCKED_EXIT
 
 if __name__ == "__main__":
     raise SystemExit(main())

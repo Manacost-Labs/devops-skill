@@ -3,9 +3,13 @@
 from __future__ import annotations
 import argparse, hashlib, importlib.util, json, os, shutil, stat, subprocess, sys, tempfile
 from datetime import datetime, timezone
+from contextlib import nullcontext
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+_support_spec = importlib.util.spec_from_file_location("installation_runtime_support", ROOT / "tools/runtime_lock.py")
+_support = importlib.util.module_from_spec(_support_spec)
+_support_spec.loader.exec_module(_support)
 
 
 def is_reparse_point(metadata: os.stat_result) -> bool:
@@ -87,98 +91,99 @@ def install_runtime(args) -> int:
     try:
         if path_exists(args.destination.expanduser()):
             real_directory(args.destination.expanduser())
-        existed = destination.exists()
-        original_digest = tree_digest(destination) if existed else None
-        if existed and any(destination.iterdir()):
-            marker = destination / "catalog.json"
-            identity = json.loads(marker.read_text(encoding="utf-8-sig")) if marker.is_file() else None
-            if not isinstance(identity, dict) or identity.get("name") != "devops-skill-platform" or not (destination / "tools/install.py").is_file():
-                raise ValueError("refusing to replace a non-runtime directory")
-        if existed and not args.force:
-            raise ValueError("destination already exists; review then use --apply --force")
-        spec = importlib.util.spec_from_file_location("runtime_release_paths", source / "tools/verify_release.py")
-        verifier = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(verifier)
-        catalog = json.loads((source / "catalog.json").read_text(encoding="utf-8-sig"))
-        files = [source / name for name in sorted(verifier.REQUIRED_ROOT_FILES | verifier.REQUIRED_TOOL_FILES)]
-        real_directory(source / "tools")
-        real_directory(source / "tools/hooks")
-        for folder in [source / "docs", *(source / name for name in sorted(catalog["skills"]))]:
-            real_directory(folder)
-            for directory, names, filenames in os.walk(folder, followlinks=False):
-                names[:] = sorted(name for name in names if name not in {"__pycache__", ".pytest_cache"})
-                for name in names:
-                    real_directory(Path(directory) / name)
-                for name in sorted(filenames):
-                    path = Path(directory) / name
-                    if path.suffix == ".pyc":
-                        continue
-                    if not verifier.allowed_release_path(path.relative_to(source).as_posix(), set(catalog["skills"])):
-                        raise ValueError(f"unexpected runtime member: {path.relative_to(source)}")
-                    files.append(path)
-        # Match tree_digest's directory-first os.walk order.
-        files.sort(key=lambda path: (path.parent.relative_to(source).parts, path.name))
-        def snapshot():
-            digest = hashlib.sha256()
-            for path in files:
-                real_file(path)
-                if source not in path.resolve().parents:
-                    raise ValueError("runtime member escapes the source")
-                digest.update(path.relative_to(source).as_posix().encode("utf-8") + b"\0")
-                digest.update(path.read_bytes())
-            return digest.hexdigest()
-        expected = snapshot()
-        print(f"runtime: {len(files)} allowlisted files -> {destination}")
-        print("Includes planner, executor, optional Claude hook, verifier and all 22 modules; hook settings are not enabled automatically.")
-        if not args.apply:
-            print("Dry-run only. Review then add --apply.")
-            return 0
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        real_directory(destination.parent)
-        with tempfile.TemporaryDirectory(prefix=".devops-runtime-stage-", dir=destination.parent) as staging:
-            staged = Path(staging) / "runtime"
-            staged.mkdir()
-            for path in files:
-                target = staged / path.relative_to(source)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(path, target)
-            if tree_digest(staged) != expected or snapshot() != expected:
-                raise ValueError("runtime source or staged content changed")
-            validation = subprocess.run([sys.executable, str(staged / "devops-platform-contracts/scripts/validate_platform.py")], capture_output=True, text=True)
-            if validation.returncode:
-                raise ValueError("staged runtime validation failed")
-            # Keep local operation plans and audit history across upgrades.
-            if existed and (destination / "operations").exists():
-                tree_digest(destination / "operations")
-                shutil.copytree(destination / "operations", staged / "operations")
-            if path_exists(destination) != existed or (existed and tree_digest(destination) != original_digest):
-                raise ValueError("runtime destination changed concurrently")
-            staged_digest = tree_digest(staged)
-            backup_parent = destination.parent / ".devops-skill-backups"
-            backup_parent.mkdir(exist_ok=True)
-            real_directory(backup_parent)
-            backup_set = Path(tempfile.mkdtemp(prefix="runtime-", dir=backup_parent))
-            previous = backup_set / "previous"
-            moved_previous = installed = False
-            try:
-                if existed:
-                    os.replace(destination, previous)
-                    moved_previous = True
-                os.replace(staged, destination)
-                installed = True
-                if tree_digest(destination) != staged_digest:
-                    raise ValueError("installed runtime digest mismatch")
-            except Exception:
-                print(f"recovery-set: {backup_set}")
-                if installed:
-                    os.replace(destination, backup_set / "failed")
-                if moved_previous:
-                    os.replace(previous, destination)
-                raise
-            print(f"OK: installed complete runtime at {destination}")
-            print(f"backup-set: {backup_set}")
-            print(f"Run from any project with an absolute path: python \"{destination / 'tools/devops_plan.py'}\" --help")
-            return 0
+        with _support.runtime_lock(destination) if args.apply else nullcontext():
+            existed = destination.exists()
+            original_digest = tree_digest(destination) if existed else None
+            if existed and any(destination.iterdir()):
+                marker = destination / "catalog.json"
+                identity = json.loads(marker.read_text(encoding="utf-8-sig")) if marker.is_file() else None
+                if not isinstance(identity, dict) or identity.get("name") != "devops-skill-platform" or not (destination / "tools/install.py").is_file():
+                    raise ValueError("refusing to replace a non-runtime directory")
+            if existed and not args.force:
+                raise ValueError("destination already exists; review then use --apply --force")
+            spec = importlib.util.spec_from_file_location("runtime_release_paths", source / "tools/verify_release.py")
+            verifier = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(verifier)
+            catalog = json.loads((source / "catalog.json").read_text(encoding="utf-8-sig"))
+            files = [source / name for name in sorted(verifier.REQUIRED_ROOT_FILES | verifier.REQUIRED_TOOL_FILES)]
+            real_directory(source / "tools")
+            real_directory(source / "tools/hooks")
+            for folder in [source / "docs", *(source / name for name in sorted(catalog["skills"]))]:
+                real_directory(folder)
+                for directory, names, filenames in os.walk(folder, followlinks=False):
+                    names[:] = sorted(name for name in names if name not in {"__pycache__", ".pytest_cache"})
+                    for name in names:
+                        real_directory(Path(directory) / name)
+                    for name in sorted(filenames):
+                        path = Path(directory) / name
+                        if path.suffix == ".pyc":
+                            continue
+                        if not verifier.allowed_release_path(path.relative_to(source).as_posix(), set(catalog["skills"])):
+                            raise ValueError(f"unexpected runtime member: {path.relative_to(source)}")
+                        files.append(path)
+            # Match tree_digest's directory-first os.walk order.
+            files.sort(key=lambda path: (path.parent.relative_to(source).parts, path.name))
+            def snapshot():
+                digest = hashlib.sha256()
+                for path in files:
+                    real_file(path)
+                    if source not in path.resolve().parents:
+                        raise ValueError("runtime member escapes the source")
+                    digest.update(path.relative_to(source).as_posix().encode("utf-8") + b"\0")
+                    digest.update(path.read_bytes())
+                return digest.hexdigest()
+            expected = snapshot()
+            print(f"runtime: {len(files)} allowlisted files -> {destination}")
+            print("Includes planner, executor, optional Claude hook, verifier and all 22 modules; hook settings are not enabled automatically.")
+            if not args.apply:
+                print("Dry-run only. Review then add --apply.")
+                return 0
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            real_directory(destination.parent)
+            with tempfile.TemporaryDirectory(prefix=".devops-runtime-stage-", dir=destination.parent) as staging:
+                staged = Path(staging) / "runtime"
+                staged.mkdir()
+                for path in files:
+                    target = staged / path.relative_to(source)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
+                if tree_digest(staged) != expected or snapshot() != expected:
+                    raise ValueError("runtime source or staged content changed")
+                validation = subprocess.run([sys.executable, str(staged / "devops-platform-contracts/scripts/validate_platform.py")], capture_output=True, text=True)
+                if validation.returncode:
+                    raise ValueError("staged runtime validation failed")
+                # Keep local operation plans and audit history across upgrades.
+                if existed and (destination / "operations").exists():
+                    tree_digest(destination / "operations")
+                    shutil.copytree(destination / "operations", staged / "operations")
+                if path_exists(destination) != existed or (existed and tree_digest(destination) != original_digest):
+                    raise ValueError("runtime destination changed concurrently")
+                staged_digest = tree_digest(staged)
+                backup_parent = destination.parent / ".devops-skill-backups"
+                backup_parent.mkdir(exist_ok=True)
+                real_directory(backup_parent)
+                backup_set = Path(tempfile.mkdtemp(prefix="runtime-", dir=backup_parent))
+                previous = backup_set / "previous"
+                moved_previous = installed = False
+                try:
+                    if existed:
+                        os.replace(destination, previous)
+                        moved_previous = True
+                    os.replace(staged, destination)
+                    installed = True
+                    if tree_digest(destination) != staged_digest:
+                        raise ValueError("installed runtime digest mismatch")
+                except Exception:
+                    print(f"recovery-set: {backup_set}")
+                    if installed:
+                        os.replace(destination, backup_set / "failed")
+                    if moved_previous:
+                        os.replace(previous, destination)
+                    raise
+                print(f"OK: installed complete runtime at {destination}")
+                print(f"backup-set: {backup_set}")
+                print(f"Run from any project with an absolute path: python \"{destination / 'tools/devops_plan.py'}\" --help")
+                return 0
     except (OSError, ValueError) as error:
         print(f"ERROR: runtime installation failed: {error}")
         return 1
