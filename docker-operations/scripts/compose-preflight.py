@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 BAD_KEY = re.compile(r"(token|password|secret|api[_-]?key|private[_-]?key)", re.I)
-SAFE_REFERENCE = re.compile(r"^(\$\{[A-Za-z_][A-Za-z0-9_]*(?::[-?][^}]*)?\}|/run/secrets/[^\s]+|(?:vault|ref|secret):[^\s]+)$")
+SAFE_REFERENCE = re.compile(r"^(\$\{[A-Za-z_][A-Za-z0-9_]*(?::?\?[^}]*)?\}|/run/secrets/[^\s]+|(?:vault|ref|secret):[^\s]+)$")
 SENSITIVE_BINDS = ("/", "/etc", "/proc", "/sys", "/dev", "/var/run", "/root", "/home")
 
 def environment_items(value):
@@ -22,7 +22,7 @@ def environment_items(value):
 def source_of_mount(value):
     if isinstance(value, str): return value.split(":", 1)[0]
     if isinstance(value, dict) and value.get("type") == "bind": return str(value.get("source", ""))
-    return ""
+    return None
 
 def main() -> int:
     if len(sys.argv) != 2:
@@ -48,7 +48,9 @@ def main() -> int:
         mounts = service.get("volumes", []) or []
         if any("docker.sock" in str(v).lower() for v in mounts): errors.append(f"{name}: Docker socket mount requires explicit exception")
         for mount in mounts:
-            source = source_of_mount(mount).replace("\\", "/").rstrip("/") or "/"
+            source = source_of_mount(mount)
+            if source is None: continue  # Named/anonymous volumes are not host bind paths.
+            source = source.replace("\\", "/").rstrip("/") or "/"
             if source in SENSITIVE_BINDS: errors.append(f"{name}: sensitive host bind mount {source} requires redesign/explicit exception")
         if "healthcheck" not in service: warnings.append(f"{name}: no healthcheck declared")
         if service.get("read_only") is not True: warnings.append(f"{name}: root filesystem is not read-only")

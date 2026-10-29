@@ -16,6 +16,8 @@ Confirm the CNI implements required policy semantics. Build an ingress and egres
 
 Record PVC/PV/StorageClass/CSI driver, access/volume modes, reclaim policy, binding, topology, snapshots, application consistency, and owner. Scaling or deleting StatefulSets, PVCs, PVs, snapshots, or namespaces can destroy or orphan data. Require a fresh approved snapshot/backup and isolated restore evidence for destructive R4 work. A CSI snapshot object alone is not restore proof.
 
+Use `references/storage-diagnostics.md` for identity/attach/mount/capacity diagnosis and `references/stateful-release-recovery.md` before a data-changing update or reversal. ReadWriteOnce does not serialize application writers. Backup and restore decisions include schema/file/queue compatibility, latest writes and external effects.
+
 ## Control plane
 
 For managed Kubernetes, use the provider's documented backup/restore and upgrade contracts through the provider owner. For self-managed clusters, coordinate etcd snapshot consistency, encryption keys, certificates, manifests, version compatibility, and restore testing with the control-plane owner. Do not claim that GitOps manifests or workload backup can restore cluster identity, RBAC, CRDs, or etcd state.

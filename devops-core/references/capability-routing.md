@@ -7,7 +7,7 @@ Select the smallest installed set that covers the confirmed task. Read a module 
 | Linux hosts, SSH, systemd, ports, disks, logs | `linux-operations` |
 | Windows Server, SMB/NTFS, host certificates/keys, tasks, storage/file recovery, WinRM/RDP, services/events/firewall | `windows-server-operations`; AD/GPO, PKI authority, clusters and application recovery retain their owners |
 | Active Directory DS, OUs, users, computers, groups, delegated administration, GPOs and policy links | `identity-directory-operations`; add Windows, access, reliability or Azure modules only for their owned boundary |
-| Docker, Compose, images, registries, volumes | `docker-operations` |
+| Docker/Compose crashes, OOM, networks, volumes, images and data-compatible release recovery | `docker-operations`; join application/data owners for formats, current writes and external effects |
 | DNS, TLS, HTTP, reverse proxy, origin reachability | `network-edge-operations` |
 | Cloudflare DNS, WAF, Tunnel, Access, Workers | `cloudflare-operations` |
 | Metrics, logs, traces, SLOs, alerts, incidents | `reliability-operations` |
@@ -21,7 +21,7 @@ Select the smallest installed set that covers the confirmed task. Read a module 
 | Google Cloud organization/project, IAM, VPC, Compute/GKE/Cloud Run/Cloud SQL control plane | `cloud-gcp` plus the narrow technical module |
 | Azure tenant/subscription, Entra/RBAC, VNet, VM/AKS/Functions/database control plane | `cloud-azure` plus the narrow technical module |
 | Selectel account/project, IAM, cloud/OpenStack resources, managed services | `cloud-selectel` plus the narrow technical module |
-| Kubernetes workload or cluster operations | `kubernetes-operations`; add the provider pack only for its managed control plane |
+| Kubernetes crashes/resources, Service/DNS paths, PVC/CSI, policy and data-aware controller rollout/recovery | `kubernetes-operations`; add provider/host/application/data owners only for their layers |
 | VPN, BGP, routing, segmentation, on-premises or hybrid connectivity | `enterprise-networking` |
 | Threat models, vulnerability lifecycle, exceptions, control ownership, evidence packs | `security-compliance-operations` |
 

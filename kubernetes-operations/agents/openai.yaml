@@ -1,4 +1,4 @@
 interface:
   display_name: "Kubernetes Operations"
-  short_description: "Audit and change Kubernetes workloads safely"
-  default_prompt: "Use $kubernetes-operations to assess and plan this Kubernetes change safely."
+  short_description: "Kubernetes diagnosis and data-aware recovery"
+  default_prompt: "Use $kubernetes-operations to diagnose this workload and plan recovery with explicit cluster identity and data compatibility."

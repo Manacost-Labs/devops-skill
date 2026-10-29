@@ -47,7 +47,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.7.0")
+        self.assertEqual(catalog["version"], "0.8.0")
         self.assertEqual(len(catalog["skills"]), 23)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
@@ -105,6 +105,7 @@ class PlatformTests(unittest.TestCase):
             "cloud-azure": {"learn.microsoft.com"},
             "cloud-selectel": {"docs.selectel.ru"},
             "kubernetes-operations": {"kubernetes.io"},
+            "docker-operations": {"docs.docker.com", "docs.kernel.org"},
         }
         for name, hosts in expected.items():
             manifest = yaml.safe_load((ROOT / name / "module.yaml").read_text(encoding="utf-8-sig"))
@@ -520,7 +521,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.7.0")
+                self.assertEqual(manifest["version"], "0.8.0")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)
