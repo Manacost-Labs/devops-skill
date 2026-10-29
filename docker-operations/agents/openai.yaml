@@ -1,4 +1,4 @@
 interface:
   display_name: "Docker Operations"
-  short_description: "Safe Docker and Compose lifecycle operations"
-  default_prompt: "Use $docker-operations to audit and safely deploy a Docker Compose workload."
+  short_description: "Docker diagnosis and data-aware release recovery"
+  default_prompt: "Use $docker-operations to diagnose this container failure and plan a data-compatible repair or release recovery."

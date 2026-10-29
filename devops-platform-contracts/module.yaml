@@ -1,5 +1,5 @@
 name: devops-platform-contracts
-version: 0.4.2
+version: 0.4.3
 kind: policy-and-validation
 allowed_tools:
 - Read

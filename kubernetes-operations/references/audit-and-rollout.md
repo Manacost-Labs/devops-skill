@@ -22,4 +22,6 @@ Use server-side apply with a stable field manager owned by this delivery path. R
 
 Set an explicit timeout and abort criteria. Watch the owning Deployment, StatefulSet, DaemonSet, Job, or custom controller rather than individual pods alone. Check observed generation, revision, desired/current/ready/available counts, conditions, probe failures, scheduling, image pulls, admission, endpoints, errors, latency, and capacity.
 
-Pause or roll back before error budgets are exhausted. A controller rollback may not restore ConfigMaps, Secrets, CRDs, Jobs, external services, or persistent data. Verify target-reported image/config revision and the external user path after rollout.
+Contain before error budgets are exhausted. Select recovery with `references/stateful-release-recovery.md` before undo: unknown or incompatible current data blocks automatic application reversal. A controller rollback may not restore ConfigMaps, Secrets, CRDs, Jobs, external services, or persistent data. Verify target-reported image/config revision, data invariants and the external user path afterward.
+
+For failed workloads use `references/failure-and-resources.md`, `references/network-path.md` and `references/storage-diagnostics.md`. Bind events to exact involved-object UID, not just a reused name; event retention and sampling can leave gaps. Scope logs by Pod/container, previous/current instance, time, tail and byte count. Do not broadcast all-namespace logs or claim absent metrics imply zero pressure.

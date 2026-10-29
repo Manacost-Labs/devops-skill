@@ -4,6 +4,13 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.8.0 — 2026-10-29
+
+- Deepen Docker and Kubernetes crash/resource, networking and storage diagnosis with explicit target, history, identity, ownership and partial-evidence boundaries.
+- Add application/data compatibility and newest-write decisions before image/controller reversal; cover forward repair, writer fencing, isolated restore and external-effect reconciliation.
+- Add bounded offline identity-bound Docker/Pod summaries, official-source mappings, adversarial scenarios and disposable native Docker/kind fixtures, including incompatible synthetic data changes and recovery-choice evidence.
+- Correct Compose preflight handling of long-form named volumes and reject literal sensitive fallback values in environment interpolation.
+
 ## 0.7.0 — 2026-10-29
 
 - Deepen Windows Server procedures for SMB/NTFS, host certificates/private keys, scheduled tasks, standalone storage, security and file/host recovery. Correct unsupported SQL Server recovery routing.

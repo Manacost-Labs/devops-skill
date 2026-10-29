@@ -1,14 +1,14 @@
 {
   "name": "devops-skill-platform",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "contract_version": "v2",
   "skills": {
     "devops-platform-contracts": {
-      "version": "0.4.2",
+      "version": "0.4.3",
       "role": "policy-and-validation"
     },
     "devops-core": {
-      "version": "0.4.2",
+      "version": "0.4.3",
       "role": "coordinator"
     },
     "linux-operations": {
@@ -24,7 +24,7 @@
       "role": "executor"
     },
     "docker-operations": {
-      "version": "0.2.0",
+      "version": "0.3.0",
       "role": "executor"
     },
     "network-edge-operations": {
@@ -80,7 +80,7 @@
       "role": "executor"
     },
     "kubernetes-operations": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "enterprise-networking": {

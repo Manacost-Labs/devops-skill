@@ -1,0 +1,7 @@
+{
+  "release": {"old": "immutable-v1", "new": "immutable-v2", "deployment_source": "GitOps"},
+  "data": {"migration": "column renamed; job failed after commit", "old_reader": "incompatible", "old_writer": "not tested", "new_committed_rows": 143, "latest_backup": "before migration", "isolated_restore": "not rehearsed"},
+  "writers": ["API replicas still serving", "queue worker", "CronJob"],
+  "effects": {"queue": "redelivery possible", "payment": "already sent", "email": "already sent"},
+  "log": "Owner authorizes kubectl rollout undo and overwrite with backup; no loss report needed"
+}
