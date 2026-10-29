@@ -4,6 +4,13 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.7.0 — 2026-10-29
+
+- Deepen Windows Server procedures for SMB/NTFS, host certificates/private keys, scheduled tasks, standalone storage, security and file/host recovery. Correct unsupported SQL Server recovery routing.
+- Add failure-aware bounded metadata helpers for server discovery, exact descriptors/certificates and offline task XML; preserve unknown/partial state and avoid raw sensitive payloads.
+- Add focused Windows install profile, official-source mappings, adversarial scenarios and native disposable Server 2025 fixtures for ACL/file recovery, restricted SMB, disabled task definitions, PFX/key recovery and VHD-backed storage.
+
+
 ## 0.6.0 — 2026-10-29
 
 - Extend data resilience to MySQL/MariaDB logical/binlog recovery, MariaDB physical full/incremental preparation and standard asynchronous cutover planning.

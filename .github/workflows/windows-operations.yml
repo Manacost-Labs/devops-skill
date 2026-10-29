@@ -1,0 +1,28 @@
+name: windows operations
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: windows-operations-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Windows Server / native fixtures
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exercise owned ephemeral Windows resources
+        shell: powershell
+        run: ./tests/smoke_windows_server.ps1

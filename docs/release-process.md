@@ -20,9 +20,9 @@ From a clean checkout of the reviewed revision:
 python -m pip install --isolated --disable-pip-version-check --no-input --require-hashes -r requirements.txt
 python devops-platform-contracts/scripts/validate_platform.py
 python -m unittest discover -s tests -v
-python tools/build_release.py --output dist/devops-skill-platform-0.6.0.zip
-python tools/verify_release.py dist/devops-skill-platform-0.6.0.zip
-Get-FileHash -Algorithm SHA256 dist/devops-skill-platform-0.6.0.zip
+python tools/build_release.py --output dist/devops-skill-platform-0.7.0.zip
+python tools/verify_release.py dist/devops-skill-platform-0.7.0.zip
+Get-FileHash -Algorithm SHA256 dist/devops-skill-platform-0.7.0.zip
 ~~~
 
 The deterministic builder packages only catalog-declared skills, approved documentation, and allowlisted runtime tools. It rejects symlink/reparse/non-regular entries and known credential patterns and emits a per-file hash manifest. Target-specific administration scripts are not release members. Verification rejects undeclared, duplicate, case-colliding, traversing, encrypted, non-regular, wrongly permissioned, non-canonical-compression, oversized, catalog-inconsistent, or incomplete members.
@@ -45,7 +45,7 @@ The workflow intentionally does not upload an artifact, create a GitHub release,
 
 ## Tag and publish a portfolio RC
 
-After all public-RC prerequisites are evidenced, create an annotated prerelease tag such as v0.6.0-rc.1 from the reviewed commit. Publish the exact verified archive and checksum as prerelease assets using a controlled maintainer procedure. Do not substitute an unverified rebuild or GitHub-generated source archive for the tested artifact.
+After all public-RC prerequisites are evidenced, create an annotated prerelease tag such as v0.7.0-rc.1 from the reviewed commit. Publish the exact verified archive and checksum as prerelease assets using a controlled maintainer procedure. Do not substitute an unverified rebuild or GitHub-generated source archive for the tested artifact.
 
 Until independent signing and provenance exist, label the asset as an **unsigned evaluation RC**. Preserve the source SHA, archive digest, validation run, dependency-review result, reviewer, release owner, limitations, and rollback artifact in the release notes.
 

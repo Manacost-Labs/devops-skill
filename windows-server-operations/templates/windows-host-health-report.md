@@ -7,7 +7,9 @@
 - Audit timestamp:
 
 ## Status
-- Overall: healthy | degraded | critical | unknown
+- Collection: bounded_scope_observed | partial | unknown
+- Operation result: verified | partially_verified | rolled_back | blocked
+- Service/user-path health: evidence-based result or not_assessed
 - Verified services:
 - User-facing impact:
 
