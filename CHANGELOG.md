@@ -4,6 +4,12 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+- Prepare RC 0.4.1 with a conservative command grammar: reject unknown options, attached shell operators, arbitrary output paths, alternate shells and direct editing tools in explicitly protected Claude sessions. Preserve the real-time approval checks from the security hardening PR.
+- Persist an fsynced launch intent before execution; distinguish pre-launch refusals, process results, timeouts, unknown outcomes and post-launch audit failures.
+- Add explicit, preview-first complete runtime installation with recovery copies and preservation of local operation records. Keep skill-only installation separate and clearly labeled.
+- Correct Claude plugin root-path compatibility, explain permission pre-approval semantics and runtime trust assumptions, and generate public-source receipts only at export time.
+
+
 - Added `tools/devops_plan.py`, which builds a contract-v2 operation request bound to one exact command: it computes the canonical command, policy, and target-profile digests, derives the minimum risk class the policy implies and refuses to understate it, requires acceptance criteria at R2 and above, and names every remaining human obligation. Generated requests are structurally unauthorized until a real approver fills them, so planning never grants authority.
 - Packaged the repository as a Claude Code plugin and marketplace (`.claude-plugin/`), installable with `/plugin marketplace add Manacost-Labs/devops-skill`. The plugin ships skills only; the fail-closed command gate stays opt-in through `docs/hooks-setup.md`.
 - Added `github-operations`, a bounded GitHub control-plane executor (catalog 0.4.0, 22 skills): branch protection and rulesets, deployment environments and reviewer gates, Actions run and runner administration, releases, and token-permission scope, with a permission-model reference, verified failure modes, a change-card template, and a read-only repository-protection audit script; joined the `delivery` and `all` profiles with docs.github.com freshness validation.

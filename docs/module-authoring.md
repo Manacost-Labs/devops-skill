@@ -4,8 +4,8 @@
 
 1. Define concrete trigger examples, explicit non-goals, affected state, risk domains, handoffs, and acceptance evidence.
 2. Initialize a new skill with the standard `skill-creator/scripts/init_skill.py`; do not hand-build its metadata skeleton.
-3. Keep `SKILL.md` under 500 lines with only `name` and `description` frontmatter. Put detailed variants in one-level `references/` files and deterministic repeated checks in tested scripts.
-4. Add `module.yaml` with a SemVer version, bounded unique capabilities, risk domains, and compatible `devops-core` and `devops-platform-contracts` requirements.
+3. Keep `SKILL.md` under 500 lines with `name`, `description` and `allowed-tools` frontmatter. Match the manifest tool list exactly; these entries are pre-approvals, not a sandbox. Put detailed variants in one-level `references/` files and deterministic repeated checks in tested scripts.
+4. Add `module.yaml` with a SemVer version, bounded unique capabilities, matching `allowed_tools`, risk domains, and compatible `devops-core` and `devops-platform-contracts` requirements.
 5. Inherit contract v2. A module may strengthen policy but may not weaken approvals, locks, recovery, evidence, tenant isolation, or untrusted-content boundaries.
 6. Use opaque credential references only. Never include example values that resemble live credentials or customer identifiers.
 7. Add capability routing, an install profile where justified, positive/negative/adversarial evaluations, and rollback/verification criteria.

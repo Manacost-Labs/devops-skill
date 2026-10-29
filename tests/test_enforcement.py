@@ -51,8 +51,9 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("ALLOWED:", result.stdout)
         self.assertIn("wrapper-executed", result.stdout)
-        self.assertEqual([record["status"] for record in records], ["executed"])
-        self.assertEqual(records[0]["exit_code"], 0)
+        self.assertEqual([record["status"] for record in records], ["launch_intent", "executed"])
+        self.assertEqual(records[1]["exit_code"], 0)
+        self.assertEqual(records[0]["execution_id"], records[1]["execution_id"])
         self.assertEqual(records[0]["command_digest"], command_digest(command))
 
     def test_wrapper_blocks_command_digest_drift(self):
@@ -98,6 +99,54 @@ class WrapperTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("BLOCKED", result.stdout)
         self.assertNotIn("should-not-run", result.stdout)
+
+    def test_unavailable_journal_prevents_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = root / "must-not-exist"
+            command = [PYTHON, "-c", f"from pathlib import Path; Path({str(marker)!r}).touch()"]
+            request = root / "operation.json"
+            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
+            ledger = root / "directory"
+            ledger.mkdir()
+            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request),
+                "--at", NOW, "--ledger", str(ledger), "--", *command], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 3, result.stdout)
+            self.assertFalse(marker.exists())
+            self.assertIn("no command was launched", result.stdout)
+
+    def test_journal_failure_after_execution_never_reports_blocked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker, ledger = root / "executed", root / "ledger.jsonl"
+            command = [PYTHON, "-c",
+                f"from pathlib import Path; p=Path({str(ledger)!r}); "
+                f"p.rename(p.with_suffix('.saved')); p.mkdir(); Path({str(marker)!r}).touch()"]
+            request = root / "operation.json"
+            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
+            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request),
+                "--at", NOW, "--ledger", str(ledger), "--", *command], capture_output=True, text=True)
+            self.assertTrue(marker.exists())
+            self.assertEqual(result.returncode, 74, result.stdout)
+            self.assertIn("AUDIT ERROR", result.stdout)
+            self.assertNotIn("BLOCKED", result.stdout)
+            intent = json.loads(ledger.with_suffix(".saved").read_text(encoding="utf-8"))
+            self.assertEqual(intent["status"], "launch_intent")
+
+    def test_timeout_reports_possible_changes_and_retains_intent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker, ledger = root / "executed", root / "ledger.jsonl"
+            command = [PYTHON, "-c", f"from pathlib import Path; import time; Path({str(marker)!r}).touch(); time.sleep(10)"]
+            request = root / "operation.json"
+            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
+            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request),
+                "--at", NOW, "--timeout-seconds", "1", "--ledger", str(ledger), "--", *command], capture_output=True, text=True)
+            self.assertTrue(marker.exists())
+            self.assertEqual(result.returncode, 124, result.stdout)
+            self.assertNotIn("BLOCKED", result.stdout)
+            records = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([record["status"] for record in records], ["launch_intent", "timed_out"])
 
 
 class PlanBuilderTests(unittest.TestCase):
@@ -240,13 +289,13 @@ class HookTests(unittest.TestCase):
             "systemctl status nginx",
             "kubectl get pods -A",
             "kubectl describe deployment api",
-            "terraform plan -input=false",
             "docker ps",
             "git status",
             "aws ec2 describe-instances --region eu-central-1",
             "gcloud compute instances list",
             "az vm show --name web-1",
             "cat access.log | grep 503 | wc -l",
+            "curl -q --head https://example.invalid",
         ):
             returncode, decision, reason = self.run_hook(command)
             self.assertEqual(decision, "allow", f"{command}: {reason}")
@@ -328,6 +377,41 @@ class HookTests(unittest.TestCase):
         self.assert_blocked("frobnicate --all")
         self.assert_blocked("echo data > /etc/hosts")
         self.assert_blocked("cat plan.txt\nterraform apply")
+
+    def test_hook_blocks_attached_operators_and_mutating_options(self):
+        for command in (
+            "echo audit;touch marker", "echo audit&&touch marker",
+            "echo audit|&touch marker", "echo audit&touch marker",
+            "sort -o result.txt input.txt", "sort --output=result.txt input.txt",
+            "journalctl --rotate", "journalctl --vacuum-time=1s",
+            "hostname replacement", "date 0101010100",
+            "rg --pre=helper pattern", "rg --pre helper pattern",
+            "curl -q -XPOST https://example.invalid",
+            "curl -q --request=POST https://example.invalid",
+            "curl -q --output=result.txt https://example.invalid",
+            "curl https://example.invalid",
+            "gh api -XDELETE repos/example/fixture",
+            "gh api --field=name=value repos/example/fixture",
+            "git log --output=result.txt", "git diff --ext-diff",
+            "terraform plan -input=false", "kubectl diff -f deployment.yaml",
+            "python devops-platform-contracts/scripts/ledger_chain.py append ledger.jsonl record.json",
+            "python tools/devops_plan.py --output .claude/settings.json",
+            "/tmp/ls", "ls *.log",
+        ):
+            with self.subTest(command=command):
+                self.assert_blocked(command)
+
+    def test_hook_allows_only_bounded_planner_output(self):
+        path = (ROOT / "operations/plans/test.json").as_posix()
+        for suffix in (f'--output "{path}"', f'--output="{path}"'):
+            result = self.run_hook(f"python tools/devops_plan.py {suffix}")
+            self.assertEqual(result[1], "allow", result)
+        self.assert_blocked("python tools/devops_plan.py --output operations/plans/../../settings.json")
+
+    def test_hook_rejects_alternate_mutation_tools(self):
+        for tool in ("Write", "Edit", "NotebookEdit", "PowerShell", "mcp__unknown__execute"):
+            result = self.run_hook(payload={"tool_name": tool, "tool_input": {}})
+            self.assertEqual(result[1], "deny", tool)
 
     def test_hook_fails_closed_on_malformed_payload(self):
         returncode, decision, reason = self.run_hook(payload={"tool_name": "Bash", "tool_input": {}})

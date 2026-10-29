@@ -12,3 +12,6 @@ tests/test_enforcement.py:generic-api-key:83
 
 # Literal synthetic API-key fixture restored to preserve argv redaction regression coverage.
 81c60081cd48ee8357b6af7aa27b4ddb6bfbe2d0:tests/test_enforcement.py:generic-api-key:83
+
+# Same reviewed synthetic argv-redaction fixture after journal intent assertions.
+tests/test_enforcement.py:generic-api-key:84

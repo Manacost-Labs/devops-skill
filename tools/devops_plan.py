@@ -198,7 +198,7 @@ def main() -> int:
         return 2
     split = arguments.index("--")
     command = arguments[split + 1 :]
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, allow_abbrev=False)
     parser.add_argument("--target-profile", required=True, help="Validated non-secret target profile YAML.")
     parser.add_argument("--action", required=True, help="Action identifier, [a-z0-9_-]{2,80}.")
     parser.add_argument("--risk", required=True, choices=list(RISK_ORDER), help="Declared risk class; must not understate policy.")
