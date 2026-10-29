@@ -55,6 +55,13 @@ class RecoveryReceiptTests(unittest.TestCase):
                 data["start"]["position"], data["stop"]["position"] = start, stop
                 with self.subTest(start=start, stop=stop), self.assertRaises(ValueError): CHECK.verify(data, root)
 
+    def test_unicode_coordinate_digits_are_not_filename_aliases(self):
+        for start, stop in (("binlog.００００２１", "binlog.００００２２"), ("binlog.٠٠٠٠٢١", "binlog.٠٠٠٠٢٢")):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); data = fixture(root)
+                data["start"]["name"], data["stop"]["name"] = start, stop
+                with self.assertRaises(ValueError): CHECK.verify(data, root)
+
     def test_corruption_truncation_magic_and_budget_fail_closed(self):
         for mode in ("corrupt", "truncate", "magic", "budget"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:

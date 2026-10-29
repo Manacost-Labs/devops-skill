@@ -4,22 +4,24 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
+import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
 from pathlib import Path
 
 from smoke_operations import ENGINES, ROOT
+from mysql_client_tools import VERSION as TOOL_VERSION, provision
 
 
-def run(argv, *, input=None, timeout=180, check=True):
-    result = subprocess.run(argv, input=input, capture_output=True, text=True, timeout=timeout)
+def run(argv, *, input=None, timeout=180, check=True, env=None):
+    result = subprocess.run(argv, input=input, capture_output=True, text=True, timeout=timeout, env=env)
     if check and result.returncode:
-        raise RuntimeError(f"command failed ({result.returncode}): {result.stderr[-2000:]}")
+        raise RuntimeError(f"synthetic command failed ({result.returncode}): {(result.stderr + result.stdout)[-2000:]}")
     return result
 
 
@@ -33,12 +35,16 @@ class Engine:
         # Pull exact reviewed manifests; no ports, host credentials or external network.
         run(["docker", "pull", self.image])
         args = ["docker", "run", "--detach", "--rm", "--network=none", "--memory=2g", "--cpus=2", "--name", self.name]
-        if self.sleeping:
-            run([*args, "--entrypoint=/bin/sleep", self.image, "infinity"])
-        else:
-            skip = "--skip-replica-start" if self.engine == "mysql" else "--skip-slave-start"
-            run([*args, "--env", self.auth, self.image, "--server-id=51", "--log-bin=/var/lib/mysql/recovery-bin", "--binlog-format=ROW", "--event-scheduler=OFF", skip])
-            self.ready()
+        try:
+            if self.sleeping:
+                run([*args, "--entrypoint=/bin/sleep", self.image, "infinity"])
+            else:
+                skip = "--skip-replica-start" if self.engine == "mysql" else "--skip-slave-start"
+                run([*args, "--env", self.auth, self.image, "--server-id=51", "--log-bin=/var/lib/mysql/recovery-bin", "--binlog-format=ROW", "--event-scheduler=OFF", skip])
+                self.ready()
+        except BaseException:
+            run(["docker", "rm", "--force", "--volumes", self.name], check=False)
+            raise
         return self
 
     def __exit__(self, *exc):
@@ -53,7 +59,9 @@ class Engine:
     def ready(self):
         deadline = time.monotonic() + 150
         while time.monotonic() < deadline:
-            if self.sql("SELECT 1;", check=False).returncode == 0:
+            daemon = self.execute(["cat", "/proc/1/comm"], check=False)
+            final_daemon = self.sleeping or daemon.stdout.strip() == {"mysql": "mysqld", "mariadb": "mariadbd"}[self.engine]
+            if final_daemon and self.sql("SELECT 1;", check=False).returncode == 0:
                 return
             time.sleep(2)
         raise RuntimeError("isolated engine did not become ready")
@@ -118,23 +126,32 @@ def logical_pitr(engine):
         receipt_file = artifacts/"receipt.json"
         receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
         verifier = ROOT/"data-resilience-operations/scripts/verify-binlog-chain.py"
-        run(["python", str(verifier), str(receipt_file), "--root", directory])
+        run([sys.executable, str(verifier), str(receipt_file), "--root", directory])
         target.sql(dump)
         assert_data(target, 100, 0)
-        decoder = "mysqlbinlog" if engine == "mysql" else "mariadb-binlog"
-        replay = source.execute([decoder, "--no-defaults", "--verify-binlog-checksum", f"--start-position={start[1]}", f"--stop-position={stop[1]}", *[f"/var/lib/mysql/{name}" for name in files]]).stdout
+        positions = [f"--start-position={start[1]}", f"--stop-position={stop[1]}"]
+        if engine == "mysql":
+            if not source.sql("SELECT VERSION();").stdout.strip().startswith(TOOL_VERSION + " ") and source.sql("SELECT VERSION();").stdout.strip() != TOOL_VERSION:
+                raise RuntimeError("pinned Oracle decoder and engine patch versions differ")
+            decoder = provision(artifacts/"mysql-tools")
+            tool_env = dict(os.environ, LD_LIBRARY_PATH=str(decoder.parent.parent/"lib/private"))
+            version = run([str(decoder), "--no-defaults", "--version"], env=tool_env).stdout
+            if TOOL_VERSION not in version: raise RuntimeError("unexpected Oracle decoder version")
+            replay = run([str(decoder), "--no-defaults", "--verify-binlog-checksum", *positions, *[str(artifacts/name) for name in files]], env=tool_env).stdout
+        else:
+            replay = source.execute(["mariadb-binlog", "--no-defaults", "--verify-binlog-checksum", *positions, *[f"/var/lib/mysql/{name}" for name in files]]).stdout
         target.sql(replay)  # one connection, no force or suppressed errors
         assert_data(target, 175, 2)
         # A missing archive segment and damaged bytes must fail, even though DB restore passed.
         first = artifacts/files[0]
         original = first.read_bytes()
         first.write_bytes(original[:-1])
-        if run(["python", str(verifier), str(receipt_file), "--root", directory], check=False).returncode == 0:
+        if run([sys.executable, str(verifier), str(receipt_file), "--root", directory], check=False).returncode == 0:
             raise RuntimeError("truncated recovery log accepted")
         first.write_bytes(original)
         receipt["logs"] = receipt["logs"][1:]
         receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
-        if run(["python", str(verifier), str(receipt_file), "--root", directory], check=False).returncode == 0:
+        if run([sys.executable, str(verifier), str(receipt_file), "--root", directory], check=False).returncode == 0:
             raise RuntimeError("missing recovery log accepted")
         print(f"OK: {engine} logical restore + two-file PITR includes safe writes and excludes unwanted transaction")
 

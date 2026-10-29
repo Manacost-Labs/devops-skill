@@ -33,8 +33,12 @@ def engine_smoke(engine):
         if started.returncode:
             raise RuntimeError(started.stderr)
         for _ in range(90):
+            # Entry points expose a temporary socket server during initialization.
+            # Accept readiness only after PID 1 has exec'd the final database daemon.
+            daemon = run(["docker", "exec", name, "cat", "/proc/1/comm"])
             probe = run(["docker", "exec", "-i", name, *client], input="SELECT 1;\n")
-            if probe.returncode == 0:
+            expected_daemon = {"postgresql": "postgres", "mysql": "mysqld", "mariadb": "mariadbd"}[engine]
+            if daemon.returncode == 0 and daemon.stdout.strip() == expected_daemon and probe.returncode == 0:
                 break
             time.sleep(2)
         else:

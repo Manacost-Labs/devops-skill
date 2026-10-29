@@ -11,7 +11,7 @@ import stat
 from pathlib import Path, PurePosixPath
 
 MAX_BUDGET = 1 << 40
-NAME = re.compile(r"([A-Za-z0-9_-]{1,64})\.(\d{6,10})\Z")
+NAME = re.compile(r"([A-Za-z0-9_-]{1,64})\.([0-9]{6,10})\Z")
 COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 REFERENCE = re.compile(r"[a-z][a-z0-9_-]{0,30}:[A-Za-z0-9][A-Za-z0-9._-]{0,95}\Z")
 RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
@@ -80,6 +80,46 @@ def coordinate(value):
     return match.group(1), match.group(2), int(match.group(2))
 
 
+def open_artifact(root, relative, root_info, canonical_root):
+    if os.name == "nt":
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+        descriptor = os.open(root / relative, os.O_RDONLY | os.O_BINARY)
+        try:
+            native_path = ctypes.WinDLL("kernel32", use_last_error=True).GetFinalPathNameByHandleW
+            native_path.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD]
+            native_path.restype = wintypes.DWORD
+            buffer = ctypes.create_unicode_buffer(32768)
+            length = native_path(msvcrt.get_osfhandle(descriptor), buffer, len(buffer), 0)
+            if not length or length >= len(buffer):
+                raise ValueError("native artifact path unavailable")
+            final = buffer.value
+            if final.startswith("\\\\?\\UNC\\"): final = "\\\\" + final[8:]
+            elif final.startswith("\\\\?\\"): final = final[4:]
+            actual, expected = os.path.normcase(final), os.path.normcase(str(canonical_root))
+            if os.path.commonpath([actual, expected]) != expected:
+                raise ValueError("opened artifact outside root")
+            return descriptor
+        except BaseException:
+            os.close(descriptor)
+            raise
+    # Descriptor-relative traversal prevents swapping a checked directory for a link.
+    directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        opened_root = os.fstat(directory)
+        if (opened_root.st_dev, opened_root.st_ino) != (root_info.st_dev, root_info.st_ino):
+            raise ValueError("artifact root changed")
+        parts = relative.split("/")
+        for part in parts[:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        return os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+    finally:
+        os.close(directory)
+
+
 def verify(data, root, max_bytes=1 << 30):
     fields(data, {"schema_version", "engine", "source_ref", "coordinate_evidence_ref", "boundary_evidence_ref", "backup", "start", "stop", "logs"})
     if data["schema_version"] != "1.0" or data["engine"] not in ("mysql", "mariadb"):
@@ -100,6 +140,8 @@ def verify(data, root, max_bytes=1 << 30):
         expected = f"{start[0]}.{start[2] + index:0{len(start[1])}d}"
         if log["name"] != expected or not isinstance(log["file"], str) or PurePosixPath(log["file"]).name != expected:
             raise ValueError("log sequence/path")
+    if data["start"]["name"] != logs[0]["name"] or data["stop"]["name"] != logs[-1]["name"]:
+        raise ValueError("exact endpoint names required")
     if data["start"]["position"] >= logs[0]["size"] or data["stop"]["position"] > logs[-1]["size"]:
         raise ValueError("position outside file")
     if len(logs) == 1 and data["stop"]["position"] <= data["start"]["position"]:
@@ -112,6 +154,7 @@ def verify(data, root, max_bytes=1 << 30):
     for parent in [*reversed(root.parents), root]:
         if not stat.S_ISDIR(no_link(parent).st_mode):
             raise ValueError("artifact root")
+    root_info, canonical_root = no_link(root), root.resolve(strict=True)
     paths, aliases, checked = [], set(), set()
     for record in records:
         path, info = artifact(root, record)
@@ -122,7 +165,7 @@ def verify(data, root, max_bytes=1 << 30):
         aliases.add(alias); checked.add(identity)
         paths.append((path, info, record))
     for index, (path, before, record) in enumerate(paths):
-        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        descriptor = open_artifact(root, record["file"], root_info, canonical_root)
         with os.fdopen(descriptor, "rb") as source:
             opened = os.fstat(source.fileno())
             if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino) or opened.st_nlink != 1:
@@ -139,7 +182,7 @@ def verify(data, root, max_bytes=1 << 30):
             after = os.fstat(source.fileno())
             if source.read(1) or digest.hexdigest() != record["sha256"]:
                 raise ValueError("bytes differ")
-            current = no_link(path)
+            _, current = artifact(root, record)
             fingerprint = lambda x: (x.st_dev, x.st_ino, x.st_size, x.st_mtime_ns, x.st_nlink)
             # Windows stat/fstat ctime can use different creation/change semantics.
             # Compare ctime within the descriptor API; POSIX also compares the path.
