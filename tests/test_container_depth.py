@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import subprocess
 import sys
@@ -9,6 +10,7 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 from pathlib import Path
+from contextlib import redirect_stdout
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTITY = "a" * 64
@@ -291,3 +293,99 @@ class NativeFixtureBoundaryTests(unittest.TestCase):
         fixture.kubectl = mock.Mock()
         with self.assertRaises(RuntimeError): fixture.check_cluster()
         fixture.kubectl.assert_not_called()
+
+
+class OomObservationTests(unittest.TestCase):
+    @staticmethod
+    def report(**changes):
+        return {"container_id": IDENTITY, "state": "exited", "running": False,
+                "exit_code": 137, "oom_killed": False, **changes}
+
+    class Clock:
+        def __init__(self): self.now = 0
+        def __call__(self): return self.now
+        def sleep(self, interval): self.now += interval
+
+    def test_late_explicit_oom_uses_same_identity_without_restarting(self):
+        import smoke_containers as native
+        clock = self.Clock()
+        fixture = mock.Mock(runtime_versions={"Engine": "fixture"})
+        with mock.patch.object(native, "snapshot", side_effect=[self.report(), self.report(oom_killed=True)]) as snapshot:
+            result = native.wait_for_oom_report(fixture, IDENTITY, timeout=1, clock=clock, sleep=clock.sleep)
+        self.assertTrue(result["oom_killed"])
+        self.assertEqual(snapshot.call_count, 2)
+        self.assertTrue(all(call.args == (fixture, IDENTITY) and call.kwargs["deadline"] == 1 for call in snapshot.call_args_list))
+        self.assertEqual(fixture.mock_calls, [])
+
+    def test_absent_oom_evidence_times_out_and_prints_only_selected_diagnostics(self):
+        import smoke_containers as native
+        clock = self.Clock(); output = io.StringIO()
+        fixture = mock.Mock(runtime_versions={"Engine": "fixture"})
+        with mock.patch.object(native, "snapshot", return_value=self.report(env="sensitive-marker")) as snapshot, redirect_stdout(output):
+            with self.assertRaises(RuntimeError):
+                native.wait_for_oom_report(fixture, IDENTITY, timeout=.5, clock=clock, sleep=clock.sleep)
+        self.assertEqual(snapshot.call_count, 2)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["status"], "oom_evidence_not_observed")
+        self.assertFalse(report["last_oom_killed"])
+        self.assertNotIn("sensitive-marker", output.getvalue())
+        self.assertEqual(fixture.mock_calls, [])
+
+    def test_invalid_state_identity_and_collection_errors_fail_without_retry(self):
+        import smoke_containers as native
+        for change in ({"container_id": "b"*64}, {"state": "running"}, {"running": True},
+                       {"exit_code": 0}, {"exit_code": True}, {"oom_killed": None}, {"oom_killed": 1}):
+            clock = self.Clock(); fixture = mock.Mock()
+            with mock.patch.object(native, "snapshot", return_value=self.report(**change)) as snapshot:
+                with self.assertRaises(RuntimeError):
+                    native.wait_for_oom_report(fixture, IDENTITY, clock=clock, sleep=clock.sleep)
+                self.assertEqual(snapshot.call_count, 1)
+        for failure in (RuntimeError("owner/daemon mismatch"), subprocess.TimeoutExpired("synthetic", 1)):
+            with mock.patch.object(native, "snapshot", side_effect=failure) as snapshot:
+                with self.assertRaises(type(failure)): native.wait_for_oom_report(mock.Mock(), IDENTITY)
+                self.assertEqual(snapshot.call_count, 1)
+
+    def test_success_after_deadline_is_rejected(self):
+        import smoke_containers as native
+        clock = self.Clock(); fixture = mock.Mock(runtime_versions={})
+        def late(*args, **kwargs):
+            clock.now = 2
+            return self.report(oom_killed=True)
+        with mock.patch.object(native, "snapshot", side_effect=late), redirect_stdout(io.StringIO()):
+            with self.assertRaises(RuntimeError):
+                native.wait_for_oom_report(fixture, IDENTITY, timeout=1, clock=clock, sleep=clock.sleep)
+
+    def test_snapshot_binds_owner_inspection_and_passes_deadline(self):
+        import smoke_containers as native
+        fixture = mock.Mock()
+        fixture.owned_container.return_value = docker()[0]
+        with mock.patch.object(native, "command", return_value=SimpleNamespace(stdout=json.dumps(self.report(oom_killed=True)))) as command:
+            native.snapshot(fixture, IDENTITY, deadline=8)
+        fixture.owned_container.assert_called_once_with(IDENTITY, deadline=8)
+        self.assertEqual(command.call_args.kwargs["deadline"], 8)
+        self.assertEqual(json.loads(command.call_args.kwargs["input"])[0]["Id"], IDENTITY)
+
+    def test_owned_snapshot_runs_actual_offline_helper(self):
+        import smoke_containers as native
+        fixture = mock.Mock()
+        fixture.owned_container.return_value = docker()[0]
+        result = native.snapshot(fixture, IDENTITY)
+        self.assertEqual(result["container_id"], IDENTITY)
+        self.assertEqual(result["exit_code"], 137)
+        self.assertIs(result["oom_killed"], False)
+        self.assertNotIn("sensitive-marker", json.dumps(result))
+
+    def test_deadline_clamps_subprocess_and_propagates_through_daemon_guard(self):
+        import container_fixture as native
+        with mock.patch.object(native.time, "monotonic", return_value=3), mock.patch.object(native.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
+            native.command(["synthetic"], timeout=120, deadline=8)
+            self.assertEqual(run.call_args.kwargs["timeout"], 5)
+            run.reset_mock()
+            with self.assertRaises(TimeoutError): native.command(["synthetic"], deadline=2)
+            run.assert_not_called()
+        fixture = object.__new__(native.DockerFixture)
+        fixture.daemon_id = "fixture"; fixture.folder = Path("owned"); fixture.environment = {}
+        with mock.patch.object(native, "command", side_effect=[SimpleNamespace(stdout='{"ID":"fixture","OSType":"linux"}'), SimpleNamespace(stdout="[]")]) as command:
+            fixture.docker("container", "inspect", IDENTITY, deadline=8)
+            self.assertEqual(command.call_count, 2)
+            self.assertTrue(all(call.kwargs["deadline"] == 8 for call in command.call_args_list))
