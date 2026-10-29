@@ -10,7 +10,7 @@ from container_fixture import APP, HTTP, REQUEST, ROOT, DockerFixture, command
 
 def snapshot(fixture, identity, *, deadline=None):
     # Summarize the same inspection that passed full ID and owner-label checks.
-    raw = json.dumps(fixture.owned_container(identity, deadline=deadline))
+    raw = json.dumps([fixture.owned_container(identity, deadline=deadline)])
     result = command([sys.executable, str(ROOT/"docker-operations/scripts/inspect-container-state.py"), "--id", identity],
                      input=raw, deadline=deadline)
     return json.loads(result.stdout)

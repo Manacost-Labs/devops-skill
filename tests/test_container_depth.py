@@ -363,7 +363,17 @@ class OomObservationTests(unittest.TestCase):
             native.snapshot(fixture, IDENTITY, deadline=8)
         fixture.owned_container.assert_called_once_with(IDENTITY, deadline=8)
         self.assertEqual(command.call_args.kwargs["deadline"], 8)
-        self.assertEqual(json.loads(command.call_args.kwargs["input"])["Id"], IDENTITY)
+        self.assertEqual(json.loads(command.call_args.kwargs["input"])[0]["Id"], IDENTITY)
+
+    def test_owned_snapshot_runs_actual_offline_helper(self):
+        import smoke_containers as native
+        fixture = mock.Mock()
+        fixture.owned_container.return_value = docker()[0]
+        result = native.snapshot(fixture, IDENTITY)
+        self.assertEqual(result["container_id"], IDENTITY)
+        self.assertEqual(result["exit_code"], 137)
+        self.assertIs(result["oom_killed"], False)
+        self.assertNotIn("sensitive-marker", json.dumps(result))
 
     def test_deadline_clamps_subprocess_and_propagates_through_daemon_guard(self):
         import container_fixture as native
