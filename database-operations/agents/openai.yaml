@@ -1,0 +1,4 @@
+interface:
+  display_name: "Database Operations"
+  short_description: "Diagnose and operate PostgreSQL, MySQL and MariaDB"
+  default_prompt: "Use $database-operations to investigate database health and plan bounded maintenance."

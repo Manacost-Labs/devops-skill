@@ -1,29 +1,90 @@
 name: linux-operations
-version: 0.2.0
+version: 0.3.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
 requires:
-  - devops-platform-contracts >= 0.2.0
-  - devops-core >= 0.2.0
+- devops-platform-contracts >= 0.2.0
+- devops-core >= 0.2.0
 capabilities:
-  - debian-ubuntu-host-audit
-  - ssh-access-and-hardening
-  - systemd-service-operations
-  - host-firewall-operations
-  - disk-memory-network-diagnosis
-  - controlled-host-recovery
+- debian-ubuntu-host-audit
+- ssh-access-and-hardening
+- systemd-service-operations
+- host-firewall-operations
+- disk-memory-network-diagnosis
+- controlled-host-recovery
+- rhel-family-host-operations
+- cgroup-resource-diagnosis
+- linux-storage-and-boot-operations
+- linux-mandatory-access-controls
 risk_domains:
-  - ssh-and-access
-  - firewall-and-networking
-  - users-and-sudo
-  - packages-and-reboots
-  - host-configuration
+- ssh-and-access
+- firewall-and-networking
+- users-and-sudo
+- packages-and-reboots
+- host-configuration
 platforms:
-  - debian
-  - ubuntu
+- debian
+- ubuntu
+- rhel
+- rocky
+- almalinux
+source_freshness:
+  last_verified: '2026-10-29'
+  refresh_before_change: true
+  official_sources:
+  - https://manpages.debian.org/bookworm/apt/apt-get.8.en.html
+  - https://www.openssh.org/manual.html
+  - https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
+  - https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html
+  - https://www.freedesktop.org/software/systemd/man/latest/journalctl.html
+  - https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html
+  - https://firewalld.org/documentation/concepts.html
+  - https://wiki.nftables.org/wiki-nftables/index.php/Main_Page
+  - https://networkmanager.dev/docs/api/latest/
+  - https://docs.kernel.org/accounting/psi.html
+  - https://docs.kernel.org/filesystems/proc.html
+  - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/managing_monitoring_and_updating_the_kernel/index
+  - https://dnf.readthedocs.io/en/latest/command_ref.html
+  - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_selinux/index
+  - https://docs.kernel.org/admin-guide/cgroup-v2.html
+  - https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html
+  - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/configuring_and_managing_logical_volumes/index
+  - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/managing_file_systems/index
+  - https://documentation.ubuntu.com/server/how-to/security/apparmor/
+  capability_sources:
+    debian-ubuntu-host-audit:
+    - https://manpages.debian.org/bookworm/apt/apt-get.8.en.html
+    ssh-access-and-hardening:
+    - https://www.openssh.org/manual.html
+    systemd-service-operations:
+    - https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
+    - https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html
+    - https://www.freedesktop.org/software/systemd/man/latest/journalctl.html
+    - https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html
+    host-firewall-operations:
+    - https://firewalld.org/documentation/concepts.html
+    - https://wiki.nftables.org/wiki-nftables/index.php/Main_Page
+    - https://networkmanager.dev/docs/api/latest/
+    disk-memory-network-diagnosis:
+    - https://docs.kernel.org/accounting/psi.html
+    - https://docs.kernel.org/filesystems/proc.html
+    controlled-host-recovery:
+    - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/managing_monitoring_and_updating_the_kernel/index
+    rhel-family-host-operations:
+    - https://dnf.readthedocs.io/en/latest/command_ref.html
+    - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_selinux/index
+    cgroup-resource-diagnosis:
+    - https://docs.kernel.org/admin-guide/cgroup-v2.html
+    - https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html
+    linux-storage-and-boot-operations:
+    - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/configuring_and_managing_logical_volumes/index
+    - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/managing_file_systems/index
+    linux-mandatory-access-controls:
+    - https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_selinux/index
+    - https://documentation.ubuntu.com/server/how-to/security/apparmor/

@@ -12,3 +12,4 @@
 LICENSE text eol=lf
 .github/CODEOWNERS text eol=lf
 linux-operations/scripts/host-audit text eol=lf
+*.sql text eol=lf

@@ -4,6 +4,15 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.5.0 — 2026-10-29
+
+- Expand Linux operations with RHEL-family procedures, cgroup/resource diagnosis, storage/boot, networking, access and SELinux/AppArmor boundaries. Make the local audit report missing evidence without claiming health or running package discovery.
+- Expand reliability with Prometheus/Alertmanager, Grafana, Loki/OTel pipelines, privacy/cardinality/cost, SLO burn windows, incident/capacity/release procedures and real promtool examples.
+- Add database-operations for PostgreSQL/MySQL/MariaDB waits, connections, replication diagnosis and maintenance intent, with separate engine SQL and an offline connection budget. Keep recovery ownership explicit, including unsupported MySQL/MariaDB recovery.
+- Add strict offline SLO arithmetic, source freshness mappings, negative evaluations, isolated pinned-engine SQL/promtool CI and release/install coverage for 23 modules.
+
+### Earlier 0.4.1 work
+
 - Independent review follow-up: reject output operands in the inspection form of `uniq`; coordinate runtime execution/planning/upgrades with a native process lock outside the replaceable directory; sync POSIX journal directory entries before launch.
 
 - Prepare RC 0.4.1 with a conservative command grammar: reject unknown options, attached shell operators, arbitrary output paths, alternate shells and direct editing tools in explicitly protected Claude sessions. Preserve the real-time approval checks from the security hardening PR.

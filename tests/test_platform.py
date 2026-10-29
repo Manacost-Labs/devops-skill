@@ -47,8 +47,8 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.4.1")
-        self.assertEqual(len(catalog["skills"]), 22)
+        self.assertEqual(catalog["version"], "0.5.0")
+        self.assertEqual(len(catalog["skills"]), 23)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
         for name, metadata in catalog["skills"].items():
@@ -351,7 +351,7 @@ class PlatformTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             result = self.command(Path(directory)/"devops-platform-contracts/scripts/validate_platform.py")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            expected = f"{len(json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8-sig'))['profiles']['identity-directory'])}/22"
+            expected = f"{len(json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8-sig'))['profiles']['identity-directory'])}/23"
             self.assertIn(expected, result.stdout)
     def gate(self, request, directory, policy=None):
         path = Path(directory) / "operation.json"
@@ -519,7 +519,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.4.1")
+                self.assertEqual(manifest["version"], "0.5.0")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)

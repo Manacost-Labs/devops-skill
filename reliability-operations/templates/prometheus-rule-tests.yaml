@@ -1,0 +1,56 @@
+rule_files:
+  - prometheus-rules.yaml
+evaluation_interval: 1m
+tests:
+  - name: weighted error ratio fires
+    interval: 1m
+    input_series:
+      - series: demo_http_requests_total{service="demo",code="200",instance="a"}
+        values: 0+90x10
+      - series: demo_http_requests_total{service="demo",code="500",instance="a"}
+        values: 0+10x10
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: DemoHighErrorRatio
+        exp_alerts:
+          - exp_labels: {service: demo, severity: test}
+            exp_annotations: {summary: Synthetic demo error ratio exceeds 5 percent}
+  - name: healthy and zero traffic do not fire error alert
+    interval: 1m
+    input_series:
+      - series: demo_http_requests_total{service="demo",code="200"}
+        values: 0+100x5 500+0x10
+      - series: demo_http_requests_total{service="demo",code="500"}
+        values: 0+0x16
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DemoHighErrorRatio
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: DemoHighErrorRatio
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: DemoTelemetryMissing
+        exp_alerts: []
+  - name: missing counter is telemetry fault
+    interval: 1m
+    input_series:
+      - series: demo_http_requests_total{service="demo",code="200"}
+        values: 0+100x10
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: DemoTelemetryMissing
+        exp_alerts:
+          - exp_labels: {service: demo, code: '500', severity: test}
+            exp_annotations: {summary: Synthetic demo counter is missing}
+  - name: counter reset does not create an error spike
+    interval: 1m
+    input_series:
+      - series: demo_http_requests_total{service="demo",code="200"}
+        values: 1000+100x3 0+100x8
+      - series: demo_http_requests_total{service="demo",code="500"}
+        values: 0+0x12
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: DemoHighErrorRatio
+        exp_alerts: []

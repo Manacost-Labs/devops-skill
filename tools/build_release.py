@@ -34,7 +34,7 @@ TOOL_FILES = {
     "tools/install.py",
     "tools/verify_release.py",
 }
-ALLOWED_SUFFIXES = {".md", ".yaml", ".yml", ".json", ".py", ".ps1", ".txt"}
+ALLOWED_SUFFIXES = {".sql", ".md", ".yaml", ".yml", ".json", ".py", ".ps1", ".txt"}
 SECRET_PATTERNS = {
     "private key": re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "AWS access key": re.compile(rb"AKIA[0-9A-Z]{16}"),

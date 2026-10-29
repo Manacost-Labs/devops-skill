@@ -1,24 +1,74 @@
 name: reliability-operations
-version: 0.2.0
+version: 0.3.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
 requires:
-  - devops-platform-contracts >= 0.2.0
-  - devops-core >= 0.2.0
+- devops-platform-contracts >= 0.2.0
+- devops-core >= 0.2.0
 capabilities:
-  - observability-inventory
-  - sli-slo-design
-  - actionable-alert-design
-  - release-verification
-  - incident-evidence-and-handoff
+- observability-inventory
+- sli-slo-design
+- actionable-alert-design
+- release-verification
+- incident-evidence-and-handoff
+- prometheus-alertmanager-operations
+- grafana-dashboard-review
+- otel-log-trace-pipelines
+- telemetry-capacity-governance
 risk_domains:
-  - telemetry-data-exposure
-  - alert-routing
-  - retention-and-cost
-  - incident-communication
+- telemetry-data-exposure
+- alert-routing
+- retention-and-cost
+- incident-communication
+source_freshness:
+  last_verified: '2026-10-29'
+  refresh_before_change: true
+  official_sources:
+  - https://opentelemetry.io/docs/collector/configuration/
+  - https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+  - https://sre.google/workbook/alerting-on-slos/
+  - https://prometheus.io/docs/practices/alerting/
+  - https://prometheus.io/docs/alerting/latest/configuration/
+  - https://sre.google/workbook/canarying-releases/
+  - https://sre.google/workbook/incident-response/
+  - https://prometheus.io/docs/prometheus/latest/querying/functions/
+  - https://prometheus.io/docs/prometheus/latest/querying/basics/
+  - https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
+  - https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/
+  - https://opentelemetry.io/docs/security/handling-sensitive-data/
+  - https://opentelemetry.io/docs/concepts/sampling/
+  - https://grafana.com/docs/loki/latest/get-started/labels/cardinality/
+  capability_sources:
+    observability-inventory:
+    - https://opentelemetry.io/docs/collector/configuration/
+    - https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+    sli-slo-design:
+    - https://sre.google/workbook/alerting-on-slos/
+    actionable-alert-design:
+    - https://prometheus.io/docs/practices/alerting/
+    - https://prometheus.io/docs/alerting/latest/configuration/
+    release-verification:
+    - https://sre.google/workbook/canarying-releases/
+    incident-evidence-and-handoff:
+    - https://sre.google/workbook/incident-response/
+    prometheus-alertmanager-operations:
+    - https://prometheus.io/docs/prometheus/latest/querying/functions/
+    - https://prometheus.io/docs/prometheus/latest/querying/basics/
+    - https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
+    - https://prometheus.io/docs/alerting/latest/configuration/
+    grafana-dashboard-review:
+    - https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/
+    otel-log-trace-pipelines:
+    - https://opentelemetry.io/docs/collector/configuration/
+    - https://opentelemetry.io/docs/security/handling-sensitive-data/
+    - https://opentelemetry.io/docs/concepts/sampling/
+    - https://grafana.com/docs/loki/latest/get-started/labels/cardinality/
+    telemetry-capacity-governance:
+    - https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+    - https://grafana.com/docs/loki/latest/get-started/labels/cardinality/

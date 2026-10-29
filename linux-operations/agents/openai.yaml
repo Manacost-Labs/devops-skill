@@ -1,4 +1,4 @@
 interface:
   display_name: "Linux Operations"
-  short_description: "Safe Debian and Ubuntu server operations"
-  default_prompt: "Use $linux-operations to audit and safely operate a Debian or Ubuntu Linux server."
+  short_description: "Diagnose and operate Debian, Ubuntu and RHEL hosts"
+  default_prompt: "Use $linux-operations to diagnose a Linux host and plan a safe, verifiable change."
