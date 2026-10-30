@@ -66,7 +66,10 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture ($listener.Count -eq 1)
     $listenerPath=$listener[0].PSPath
     $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$name),$password)
-    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject ($name+'@localhost') -URI ('http://schemas.microsoft.com/powershell/'+$endpoint) -Issuer $ca.Thumbprint -Credential $credential
+    $subject=$name+'@localhost';$resourceUri='http://schemas.microsoft.com/powershell/'+$endpoint
+    $existingMappings=@(Get-ChildItem WSMan:\localhost\ClientCertificate | Where-Object {$_.Keys -contains ('Subject='+$subject) -and $_.Keys -contains ('URI='+$resourceUri) -and $_.Keys -contains ('Issuer='+$ca.Thumbprint)})
+    Require-Fixture ($existingMappings.Count -eq 0)
+    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $ca.Thumbprint -Credential $credential -Force
     $mappingPath=$mapping.PSPath
     $target=@{kind='windows-jea-v1';server='localhost';port=$port;configuration_name=$endpoint;ca_file=(Join-Path $root 'ca.pem');authentication=@{method='certificate';certificate_pem=(Join-Path $root 'client.pem');certificate_key_pem=(Join-Path $root 'client.key')};binding_digest=$binding}
     $target|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $root 'target.json') -Encoding utf8
@@ -84,6 +87,9 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture (Test-PSSessionConfigurationFile -Path $sessionPath)
     Register-PSSessionConfiguration -Name $endpoint -Path $sessionPath -NoServiceRestart -Force | Out-Null;$registered=$true
     Restart-Service WinRM -Force
+    $observed=Get-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address='IP:127.0.0.1';Transport='HTTPS'}
+    Require-Fixture ([int]$observed.Port -eq $port -and $observed.Hostname -ceq 'localhost' -and $observed.CertificateThumbprint -ieq $server.Thumbprint -and $observed.Enabled -ieq 'true')
+    Require-Fixture (@($observed.ListeningOn).Count -eq 1 -and @($observed.ListeningOn)[0] -ceq '127.0.0.1')
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') exercise --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0)
 }finally{
