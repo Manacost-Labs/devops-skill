@@ -64,19 +64,19 @@
       "role": "executor"
     },
     "cloud-aws": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "cloud-gcp": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "cloud-azure": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "cloud-selectel": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "kubernetes-operations": {

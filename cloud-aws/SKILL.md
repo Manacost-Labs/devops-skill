@@ -17,6 +17,19 @@ Operate bounded AWS control-plane changes with exact account, partition, and reg
 
 Never invent AWS CLI options, API parameters, IAM actions, service-linked roles, defaults, prices, quotas, retry behavior, or rollback semantics. Inspect the installed tool version and the exact current official CLI or API reference before every material call. Accept credential profile or broker references only; never request, retrieve, or record access keys or session tokens.
 
+## Operation runbooks
+
+Read only the runbook for the requested operation. These procedures refine the contract-v2 workflow; they do not grant authority or acquire a cloud-side lock.
+
+Runbook API names and parameters describe planning and verification. Agent-executed live writes require an externally registered typed broker task and signed grant under [protected execution](../docs/protected-execution.md). A planner or standalone gate PASS does not authorize execution; if the required task is absent, return a blocked handoff instead of invoking a credentialed CLI directly.
+
+- For a customer-managed policy version or a role attachment, read [IAM changes](references/iam-changes.md).
+- For an existing VPC security-group rule, read [network changes](references/network-changes.md).
+- For a bounded EC2 launch, read [EC2 launch and reconciliation](references/ec2-launch.md).
+- Before any write or after a timeout, read [asynchronous changes and recovery](references/async-recovery.md). Keep one in-flight mutation per policy ARN, security-group ID, or launch token. This is a local coordination limit, not an AWS rate-limit claim.
+
+The optional local `scripts/inspect-launch.py` checks a saved `DescribeInstances` response against a small launch observation checklist. It makes no AWS calls and cannot authorize a retry or prove service health. Invoke it explicitly with a local Python runtime as described in the EC2 runbook; its presence does not extend the AWS tool permissions.
+
 ## Workflow
 
 1. Receive a secret-free contract-v2 request from `devops-core`. Confirm operation ID, owner, environment, data classification, target fingerprint, requested capabilities, constraints, and acceptance criteria.

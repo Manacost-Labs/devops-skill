@@ -1,5 +1,5 @@
 name: cloud-selectel
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -7,8 +7,8 @@ allowed_tools:
   - Glob
   - Bash(openstack:*)
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+  - devops-platform-contracts >= 0.7.0
+  - devops-core >= 0.7.0
 capabilities:
   - selectel-project-discovery
   - selectel-iam-control-plane
@@ -28,7 +28,7 @@ provides:
   - selectel-cloud-control-plane-v1
   - contract-v2-executor
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
     - https://docs.selectel.ru/en/terraform/
@@ -37,16 +37,49 @@ source_freshness:
     - https://docs.selectel.ru/en/access-control/
     - https://docs.selectel.ru/en/cloud-servers/
     - https://docs.selectel.ru/en/managed-databases/
+    - https://docs.selectel.ru/en/api/users-and-roles/
+    - https://docs.selectel.ru/en/api/quota-management/
+    - https://docs.selectel.ru/en/api/urls/
+    - https://docs.selectel.ru/en/api/cloud-projects-and-resources/
+    - https://docs.selectel.ru/en/access-control/permissions/
+    - https://docs.selectel.ru/en/access-control/role-reference/
+    - https://docs.selectel.ru/en/access-control/projects/quotas/
+    - https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/about-openstack-cli/
+    - https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/configure-openstack-cli/
+    - https://docs.selectel.ru/en/cloud-servers/create/create-server/
+    - https://docs.selectel.ru/en/cloud-servers/security-groups/about/about-security-groups/
+    - https://docs.selectel.ru/en/cloud-servers/security-groups/manage-rules/create-rule/
+    - https://docs.selectel.ru/en/cloud-servers/security-groups/manage-rules/delete-rule/
+    - https://docs.selectel.ru/en/cloud-servers/security-groups/manage-groups/assign-security-groups/
+    - https://docs.selectel.ru/en/cloud-servers/cloud-networks/about-networks/
+    - https://docs.selectel.ru/en/cloud-servers/volumes/about-network-volumes/
   capability_sources:
     selectel-project-discovery:
       - https://docs.selectel.ru/en/api/authorization/
+      - https://docs.selectel.ru/en/api/cloud-projects-and-resources/
+      - https://docs.selectel.ru/en/api/quota-management/
+      - https://docs.selectel.ru/en/api/urls/
     selectel-iam-control-plane:
       - https://docs.selectel.ru/en/access-control/
+      - https://docs.selectel.ru/en/api/users-and-roles/
+      - https://docs.selectel.ru/en/access-control/permissions/
+      - https://docs.selectel.ru/en/access-control/role-reference/
     selectel-network-control-plane:
       - https://docs.selectel.ru/en/cloud-servers/
+      - https://docs.selectel.ru/en/cloud-servers/security-groups/about/about-security-groups/
+      - https://docs.selectel.ru/en/cloud-servers/security-groups/manage-rules/create-rule/
+      - https://docs.selectel.ru/en/cloud-servers/security-groups/manage-rules/delete-rule/
+      - https://docs.selectel.ru/en/cloud-servers/security-groups/manage-groups/assign-security-groups/
+      - https://docs.selectel.ru/en/cloud-servers/cloud-networks/about-networks/
+      - https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/about-openstack-cli/
     selectel-compute-control-plane:
       - https://docs.selectel.ru/en/cloud-servers/
       - https://docs.selectel.ru/en/terraform/
+      - https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/about-openstack-cli/
+      - https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/configure-openstack-cli/
+      - https://docs.selectel.ru/en/cloud-servers/create/create-server/
+      - https://docs.selectel.ru/en/cloud-servers/volumes/about-network-volumes/
+      - https://docs.selectel.ru/en/access-control/projects/quotas/
     selectel-managed-service-routing:
       - https://docs.selectel.ru/en/managed-kubernetes/
       - https://docs.selectel.ru/en/managed-databases/

@@ -1,8 +1,8 @@
 # Google Cloud provider sources
 
-last_verified: 2026-08-17
+last_verified: 2026-10-30
 provider: Google Cloud
-tooling_baseline: Google Cloud CLI release notes were current through 577.0.0 (2026-07-21) when checked; verify the installed CLI and live API release channel for every operation.
+tooling_baseline: Compute Engine REST v1 and Resource Manager project IAM v1 references; verify the installed Google Cloud CLI, API model/release channel and exact operation before use. No installed CLI version is asserted by this documentation refresh.
 
 ## Official sources
 
@@ -15,6 +15,20 @@ tooling_baseline: Google Cloud CLI release notes were current through 577.0.0 (2
 - [Cloud Run documentation](https://cloud.google.com/run/docs)
 - [Cloud SQL documentation](https://cloud.google.com/sql/docs)
 - [Cloud Billing documentation](https://cloud.google.com/billing/docs)
+
+## Operation-specific evidence
+
+On 2026-10-30 the existing architecture/IAM/CLI/VPC/Compute/GKE/Cloud Run/Cloud SQL documentation entrypoints and these exact operation references were opened. Google redirects many `cloud.google.com` links to `docs.cloud.google.com`. The old `cloud.google.com/resource-manager/reference/rest/v1/projects/{getIamPolicy,setIamPolicy}` URLs returned 404, while the explicitly listed `docs.cloud.google.com` URLs returned readable references. This refresh confirms documentation semantics, not live permissions, quotas, billing, service availability or installed tooling. No project was queried or changed.
+
+| Concern | Official references checked | Local procedure |
+|---|---|---|
+| Project policy read/write and updateMask | [getIamPolicy](https://docs.cloud.google.com/resource-manager/reference/rest/v1/projects/getIamPolicy), [setIamPolicy](https://docs.cloud.google.com/resource-manager/reference/rest/v1/projects/setIamPolicy) | [IAM changes](iam-changes.md) |
+| Conditions, concurrency and propagation | [policy versions](https://cloud.google.com/iam/docs/policies), [retry strategy](https://cloud.google.com/iam/docs/retry-strategy), [propagation](https://cloud.google.com/iam/docs/access-change-propagation) | [IAM changes](iam-changes.md) |
+| Classic firewall method-specific semantics | [insert](https://docs.cloud.google.com/compute/docs/reference/rest/v1/firewalls/insert), [patch](https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/patch), [rule behavior](https://cloud.google.com/vpc/docs/firewalls), [VPC quotas](https://cloud.google.com/vpc/docs/quota) | [network changes](network-changes.md) |
+| One VM create and existing VM tags | [instances.insert](https://cloud.google.com/compute/docs/reference/rest/v1/instances/insert), [instances.setTags](https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/setTags), [allocation quotas](https://cloud.google.com/compute/resource-usage) | [Compute changes](compute-changes.md) |
+| Scope, incarnation and bounded observation | [native zonal Operation](https://cloud.google.com/compute/docs/reference/rest/v1/zoneOperations), [handling requests/responses](https://cloud.google.com/compute/docs/api/how-tos/api-requests-responses) | [async recovery](async-recovery.md) |
+
+The local inspector and synthetic tests exercise only saved instance-insert observation shapes, errors and identity mismatches. They are not an emulator or evidence of successful IAM/firewall/VM execution, recovery, quota availability or application health. Other cloud operations, including managed containers/databases, retain discovery/routing scope and need their own current exact operation sources. Refresh method-specific permissions, mutable model versions and live target facts before registering execution authority.
 
 ## Freshness procedure
 
