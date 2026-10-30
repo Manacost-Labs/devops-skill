@@ -1,5 +1,5 @@
 name: cloud-gcp
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -8,8 +8,8 @@ allowed_tools:
   - Bash(gcloud:*)
   - Bash(gsutil:*)
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+  - devops-platform-contracts >= 0.7.0
+  - devops-core >= 0.7.0
 capabilities:
   - gcp-project-discovery
   - gcp-iam-control-plane
@@ -29,7 +29,7 @@ provides:
   - gcp-cloud-control-plane-v1
   - contract-v2-executor
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
     - https://cloud.google.com/architecture/framework
@@ -40,16 +40,45 @@ source_freshness:
     - https://cloud.google.com/kubernetes-engine/docs
     - https://cloud.google.com/run/docs
     - https://cloud.google.com/sql/docs
+    - https://docs.cloud.google.com/resource-manager/reference/rest/v1/projects/getIamPolicy
+    - https://docs.cloud.google.com/resource-manager/reference/rest/v1/projects/setIamPolicy
+    - https://cloud.google.com/iam/docs/policies
+    - https://cloud.google.com/iam/docs/retry-strategy
+    - https://cloud.google.com/iam/docs/access-change-propagation
+    - https://docs.cloud.google.com/compute/docs/reference/rest/v1/firewalls/insert
+    - https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/patch
+    - https://cloud.google.com/vpc/docs/firewalls
+    - https://cloud.google.com/vpc/docs/quota
+    - https://cloud.google.com/compute/docs/reference/rest/v1/instances/insert
+    - https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/setTags
+    - https://cloud.google.com/compute/docs/reference/rest/v1/zoneOperations
+    - https://cloud.google.com/compute/docs/api/how-tos/api-requests-responses
+    - https://cloud.google.com/compute/resource-usage
   capability_sources:
     gcp-project-discovery:
       - https://cloud.google.com/sdk/docs
       - https://cloud.google.com/architecture/framework
     gcp-iam-control-plane:
       - https://cloud.google.com/iam/docs/overview
+      - https://docs.cloud.google.com/resource-manager/reference/rest/v1/projects/getIamPolicy
+      - https://docs.cloud.google.com/resource-manager/reference/rest/v1/projects/setIamPolicy
+      - https://cloud.google.com/iam/docs/policies
+      - https://cloud.google.com/iam/docs/retry-strategy
+      - https://cloud.google.com/iam/docs/access-change-propagation
     gcp-network-control-plane:
       - https://cloud.google.com/vpc/docs/overview
+      - https://docs.cloud.google.com/compute/docs/reference/rest/v1/firewalls/insert
+      - https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/patch
+      - https://cloud.google.com/vpc/docs/firewalls
+      - https://cloud.google.com/vpc/docs/quota
+      - https://cloud.google.com/compute/docs/api/how-tos/api-requests-responses
     gcp-compute-control-plane:
       - https://cloud.google.com/compute/docs
+      - https://cloud.google.com/compute/docs/reference/rest/v1/instances/insert
+      - https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/setTags
+      - https://cloud.google.com/compute/docs/reference/rest/v1/zoneOperations
+      - https://cloud.google.com/compute/docs/api/how-tos/api-requests-responses
+      - https://cloud.google.com/compute/resource-usage
     gcp-managed-service-routing:
       - https://cloud.google.com/kubernetes-engine/docs
       - https://cloud.google.com/run/docs

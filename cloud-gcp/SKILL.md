@@ -17,6 +17,19 @@ Operate bounded Google Cloud control-plane changes with exact organization, fold
 
 Never invent gcloud options, REST fields, IAM roles or permissions, service-agent behavior, defaults, prices, quotas, API enablement effects, or recovery semantics. Inspect the installed tool version, active configuration, API release channel, and exact current official reference before every material call. Accept credential configuration or broker references only; never retrieve or record refresh tokens, service-account keys, or secret values.
 
+## Operation runbooks
+
+Read the procedure for the requested operation, rather than loading every provider reference:
+
+- [Project IAM bindings](references/iam-changes.md) covers a version-aware, etag-bound policy update.
+- [VPC firewall rules](references/network-changes.md) covers one classic firewall insert or patch; hierarchical/network firewall policies require their own plan.
+- [Compute Engine instances](references/compute-changes.md) covers one VM insert or existing-instance network-tag update.
+- Before dispatch or after an uncertain response, read [operation observation and recovery](references/async-recovery.md).
+
+These API names are planning and verification guidance. Agent live writes require an externally registered typed broker task and signed authority under [protected execution](../docs/protected-execution.md). A standalone planning gate PASS does not admit execution. If the required task is absent, return a blocked handoff; do not substitute a credentialed CLI command or add this module's helper to a hook allowlist.
+
+The optional local `scripts/inspect-operation.py` interprets saved native zonal instance-insert evidence only. It makes no Google Cloud calls and cannot establish provenance, authorize a retry or prove application health. Run it explicitly with a local Python runtime as described in the Compute reference; its presence does not extend tool permissions.
+
 ## Workflow
 
 1. Receive a secret-free contract-v2 request from `devops-core`. Confirm operation ID, owner, environment, data classification, target fingerprint, requested capabilities, constraints, and acceptance criteria.
