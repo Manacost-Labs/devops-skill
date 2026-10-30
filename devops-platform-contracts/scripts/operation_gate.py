@@ -5,13 +5,19 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.util
 import json
+import os
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+_autonomy_spec = importlib.util.spec_from_file_location("operation_autonomy", Path(__file__).with_name("autonomy.py"))
+AUTONOMY = importlib.util.module_from_spec(_autonomy_spec)
+_autonomy_spec.loader.exec_module(AUTONOMY)
 POLICY_DIR = ROOT / "devops-platform-contracts" / "policies"
 REGISTERED_POLICIES = {
     "default-policy.json": "default-baseline",
@@ -25,11 +31,11 @@ RISK_ORDER = ("R0", "R1", "R2", "R3", "R4")
 RISK = set(RISK_ORDER)
 RISK_RANK = {name: index for index, name in enumerate(RISK_ORDER)}
 DATA_CLASSES = {"public", "internal", "confidential", "restricted"}
-TOP_LEVEL = {"schema_version", "operation_id", "objective", "data_classification", "policy", "target", "change", "execution", "approvals", "recovery", "verification", "exception"}
+TOP_LEVEL = {"schema_version", "operation_id", "objective", "data_classification", "policy", "target", "change", "execution", "approvals", "recovery", "verification", "exception", "autonomy"}
 FIELDS = {
     "policy": {"id", "version", "digest"},
     "target": {"name", "environment", "owner", "profile_digest"},
-    "change": {"action", "risk", "scope", "plan_digest", "stateful", "destructive", "external_side_effects"},
+    "change": {"action", "risk", "scope", "plan_digest", "stateful", "destructive", "external_side_effects", "irreversible"},
     "execution": {"executor", "requested_at", "window_start", "window_end", "idempotency_key", "change_lock_ref"},
     "approval": {"approver", "role", "target", "plan_digest", "policy_digest", "approved_at", "expires_at", "evidence_ref"},
     "recovery": {"required", "method", "artifact_ref", "restore_tested_at", "rpo_minutes", "rto_minutes"},
@@ -41,7 +47,7 @@ POLICY_FIELDS = {
     "minimum_approvals", "require_separation_of_duties",
     "require_change_lock", "require_plan_digest", "always_require_approval",
     "require_recovery_evidence", "deny_by_default", "completion_statuses",
-    "exceptions", "ledger", "data",
+    "exceptions", "ledger", "data", "autonomy",
 }
 POLICY_LIST_FIELDS = (
     "require_change_lock", "require_plan_digest", "always_require_approval",
@@ -163,9 +169,21 @@ def validate_policy_shape(policy: dict[str, Any], label: str) -> None:
         raise ValueError(f"{label} contains an unknown data classification")
     if data["default"] not in allowed:
         raise ValueError(f"{label} default data classification is not allowed")
+    autonomy = policy["autonomy"]
+    if not isinstance(autonomy, dict):
+        raise ValueError(f"{label} autonomy must be an object")
+    require_exact_keys(autonomy, {"maximum_mode", "grant_ttl_minutes", "allow_production"}, f"{label} autonomy")
+    if not isinstance(autonomy["maximum_mode"], str) or autonomy["maximum_mode"] not in AUTONOMY.MODES or type(autonomy["allow_production"]) is not bool:
+        raise ValueError(f"{label} autonomy mode/production control is invalid")
+    if not is_integer(autonomy["grant_ttl_minutes"]) or not 1 <= autonomy["grant_ttl_minutes"] <= policy["approval_ttl_minutes"]:
+        raise ValueError(f"{label} autonomy TTL must fit approval TTL")
 
 
 def ensure_not_weaker(parent: dict[str, Any], child: dict[str, Any], label: str) -> None:
+    if (AUTONOMY.MODES[child["autonomy"]["maximum_mode"]] > AUTONOMY.MODES[parent["autonomy"]["maximum_mode"]]
+            or child["autonomy"]["grant_ttl_minutes"] > parent["autonomy"]["grant_ttl_minutes"]
+            or child["autonomy"]["allow_production"] and not parent["autonomy"]["allow_production"]):
+        raise ValueError(f"{label} cannot broaden delegated autonomy")
     if child["approval_ttl_minutes"] > parent["approval_ttl_minutes"]:
         raise ValueError(f"{label} cannot lengthen approval TTL")
     for risk in RISK_ORDER:
@@ -243,10 +261,10 @@ def reject_unknown(value: dict[str, Any], contract: str, label: str, reasons: li
         reasons.append(f"{label} contains unknown fields: {', '.join(unknown)}")
 
 
-def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str, now: datetime) -> list[str]:
+def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str, now: datetime, authority_dir=None) -> list[str]:
     reasons: list[str] = []
     unknown = sorted(set(request) - TOP_LEVEL)
-    missing = sorted((TOP_LEVEL - {"exception"}) - set(request))
+    missing = sorted((TOP_LEVEL - {"exception", "autonomy"}) - set(request))
     if unknown:
         reasons.append("unknown top-level fields: " + ", ".join(unknown))
     if missing:
@@ -294,6 +312,8 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
 
     risk = change.get("risk")
     action = change.get("action")
+    if isinstance(action, str) and action in set(policy["deny_by_default"]):
+        reasons.append("selected policy denies this action; autonomy cannot override it")
     plan_digest = change.get("plan_digest")
     if risk not in RISK:
         reasons.append("change.risk is invalid")
@@ -307,7 +327,11 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
     for flag in ("stateful", "destructive", "external_side_effects"):
         if type(change.get(flag)) is not bool:
             reasons.append(f"change.{flag} must be boolean")
+    if "irreversible" in change and type(change["irreversible"]) is not bool:
+        reasons.append("change.irreversible must be boolean")
     if risk in RISK:
+        if change.get("irreversible") is True and risk != "R4":
+            reasons.append("irreversible work must be classified R4")
         if change.get("destructive") and risk != "R4":
             reasons.append("destructive work must be classified R4")
         if change.get("external_side_effects") and RISK_RANK[risk] < RISK_RANK["R2"]:
@@ -341,6 +365,16 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
     always = set(policy["always_require_approval"])
     minimum = policy["minimum_approvals"].get(str(risk), 0)
     if action in always or change.get("external_side_effects") is True:
+        minimum = max(minimum, 1)
+    if change.get("irreversible") is True or change.get("destructive") is True:
+        minimum = max(minimum, 1)
+    delegated, manual_boundary, authority_errors = AUTONOMY.assess(request, policy, policy_digest, now, authority_dir)
+    reasons.extend(authority_errors)
+    if delegated:
+        minimum = 0  # Required authorizers approved the bounded authority record.
+        if risk in {"R3", "R4"} and not valid_text(lock_ref):
+            reasons.append("delegated R3/R4 work requires a target-scoped change lock")
+    elif manual_boundary:
         minimum = max(minimum, 1)
     approvals = request.get("approvals")
     if not isinstance(approvals, list):
@@ -403,7 +437,8 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
         value = recovery.get(field)
         if value is not None and (not is_integer(value) or value < 0):
             reasons.append(f"recovery.{field} must be a non-negative integer or null")
-    needs_recovery = action in set(policy["require_recovery_evidence"]) or bool(change.get("stateful")) and (risk == "R4" or bool(change.get("destructive")))
+    needs_recovery = (action in set(policy["require_recovery_evidence"])
+                      or bool(change.get("stateful")) and (risk in {"R3", "R4"} or bool(change.get("destructive"))))
     if needs_recovery:
         if required_flag is not True:
             reasons.append("recovery.required must be true")
@@ -411,6 +446,8 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
             reasons.append("recovery method and evidence reference are required")
         if restore_tested_at is None:
             reasons.append("recovery.restore_tested_at is required")
+        elif (parsed_restore := parse_time(restore_tested_at, "recovery.restore_tested_at", reasons)) and parsed_restore > now:
+            reasons.append("recovery restore test cannot be in the future")
         if not is_integer(recovery.get("rpo_minutes")) or recovery["rpo_minutes"] < 0 or not is_integer(recovery.get("rto_minutes")) or recovery["rto_minutes"] < 0:
             reasons.append("measured non-negative RPO and RTO are required")
 
@@ -457,20 +494,32 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--request", type=Path, help="Secret-free JSON operation request v2.")
+    request_source = parser.add_mutually_exclusive_group()
+    request_source.add_argument("--request", type=Path, help="Secret-free JSON operation request v2.")
+    request_source.add_argument("--request-stdin", action="store_true", help="Validate the executor's frozen request bytes.")
     parser.add_argument("--policy", default="default-policy.json", help="Registered policy basename.")
     parser.add_argument("--at", help="RFC3339 evaluation time for deterministic testing; defaults to now.")
     parser.add_argument("--print-policy-digest", action="store_true", help="Print the canonical effective policy digest.")
     args = parser.parse_args()
     try:
+        if args.at and os.environ.get(AUTONOMY.AUTHORITY_ENV):
+            raise ValueError("test clocks are forbidden when an authority store is configured")
         policy, policy_digest = load_registered_policy(args.policy)
         if args.print_policy_digest:
             print(f"POLICY: id={policy['policy_id']} version={policy['version']} digest={policy_digest}")
-            if args.request is None:
+            if args.request is None and not args.request_stdin:
                 return 0
-        if args.request is None:
+        if args.request is None and not args.request_stdin:
             raise ValueError("--request is required unless --print-policy-digest is used")
-        request = json.loads(args.request.read_text(encoding="utf-8-sig"))
+        if args.request_stdin:
+            raw = sys.stdin.buffer.read(1048577)
+        else:
+            with args.request.open("rb") as source:
+                raw = source.read(1048577)
+        if len(raw) > 1048576:
+            raise ValueError("operation request exceeds input limit")
+        request = json.loads(raw.decode("utf-8-sig"), object_pairs_hook=AUTONOMY.unique_pairs,
+                             parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite operation JSON")))
         if not isinstance(request, dict):
             raise ValueError("request must be a JSON object")
         time_errors: list[str] = []
@@ -488,7 +537,8 @@ def main() -> int:
         print("BLOCKED: " + "; ".join(dict.fromkeys(reasons)))
         return 1
     change, target = request["change"], request["target"]
-    print(f"ALLOWED: {request['operation_id']} {change['risk']} {change['action']} on {target['name']} passed {policy['policy_id']} {policy_digest}.")
+    mode = request.get("autonomy", {}).get("mode", "safe")
+    print(f"ALLOWED: {request['operation_id']} {change['risk']} {change['action']} on {target['name']} passed {policy['policy_id']} {policy_digest}; mode={mode}.")
     return 0
 
 

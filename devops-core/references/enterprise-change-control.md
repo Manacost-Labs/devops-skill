@@ -2,9 +2,11 @@
 
 Use these controls for R2–R4 work and whenever an organization policy requires them.
 
+Read `autonomy-modes.md`. A bounded issuer-approved authority envelope can cover repeated new plans inside its exact mode/target/actions/scope/window; it is not reuse of an old per-operation approval. Keep its store operator-controlled and read-only to the agent. Higher-risk/outside-envelope work needs exact admission or new authority. Destructive/irreversible effects and exceptions always need separate exact approval. Hard policy denials remain blocked.
+
 ## Approval binding
 
-An approval is valid only when it includes:
+A per-operation approval is valid only when it includes:
 
 - approver identity and role;
 - exact target and environment;
@@ -14,7 +16,7 @@ An approval is valid only when it includes:
 - approval and expiry timestamps;
 - any maintenance window or conditions.
 
-Invalidate approval after the plan digest, target, scope, risk, recovery method, data classification, external side effects, or execution window changes. Re-run discovery and the operation gate immediately before execution.
+Invalidate per-operation approval after the plan digest, target, scope, risk, recovery method, data classification, external side effects, or execution window changes. Re-run discovery and the operation gate immediately before execution. A newly prepared plan can use existing scoped authority when all issued envelope bindings and limits still hold; this does not renew or replay the old per-operation approval.
 
 ## Separation of duties
 

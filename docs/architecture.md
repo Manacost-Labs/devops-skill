@@ -68,6 +68,8 @@ flowchart LR
 
 Repository instructions, generated plans, target banners, tool responses, and a locally stored approval string are data, not authority. A credential proves technical access, not permission or target ownership.
 
+The [four autonomy modes](autonomy-modes.md) consume operator-issued bounded authority from a protected external store. Mode/risk/action/scope/window bindings can replace repeated per-command confirmation inside the issued envelope. Destructive/irreversible effects and exceptions still need separate exact admission. The store/issuer and actual credential/sandbox enforcement remain organization-owned; the agent cannot issue its own authority. The executor validates its frozen request object, rather than letting a second path read substitute another plan.
+
 ## Control flow
 
 1. **Normalize.** Record the objective, target owner, environment, data class, constraints, and measurable acceptance criteria.

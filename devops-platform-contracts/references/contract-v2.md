@@ -2,6 +2,8 @@
 
 Contract v2 binds infrastructure execution to a validated target, immutable plan, time-bounded authority, recovery evidence, and observable acceptance criteria.
 
+From platform 0.9.0, the optional `autonomy` selection can reference an operator-issued external authority envelope. Read `autonomy-authority.md`. Requests without it remain Safe. This adds scoped prior authorization without removing per-launch validation, target/command digests, journal, recovery or verification. Explicit `change.irreversible` is required in delegated modes and never receives automatic admission.
+
 ## Executor input
 
 Require operation ID, objective, target profile and fingerprint, environment, owner, data classification, confirmed facts, constraints, selected capabilities, risk, exact plan digest, state/destructive/external-effect flags, recovery evidence, verification criteria, execution identity, idempotency key, change lock, the selected policy ID/version/effective digest, and any approvals or exception. Every approval carries the same effective policy digest as the request.

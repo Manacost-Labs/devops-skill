@@ -6,6 +6,9 @@
 - Requester / accountable owner:
 - Selected policy and version:
 - Data classification:
+- Selected autonomy mode (Safe if absent):
+- Existing authority ID/digest, issued scope and expiry:
+- New human admission actually required (group related changes once):
 
 ## Objective
 
@@ -24,6 +27,9 @@
 - Target-scoped change lock:
 
 ## Risk and blast radius
+
+- Destructive / irreversible effects:
+- Why this risk classification fits the observed effects:
 
 ## Recovery path
 

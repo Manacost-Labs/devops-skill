@@ -22,7 +22,7 @@ The public engine must remain useful without the private overlay. The private ov
 5. Prove backup recovery in an isolated environment before any stateful production change.
 6. Exercise a staging or disposable-host deployment with an immutable artifact and explicit rollback.
 7. Define user-path checks, alerts, observation window, and incident handoff.
-8. For each live R2-R4 change, generate an exact plan digest, obtain time-bounded owner approval, run the gate immediately before execution, and stop on drift.
+8. For each live R2-R4 change, generate an exact plan digest, use valid time-bounded owner authority under the selected [autonomy mode](autonomy-modes.md) or obtain exact operation approval, run the gate immediately before execution, and stop on drift. Destructive/irreversible work still needs separate exact admission.
 
 ## Portfolio evidence
 

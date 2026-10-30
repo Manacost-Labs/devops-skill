@@ -39,7 +39,8 @@
         "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "stateful": {"type": "boolean"},
         "destructive": {"type": "boolean"},
-        "external_side_effects": {"type": "boolean"}
+        "external_side_effects": {"type": "boolean"},
+        "irreversible": {"type": "boolean"}
       }
     },
     "execution": {
@@ -95,6 +96,71 @@
           }
         }
       ]
+    },
+    "autonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "authorization_id",
+        "authorization_digest"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "safe",
+            "balanced",
+            "semi-auto",
+            "full-auto"
+          ]
+        },
+        "authorization_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^authority-[a-z0-9][a-z0-9-]{5,79}$"
+        },
+        "authorization_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "safe"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "authorization_id": {
+                "type": "null"
+              },
+              "authorization_digest": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "authorization_id": {
+                "type": "string"
+              },
+              "authorization_digest": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
     }
-  }
+  },
+  "allOf": [{"if": {"required": ["autonomy"], "properties": {"autonomy": {"properties": {"mode": {"enum": ["balanced", "semi-auto", "full-auto"]}}}}}, "then": {"properties": {"change": {"required": ["irreversible"]}}}}]
 }

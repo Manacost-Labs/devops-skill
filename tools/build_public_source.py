@@ -155,6 +155,11 @@ def main() -> int:
             relative = source.relative_to(ROOT)
             validate_relative(relative)
             data = source.read_bytes().replace(b"\r\n", b"\n")
+            if source.suffix.lower() == ".json":
+                try: value = json.loads(data.decode("utf-8-sig"))
+                except (ValueError, UnicodeError): value = None
+                if isinstance(value, dict) and value.get("schema_version") == "1.0" and value.get("status") in {"active", "revoked"} and isinstance(value.get("authorization_id"), str) and value["authorization_id"].startswith("authority-"):
+                    raise ValueError("issued private autonomy records must not enter public source")
             if b"\r" in data:
                 raise ValueError(f"stray CR character in public source file {relative.as_posix()}")
             for label, pattern in SECRET_PATTERNS.items():

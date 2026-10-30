@@ -25,7 +25,7 @@ MANIFEST_KEYS = {"name", "version", "kind", "requires", "capabilities", "allowed
 CATALOG_KEYS = {"name", "version", "contract_version", "skills", "profiles"}
 SKILL_META_KEYS = {"version", "role"}
 KINDS = {"coordinator", "executor", "policy-and-validation"}
-POLICY_KEYS = {"version", "policy_id", "risk_classes", "approval_ttl_minutes", "minimum_approvals", "require_separation_of_duties", "require_change_lock", "require_plan_digest", "always_require_approval", "require_recovery_evidence", "deny_by_default", "completion_statuses", "exceptions", "ledger", "data"}
+POLICY_KEYS = {"version", "policy_id", "risk_classes", "approval_ttl_minutes", "minimum_approvals", "require_separation_of_duties", "require_change_lock", "require_plan_digest", "always_require_approval", "require_recovery_evidence", "deny_by_default", "completion_statuses", "exceptions", "ledger", "data", "autonomy"}
 POLICY_LIST_FIELDS = ("require_change_lock", "require_plan_digest", "always_require_approval", "require_recovery_evidence", "deny_by_default")
 FRESHNESS_HOSTS = {
     "docker-operations": {"docs.docker.com", "docs.kernel.org"},
@@ -151,6 +151,11 @@ def validate_policy(policy, label):
     allowed = data["allowed_classifications"]
     if not isinstance(allowed, list) or not allowed or any(not isinstance(value, str) for value in allowed) or len(allowed) != len(set(allowed)) or not set(allowed) <= {"public", "internal", "confidential", "restricted"}: return f"{label} data classifications are invalid"
     if data["default"] not in allowed: return f"{label} default data classification is invalid"
+    autonomy = policy["autonomy"]
+    modes = {"safe": 1, "balanced": 2, "semi-auto": 3, "full-auto": 4}
+    if not isinstance(autonomy, dict) or set(autonomy) != {"maximum_mode", "grant_ttl_minutes", "allow_production"}: return f"{label} autonomy fields are invalid"
+    if not isinstance(autonomy["maximum_mode"], str) or autonomy["maximum_mode"] not in modes or type(autonomy["allow_production"]) is not bool: return f"{label} autonomy controls are invalid"
+    if type(autonomy["grant_ttl_minutes"]) is not int or not 1 <= autonomy["grant_ttl_minutes"] <= policy["approval_ttl_minutes"]: return f"{label} autonomy TTL exceeds approval TTL"
     return None
 def main() -> int:
     try:
@@ -251,6 +256,9 @@ def main() -> int:
     if policy_error: return fail(policy_error)
     if merged_enterprise["approval_ttl_minutes"] > policy["approval_ttl_minutes"]: return fail("enterprise policy cannot lengthen approval TTL")
     if any(merged_enterprise["minimum_approvals"][risk] < policy["minimum_approvals"][risk] for risk in policy["risk_classes"]): return fail("enterprise policy cannot reduce approval counts")
+    modes = {"safe": 1, "balanced": 2, "semi-auto": 3, "full-auto": 4}
+    a, b = policy["autonomy"], merged_enterprise["autonomy"]
+    if modes[b["maximum_mode"]] > modes[a["maximum_mode"]] or b["grant_ttl_minutes"] > a["grant_ttl_minutes"] or b["allow_production"] and not a["allow_production"]: return fail("enterprise policy broadens delegated autonomy")
     if any(policy["require_separation_of_duties"][risk] and not merged_enterprise["require_separation_of_duties"][risk] for risk in policy["risk_classes"]): return fail("enterprise policy cannot weaken separation of duties")
     for field in POLICY_LIST_FIELDS:
         if not set(merged_enterprise.get(field, [])) >= set(policy.get(field, [])): return fail(f"enterprise policy weakens {field}")

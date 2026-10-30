@@ -4,6 +4,14 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.9.0 — 2026-10-30
+
+- Add Safe, Balanced, Semi-Auto and Full Auto with scoped prior authority, finite windows, policy caps, explicit trusted-environment references and revocation checks. Keep Safe as the absent-selection default and enterprise baseline.
+- Reuse issued authority across new exact plans inside its envelope; retain separate exact admission for destructive/irreversible effects and exceptions, recovery/locks/verification and issuer separation.
+- Add unapproved authority preparation, planner selection/window clipping, launch/outcome authority references, strict external-record loading, adversarial and repeated-launch/revocation checks.
+- Freeze the executor's bound request into gate stdin to prevent path substitution between validation steps. Bound/strict-parse request input; reject test clocks with configured authority and private issued records in release/public-source packages.
+- Refresh policy digests and enforce recovery evidence for stateful R3/R4 work. Pending old-policy requests/approvals require regeneration and real re-authorization.
+
 ## 0.8.0 — 2026-10-29
 
 - Deepen Docker and Kubernetes crash/resource, networking and storage diagnosis with explicit target, history, identity, ownership and partial-evidence boundaries.
