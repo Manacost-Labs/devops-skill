@@ -20,7 +20,7 @@ The native test exercises:
 - Actual nft first-match accept/drop ordering, denial counters, changed-rule detection, table-scoped restoration and preservation of an unrelated sentinel table.
 - An alternate return route with strict Linux reverse-path filtering, observed loss, then exact route restoration and recovered traffic.
 - Two actual FRR bgpd peers with explicit import/export filters, forbidden-prefix admission inside the isolated lab, helper detection and withdrawal after filter rollback.
-- Actual WireGuard loss, BGP route withdrawal, tunnel restoration and control/data-plane reconvergence with the forbidden prefix still denied.
+- Actual WireGuard loss, BGP route withdrawal, tunnel and owned static-route restoration, source-specific application FIB checks on both sides and control/data-plane reconvergence with the forbidden prefix still denied. Same-scope before/final snapshots must match; link-up alone is not recovery of routes removed during link-down.
 
 The fixture uses standalone bgpd with `-Z` and an explicit private unused `-z` ZAPI socket, preventing attachment to host zebra through the shared filesystem. Network namespaces do not isolate filesystem UNIX socket paths. BGP-to-kernel integration is not tested. Static kernel routes and encrypted application-address ICMP are independent dataplane observations. The MTU test checks an IPv4 inner interface boundary, not a routed PMTUD blackhole or TCP-MSS clamp. IPv6, IPsec rekey/XFRM, vendor commit-confirmed semantics, HA/failover, BFD, EVPN/MPLS, NAT/conntrack asymmetry and multi-site redistribution need separately owned implementation-specific rehearsals. Lab timer budgets do not establish production RTO.
 

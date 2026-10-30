@@ -210,10 +210,11 @@ ip prefix-list EXPORT seq 5 permit {own}
                     print(f"DIAGNOSTIC {side} {command}: unavailable ({type(error).__name__})", flush=True)
             for command in (("ip", "-j", "addr", "show", "dev", "wg0"),
                             ("ip", "-j", "-4", "route", "get", peer, "from", local),
+                            ("ip", "-j", "-4", "route", "get", "10.20.0.1" if side == "a" else "10.10.0.1", "from", "10.10.0.1" if side == "a" else "10.20.0.1"),
                             ("ss", "-tnp")):
                 try:
                     result = self.ns(side, *command, check=False, timeout=4)
-                    print(f"DIAGNOSTIC {side} {command[0]}: exit={result.returncode}\n{result.stdout[:4000]}\n{result.stderr[:1000]}", flush=True)
+                    print(f"DIAGNOSTIC {side} {command}: exit={result.returncode}\n{result.stdout[:4000]}\n{result.stderr[:1000]}", flush=True)
                 except Exception as error:
                     print(f"DIAGNOSTIC {side} {command[0]}: unavailable ({type(error).__name__})", flush=True)
             path = self.folder / side / "bgpd.log"
@@ -287,14 +288,27 @@ class NativeNetworkingTests(unittest.TestCase):
             wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.20.0.0/24",), absent=("203.0.113.0/24",)), "leak withdrawn, permitted prefix retained")
             print("PASS: actual FRR leak admission, exact-prefix detector and filter rollback withdrawal", flush=True)
 
+            tunnel_before = {side: fixture.snapshot(side) for side in ("a", "b")}
             fixture.ns("a", "ip", "link", "set", "wg0", "down")
             self.assertFalse(fixture.ping())
             wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.10.0.0/24",), absent=("10.20.0.0/24",)), "tunnel loss BGP withdrawal")
             fixture.ns("a", "ip", "link", "set", "wg0", "up")
+            # Link-down can remove owned static routes; connected peer reachability
+            # and a recovered BGP session do not restore the application FIB.
+            before_restore = fixture.ns("a", "ip", "-j", "-4", "route", "get", "10.20.0.1", "from", "10.10.0.1", check=False)
+            print(f"DIAGNOSTIC a application FIB before route restore: exit={before_restore.returncode}\n{before_restore.stdout[:2000]}\n{before_restore.stderr[:1000]}", flush=True)
+            fixture.ns("a", "ip", "route", "replace", "10.20.0.0/24", "dev", "wg0")
+            for side, source, target in (("a", "10.10.0.1", "10.20.0.1"), ("b", "10.20.0.1", "10.10.0.1")):
+                route = json.loads(fixture.ns(side, "ip", "-j", "-4", "route", "get", target, "from", source).stdout)
+                self.assertEqual(route[0]["dev"], "wg0", f"{side} application source-specific FIB")
             wait_for(lambda: fixture.ping() and fixture.ping("b"), "tunnel data recovery")
-            wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.20.0.0/24",)), "BGP reconvergence")
+            wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.20.0.0/24",))
+                     and rib_matches(lambda: fixture.bgp("b"), present=("10.10.0.0/24",)), "bidirectional BGP reconvergence")
             self.assertNotIn("203.0.113.0/24", fixture.bgp("a")["routes"])
-            print("PASS: actual tunnel loss, BGP withdrawal and encrypted data/control recovery", flush=True)
+            for side, allowed in (("a", ["10.10.0.0/24", "10.20.0.0/24"]), ("b", b_prefixes)):
+                result = HELPER.audit(tunnel_before[side], tunnel_before[side], fixture.snapshot(side), allowed)
+                self.assertEqual(result["status"], "MATCHED", f"{side} final recovery snapshot: {result}")
+            print("PASS: actual tunnel loss, BGP withdrawal, scoped static-route restore and matched bidirectional recovery snapshots", flush=True)
         except Exception:
             fixture.diagnostics()
             raise
