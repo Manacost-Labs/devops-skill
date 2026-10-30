@@ -22,7 +22,7 @@ Repository files can recommend these controls but cannot prove that GitHub enfor
 - [ ] Use GitHub-hosted runners for this public validation baseline. Do not attach a persistent production-network runner.
 - [ ] Review every Dependabot action update before merging and retain full 40-character SHA pins with human-readable version comments.
 
-The repository workflows declare empty permissions globally and grant only contents: read to jobs that need source or dependency metadata. They contain no pull_request_target, write permission, environment, custom secret, or OIDC path.
+The repository workflows declare empty permissions globally and grant contents: read where needed. The CI/CD public-provenance fixture also has attestations: read, and its synthetic artifact consumer has actions: read; no write access is granted. The artifact producer uploads only public synthetic fixture bytes with one-day retention. They contain no pull_request_target, write permission, environment, custom secret, or OIDC path.
 
 ## Protect main
 
@@ -37,10 +37,13 @@ Create a ruleset or branch protection rule targeting main:
   - Python 3.13 / ubuntu-24.04
   - Python 3.13 / windows-2025
   - Dependency review
+  - CI/CD / workflow and signed provenance
+  - CI/CD / synthetic artifact producer
+  - CI/CD / artifact admission and partial recovery
   - Ansible / repeatability and partial recovery
   - IaC / terraform state and recovery
   - IaC / tofu state and recovery
-- [ ] Do not require the manual Verify 0.12.0 RC candidate job for ordinary pull requests.
+- [ ] Do not require the manual Verify 0.13.0 RC candidate job for ordinary pull requests.
 
 CODEOWNERS currently names one account. That is enough to route portfolio maintenance review, but it does not implement separation of duties. Production or enterprise use requires adding a second qualified identity and configuring the ruleset so the author cannot satisfy their own required approval.
 

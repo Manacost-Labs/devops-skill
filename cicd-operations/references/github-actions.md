@@ -1,5 +1,7 @@
 # GitHub Actions controls
 
+For detailed work read `references/actions-trust-boundaries.md` for events, runners, callers and injection; `references/actions-secrets-oidc.md` for effective permissions, secrets, federation and environment admission. Artifact verification and partial deployment use the separate references linked from `SKILL.md`. The controls below remain the shared minimum.
+
 ## Trigger trust
 
 Map each trigger to actor, ref, checked-out revision, available token, secrets, environment, and runner. For pull requests from forks, keep permissions read-only and withhold secrets. Treat `pull_request_target` as privileged base-repository execution: never checkout or execute the pull request head before trust is established. Review chained `workflow_run`, `repository_dispatch`, manual inputs, reusable workflows, and tag/release triggers for ref confusion.
