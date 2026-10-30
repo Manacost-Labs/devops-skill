@@ -1,11 +1,36 @@
 """Source-only helpers for owned, capability-free, socket-only recovery drills."""
 from __future__ import annotations
 
+import io
 import re
+import subprocess
 import tarfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from container_fixture import DockerFixture, OWNER
+
+
+def require_native_rejection(returncode, evidence, pattern):
+    if returncode == 0 or re.search(pattern, evidence, re.IGNORECASE) is None:
+        raise RuntimeError("expected artifact-specific native rejection was not demonstrated: "+evidence[-1500:])
+
+
+def extract_regular_archive(content, target):
+    if len(content) > 256*1024*1024:
+        raise RuntimeError("fixture archive size exceeded")
+    with tarfile.open(fileobj=io.BytesIO(content), mode="r:") as archive:
+        members = archive.getmembers()
+        if sum(member.size for member in members) > 256*1024*1024:
+            raise RuntimeError("fixture artifact size exceeded")
+        names = set()
+        for member in members:
+            path = PurePosixPath(member.name)
+            if (path.is_absolute() or ".." in path.parts or "\\" in member.name
+                    or not (member.isdir() or member.isfile()) or str(path) in names):
+                raise RuntimeError("nonregular, duplicate or escaping fixture archive entry")
+            names.add(str(path))
+        target.mkdir(mode=0o700)
+        archive.extractall(target, filter="data")
 
 
 class RecoveryFixture(DockerFixture):
@@ -62,8 +87,11 @@ class RecoveryFixture(DockerFixture):
         target = self.folder/name
         if target.exists() or target.parent != self.folder or not re.fullmatch(r"[a-z0-9-]+", name):
             raise RuntimeError("fresh owned export path required")
-        # docker cp assigns host copies to the invoking runner, so cleanup needs no sudo.
-        self.docker("cp", identity+":"+path, str(target))
+        if not re.fullmatch(r"/fixture/[a-z0-9-]+", path):
+            raise RuntimeError("bounded fixture export root required")
+        # docker cp's archive endpoint does not expose these tmpfs mounts reliably.
+        content = self.binary(identity, ["tar", "--create", "--file=-", "--directory="+path, "."])
+        extract_regular_archive(content, target)
         self.check_files(target)
         return target
 
@@ -72,13 +100,22 @@ class RecoveryFixture(DockerFixture):
         self.check_files(source)
         if not re.fullmatch(r"/fixture/[a-z0-9-]+", path):
             raise RuntimeError("fresh fixture import root required")
-        archive = self.folder/"import.tar"
-        with tarfile.open(archive, "w") as output:
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w") as output:
             output.add(source, arcname=Path(path).name)
-        self.docker("cp", str(archive), identity+":/fixture/import.tar")
         # Extract as the unprivileged engine identity; no CHOWN capability is needed.
-        self.execute(identity, "tar", "--extract", "--file=/fixture/import.tar",
-                     "--directory=/fixture", "--no-same-owner")
+        self.binary(identity, ["tar", "--extract", "--file=-", "--directory=/fixture",
+                               "--no-same-owner"], input=archive.getvalue())
+
+    def binary(self, identity, arguments, *, input=None):
+        self.owned_container(identity)
+        self.check_daemon()
+        result = subprocess.run(["docker", "--host", "unix:///var/run/docker.sock", "--config",
+                                 str(self.folder/"docker-config"), "exec", "-i", identity, *arguments],
+                                env=self.environment, input=input, capture_output=True, timeout=90)
+        if result.returncode or len(result.stdout) > 256*1024*1024:
+            raise RuntimeError("binary fixture transfer failed: "+result.stderr.decode("utf-8", errors="replace")[-1000:])
+        return result.stdout
 
     def check_files(self, source):
         source = Path(source)

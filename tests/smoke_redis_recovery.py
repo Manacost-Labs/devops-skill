@@ -6,14 +6,14 @@ import re
 import shutil
 import time
 
-from recovery_fixture import RecoveryFixture
+from recovery_fixture import RecoveryFixture, require_native_rejection
 
 # Official library/redis 7.4 multiarch index resolved 2026-10-30, never a floating pull.
 IMAGE = "redis:7.4@sha256:b6b6e3dc0c0952737748e55d5d885272840c7e42ba41ab1d5489f693419882f5"
 
 
 def cli(fixture, identity, *arguments, expected=0):
-    return fixture.execute(identity, "redis-cli", "--raw", "-s", "/fixture/redis.sock",
+    return fixture.execute(identity, "redis-cli", "-e", "--raw", "-s", "/fixture/redis.sock",
                            *arguments, expected=expected).stdout.strip()
 
 
@@ -35,6 +35,26 @@ def ready(fixture, identity):
         time.sleep(.2)
 
 
+def shutdown(fixture, identity):
+    server = cli(fixture, identity, "INFO", "server")
+    match = re.search(r"(?m)^process_id:(\d+)$", server)
+    if match is None:
+        raise RuntimeError("Redis process identity missing")
+    pid = match.group(1)
+    cli(fixture, identity, "SHUTDOWN", "NOSAVE")
+    deadline = time.monotonic()+20
+    while True:
+        state = fixture.execute(identity, "cat", "/proc/"+pid+"/stat", expected=None)
+        exited = state.returncode != 0 or state.stdout.rsplit(")", 1)[-1].strip().split()[0] == "Z"
+        socket_gone = fixture.execute(identity, "test", "!", "-e", "/fixture/redis.sock", expected=None).returncode == 0
+        pid_gone = fixture.execute(identity, "test", "!", "-e", "/fixture/redis.pid", expected=None).returncode == 0
+        if exited and socket_gone and pid_gone:
+            return
+        if time.monotonic() >= deadline:
+            raise RuntimeError("SHUTDOWN did not prove Redis stopped before capture/restart")
+        time.sleep(.2)
+
+
 def assert_data(fixture, identity, value, events, expiry):
     actual = [cli(fixture, identity, "GET", "account:1"),
               cli(fixture, identity, "GET", "account:2"),
@@ -48,15 +68,17 @@ def assert_data(fixture, identity, value, events, expiry):
         raise RuntimeError("fixture expired unexpectedly")
 
 
-def check_rejected(fixture, source, *, aof, validator, reason):
+def check_rejected(fixture, source, *, aof, validator, reason, checker_pattern, server_pattern):
     identity = fixture.engine(IMAGE, "redis")
     fixture.import_tree(identity, source, "/fixture/restore")
-    if fixture.execute(identity, *validator, expected=None).returncode == 0:
-        raise RuntimeError("native validator accepted "+reason)
+    rejected = fixture.execute(identity, *validator, expected=None)
+    require_native_rejection(rejected.returncode, rejected.stdout+rejected.stderr, checker_pattern)
     # Foreground load must terminate nonzero; a daemon fork acknowledgement is not proof.
     result = start(fixture, identity, "/fixture/restore", aof=aof, expected=None, background=False)
     if result.returncode == 0 or cli(fixture, identity, "PING", expected=None) == "PONG":
         raise RuntimeError("server loaded "+reason)
+    log = fixture.execute(identity, "cat", "/fixture/engine.log").stdout
+    require_native_rejection(result.returncode, log, server_pattern)
     print("OK: Redis native validation and startup reject "+reason)
 
 
@@ -70,6 +92,9 @@ def main():
         info = cli(fixture, source, "INFO", "server")
         if not re.search(r"(?m)^redis_version:7\.4\.", info):
             raise RuntimeError("Redis 7.4 baseline required")
+        print("Redis "+re.search(r"(?m)^redis_version:([^\r\n]+)", info).group(1)+" image="+IMAGE)
+        for tool in ("redis-server", "redis-cli", "redis-check-aof"):
+            print(fixture.execute(source, tool, "--version").stdout.strip())
         cli(fixture, source, "MSET", "account:1", "100", "account:2", "200")
         cli(fixture, source, "HSET", "metadata", "generation", "before")
         cli(fixture, source, "RPUSH", "events", "before")
@@ -89,7 +114,7 @@ def main():
         cli(fixture, source, "SET", "account:1", "175")
         cli(fixture, source, "RPUSH", "events", "wanted")
         assert_data(fixture, source, 175, ["before", "wanted"], expiry)
-        cli(fixture, source, "SHUTDOWN", "NOSAVE")
+        shutdown(fixture, source)
         backup = fixture.export(source, "/fixture/source", "safe-backup")
         manifests = list((backup/"appendonlydir").glob("*.manifest"))
         base_files = list((backup/"appendonlydir").glob("*.base.rdb"))
@@ -101,7 +126,7 @@ def main():
         cli(fixture, source, "SET", "account:1", "-999")
         cli(fixture, source, "RPUSH", "events", "unwanted")
         assert_data(fixture, source, -999, ["before", "wanted", "unwanted"], expiry)
-        cli(fixture, source, "SHUTDOWN", "NOSAVE")
+        shutdown(fixture, source)
 
         rdb = fixture.folder/"rdb-only"
         rdb.mkdir()
@@ -112,7 +137,7 @@ def main():
         start(fixture, rdb_target, "/fixture/restore", aof=False)
         ready(fixture, rdb_target)
         assert_data(fixture, rdb_target, 100, ["before"], expiry)
-        cli(fixture, rdb_target, "SHUTDOWN", "NOSAVE")
+        shutdown(fixture, rdb_target)
         print("OK: Redis RDB native validation + restore preserves data types and absolute expiry; older snapshot lacks later writes")
 
         aof_target = fixture.engine(IMAGE, "redis")
@@ -124,7 +149,7 @@ def main():
         persistence = cli(fixture, aof_target, "INFO", "persistence")
         if "aof_enabled:1" not in persistence or "aof_last_write_status:ok" not in persistence:
             raise RuntimeError("restored target did not retain healthy AOF persistence")
-        cli(fixture, aof_target, "SHUTDOWN", "NOSAVE")
+        shutdown(fixture, aof_target)
         print("OK: Redis complete multipart AOF wins over older RDB, includes wanted writes and excludes later unwanted writes")
 
         corrupt_rdb = fixture.folder/"bad-rdb"
@@ -132,17 +157,22 @@ def main():
         original = (corrupt_rdb/"dump.rdb").read_bytes()
         (corrupt_rdb/"dump.rdb").write_bytes(original[:-1]+bytes([original[-1] ^ 255]))
         check_rejected(fixture, corrupt_rdb, aof=False,
-                       validator=["redis-check-rdb", "/fixture/restore/dump.rdb"], reason="corrupt RDB checksum")
+                       validator=["redis-check-rdb", "/fixture/restore/dump.rdb"], reason="corrupt RDB checksum",
+                       checker_pattern=r"RDB CRC error", server_pattern=r"Wrong RDB checksum|RDB CRC error")
         missing = fixture.folder/"missing-aof"
         shutil.copytree(backup, missing)
         (missing/"appendonlydir"/base_files[0].name).unlink()
         aof_validator = ["redis-check-aof", "/fixture/restore/appendonlydir/"+manifests[0].name]
-        check_rejected(fixture, missing, aof=True, validator=aof_validator, reason="manifest with missing AOF base member")
+        check_rejected(fixture, missing, aof=True, validator=aof_validator, reason="manifest with missing AOF base member",
+                       checker_pattern=r"Cannot open file[^\n]*\.base\.rdb:[^\n]*No such file",
+                       server_pattern=r"Unable to obtain the AOF file[^\n]*\.base\.rdb length\. stat: No such file")
         truncated = fixture.folder/"truncated-aof"
         shutil.copytree(backup, truncated)
         damaged = truncated/"appendonlydir"/incrementals[0].name
         damaged.write_bytes(damaged.read_bytes()[:-3])
-        check_rejected(fixture, truncated, aof=True, validator=aof_validator, reason="truncated AOF with truncation disabled")
+        check_rejected(fixture, truncated, aof=True, validator=aof_validator, reason="truncated AOF with truncation disabled",
+                       checker_pattern=r"AOF [^\n]+ is not valid",
+                       server_pattern=r"Unexpected end of file reading the append only file")
     print(f"OK: Redis synthetic recovery drill {time.monotonic()-started:.2f}s; no timestamp-PITR, HA or production RPO/RTO claim")
 
 

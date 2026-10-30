@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 import time
 
-from recovery_fixture import RecoveryFixture
+from recovery_fixture import RecoveryFixture, require_native_rejection
 
 # Official image index already used by operations syntax CI; resolved 2026-10-29.
 IMAGE = "postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4"
@@ -45,11 +45,19 @@ def restore(fixture, base, archive=None, *, target="fixture_safe", negative=Fals
     return identity
 
 
-def require_startup_failure(fixture, identity, reason):
+UNREACHED = r"recovery ended before configured recovery target was reached"
+INVALID_WAL = r"(incorrect size|invalid (?:magic|record)|incorrect.*checksum)"
+
+
+def require_startup_failure(fixture, identity, reason, *, corrupt=False):
     result = start(fixture, identity, expected=None)
     status = fixture.execute(identity, "pg_ctl", "-D", "/fixture/target", "status", expected=None)
     if result.returncode == 0 or status.returncode == 0:
         raise RuntimeError(reason+" did not prevent completed recovery/startup")
+    log = fixture.execute(identity, "cat", "/fixture/engine.log").stdout
+    require_native_rejection(result.returncode, log, UNREACHED)
+    if corrupt:
+        require_native_rejection(result.returncode, log, INVALID_WAL)
     print("OK: PostgreSQL refuses "+reason)
 
 
@@ -67,6 +75,9 @@ def main():
         version = sql(fixture, source, "SHOW server_version_num;")
         if not version.isdecimal() or not 180000 <= int(version) < 190000:
             raise RuntimeError("PostgreSQL 18 engine required")
+        print("PostgreSQL server_version_num="+version+" image="+IMAGE)
+        for tool in ("pg_basebackup", "pg_verifybackup", "pg_waldump"):
+            print(fixture.execute(source, tool, "--version").stdout.strip())
         sql(fixture, source, "CREATE TABLE accounts(id bigint PRIMARY KEY, balance bigint NOT NULL); INSERT INTO accounts VALUES(1,100),(2,200); CREATE VIEW balances AS SELECT sum(balance) AS total FROM accounts;")
         fixture.execute(source, "pg_basebackup", "-h", "/fixture", "-U", "postgres", "-D", "/fixture/base",
                         "--wal-method=stream", "--checkpoint=fast", "--manifest-checksums=SHA256")
@@ -117,6 +128,14 @@ def main():
         fixture.execute(recovered, "pg_ctl", "-D", "/fixture/target", "-m", "fast", "-w", "stop")
         print("OK: PostgreSQL multi-segment WAL replay includes wanted writes, excludes unwanted write, pauses and creates timeline 2 after fencing")
 
+        control = restore(fixture, base, archive, negative=True)
+        start(fixture, control)
+        check_data(fixture, control, 175)
+        if sql(fixture, control, "SELECT pg_is_in_recovery();") != "f":
+            raise RuntimeError("negative-configuration healthy control did not complete recovery")
+        fixture.execute(control, "pg_ctl", "-D", "/fixture/target", "-m", "fast", "-w", "stop")
+        print("OK: healthy archive completes with the same promote/hot_standby=off configuration used by negative controls")
+
         missing = fixture.folder/"missing"
         shutil.copytree(archive, missing)
         (missing/needed_wal).unlink()
@@ -124,15 +143,15 @@ def main():
         corrupt = fixture.folder/"corrupt"
         shutil.copytree(archive, corrupt)
         (corrupt/needed_wal).write_bytes(b"not PostgreSQL WAL")
-        require_startup_failure(fixture, restore(fixture, base, corrupt, negative=True), "corrupt required WAL")
+        require_startup_failure(fixture, restore(fixture, base, corrupt, negative=True), "corrupt required WAL", corrupt=True)
         require_startup_failure(fixture, restore(fixture, base, archive, target="never_created", negative=True), "unreachable recovery target")
         broken = fixture.folder/"broken-base"
         shutil.copytree(base, broken)
         (broken/"PG_VERSION").write_text("19\n", encoding="ascii")
         validator = fixture.engine(IMAGE, "postgres")
         fixture.import_tree(validator, broken, "/fixture/target")
-        if fixture.execute(validator, "pg_verifybackup", "/fixture/target", expected=None).returncode == 0:
-            raise RuntimeError("corrupt base was accepted by native verifier")
+        rejected = fixture.execute(validator, "pg_verifybackup", "/fixture/target", expected=None)
+        require_native_rejection(rejected.returncode, rejected.stdout+rejected.stderr, r'checksum mismatch.*PG_VERSION')
         print("OK: PostgreSQL native manifest verification rejects altered base bytes")
     print(f"OK: PostgreSQL synthetic recovery drill {time.monotonic()-started:.2f}s; no production RPO/RTO or HA certification")
 
