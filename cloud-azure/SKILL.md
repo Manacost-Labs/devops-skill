@@ -17,6 +17,17 @@ Operate bounded Azure control-plane changes with exact tenant, subscription, res
 
 Never invent Azure CLI parameters, ARM fields or API versions, role definitions, managed-identity behavior, defaults, prices, quotas, provider-registration effects, or recovery semantics. Inspect the installed CLI and extension versions, active cloud, resource-provider API version, feature status, and exact current official reference before every material call. Accept credential or broker references only; never retrieve or record client secrets, certificates, refresh tokens, or secret values.
 
+## Operation runbooks
+
+Read only the procedure needed for the requested operation. API names and request shapes are planning material; live writes require an externally registered typed broker task and signed authority under [protected execution](../docs/protected-execution.md). A local planner or operation-gate result does not authorize execution. If the task or current authority is absent, return a blocked handoff instead of calling a credentialed CLI directly.
+
+- For one existing principal's role assignment, read [RBAC assignments](references/rbac-assignments.md).
+- For a rule in an existing VNet/NSG path, read [network rule changes](references/network-rules.md).
+- For one VM create/update request, read [VM changes](references/vm-changes.md).
+- Before dispatch or after an uncertain result, read [asynchronous observation and recovery](references/async-recovery.md). Keep one in-flight mutation per role-assignment identity, NSG, or VM/dependency set; this is a local coordination rule, not an Azure rate limit.
+
+The optional `scripts/inspect-vm-operation.py` reads saved public-Azure `Azure-AsyncOperation` and VM GET observations. It performs no network calls and cannot authorize replay, cleanup or service acceptance. Invoke it explicitly with a local Python runtime as described in the VM runbook; it does not extend tool permissions.
+
 ## Workflow
 
 1. Receive a secret-free contract-v2 request from `devops-core`. Confirm operation ID, owner, environment, data classification, target fingerprint, requested capabilities, constraints, and acceptance criteria.

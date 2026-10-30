@@ -1,5 +1,5 @@
 name: cloud-azure
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -7,8 +7,8 @@ allowed_tools:
   - Glob
   - Bash(az:*)
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+  - devops-platform-contracts >= 0.7.0
+  - devops-core >= 0.7.0
 capabilities:
   - azure-subscription-discovery
   - azure-rbac-control-plane
@@ -28,7 +28,7 @@ provides:
   - azure-cloud-control-plane-v1
   - contract-v2-executor
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
     - https://learn.microsoft.com/en-us/azure/well-architected/
@@ -39,16 +39,49 @@ source_freshness:
     - https://learn.microsoft.com/en-us/azure/aks/what-is-aks
     - https://learn.microsoft.com/en-us/azure/container-apps/overview
     - https://learn.microsoft.com/en-us/azure/azure-sql/database/sql-database-paas-overview
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/troubleshooting
+    - https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/create?view=rest-authorization-2022-04-01
+    - https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/get?view=rest-authorization-2022-04-01
+    - https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/delete?view=rest-authorization-2022-04-01
+    - https://learn.microsoft.com/en-us/rest/api/virtualnetwork/security-rules/create-or-update?view=rest-virtualnetwork-2026-01-01
+    - https://learn.microsoft.com/en-us/rest/api/virtualnetwork/security-rules/get?view=rest-virtualnetwork-2026-01-01
+    - https://learn.microsoft.com/en-us/rest/api/virtualnetwork/security-rules/delete?view=rest-virtualnetwork-2026-01-01
+    - https://learn.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview
+    - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/create-or-update?view=rest-compute-2025-04-01
+    - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/get?view=rest-compute-2025-04-01
+    - https://learn.microsoft.com/en-us/azure/virtual-machines/quotas
+    - https://learn.microsoft.com/en-us/azure/virtual-machines/delete
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/async-operations
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/request-limits-and-throttling
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules
   capability_sources:
     azure-subscription-discovery:
       - https://learn.microsoft.com/en-us/cli/azure/
       - https://learn.microsoft.com/en-us/azure/well-architected/
     azure-rbac-control-plane:
       - https://learn.microsoft.com/en-us/azure/role-based-access-control/overview
+      - https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments
+      - https://learn.microsoft.com/en-us/azure/role-based-access-control/troubleshooting
+      - https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/create?view=rest-authorization-2022-04-01
+      - https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/get?view=rest-authorization-2022-04-01
+      - https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/delete?view=rest-authorization-2022-04-01
     azure-network-control-plane:
       - https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview
+      - https://learn.microsoft.com/en-us/rest/api/virtualnetwork/security-rules/create-or-update?view=rest-virtualnetwork-2026-01-01
+      - https://learn.microsoft.com/en-us/rest/api/virtualnetwork/security-rules/get?view=rest-virtualnetwork-2026-01-01
+      - https://learn.microsoft.com/en-us/rest/api/virtualnetwork/security-rules/delete?view=rest-virtualnetwork-2026-01-01
+      - https://learn.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview
+      - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/async-operations
     azure-compute-control-plane:
       - https://learn.microsoft.com/en-us/azure/virtual-machines/overview
+      - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/create-or-update?view=rest-compute-2025-04-01
+      - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/get?view=rest-compute-2025-04-01
+      - https://learn.microsoft.com/en-us/azure/virtual-machines/quotas
+      - https://learn.microsoft.com/en-us/azure/virtual-machines/delete
+      - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/async-operations
+      - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/request-limits-and-throttling
+      - https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules
     azure-managed-service-routing:
       - https://learn.microsoft.com/en-us/azure/aks/what-is-aks
       - https://learn.microsoft.com/en-us/azure/container-apps/overview
