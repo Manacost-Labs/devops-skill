@@ -6,6 +6,8 @@ Identify service topology, healthy capacity, quorum/voters, replicas, replicatio
 
 Choose an explicit named canary and subsequent host batches across the intended topology. `serial: [1, 2, "20%"]` illustrates batch sizing, not a safe default: percentages use the selected host total and at least one host is used; the final listed size repeats. The first alphabetic/inventory host is not automatically a representative canary. Use an explicit reviewed order/host list and verify the actual batches; do not rely on file order or `shuffle`. Avoid putting multiple quorum members or the last healthy replica in the same batch.
 
+Make the canary a distinct promotion phase: observe health and re-run identical desired-state inputs there to prove no unintended changes/restarts **before** any fleet expansion. `serial` alone will not pause for that proof; encode the canary/promotion boundary in the reviewed orchestration, without adding a human confirmation inside an unchanged valid envelope. Stop if the repeated run changes unexplained state.
+
 Distinguish controls:
 
 | Control | What it bounds | What it does not prove |

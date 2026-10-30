@@ -26,7 +26,7 @@ Each test owns a newly created temporary directory with three local-connection i
 
 Coverage includes:
 
-- First convergence, two notifications coalescing to one activation, second convergence with zero changed tasks and unchanged file timestamps, targeted drift repair, check-mode non-mutation and invalid candidate rejection.
+- First convergence, two notifications coalescing to one activation, second convergence with zero changed tasks and unchanged file timestamps, explicit canary repeatability before fleet expansion, targeted drift repair, check-mode non-mutation and invalid candidate rejection.
 - Intersection/exclusion versus union group selection and preservation of unselected host state.
 - Middle-node failure after config replacement, bounded baseline-file recovery, nonzero final outcome, preserved traffic exclusion, later batch untouched, targeted resume from actual mixed state, and no changes on a subsequent unchanged run.
 - The negative control: successful rescue without re-raising permits later batches and exit zero despite an excluded failed host. The fixture exposes this hazard; it is not an accepted rollout.

@@ -115,6 +115,19 @@ class NativeAnsibleTests(unittest.TestCase):
             self.assertEqual(self.read(host, "activations"), "1")
         self.assertEqual(before, {(host, file): (self.lab / host / file).stat().st_mtime_ns for host, file in before})
 
+    def test_canary_repeatability_precedes_any_fleet_expansion(self):
+        self.run_play("converge.yml", limit="node1")
+        repeated, _ = self.run_play("converge.yml", limit="node1")
+        self.assertEqual(set(repeated), {"node1"})
+        self.assertEqual(repeated["node1"]["changed"], 0)
+        self.assertEqual(self.read("node1", "activations"), "1")
+        for host in ("node2", "node3"):
+            self.assertEqual(self.read(host, "config"), "release=v1\n")
+            self.assertEqual(self.read(host, "activations"), "0")
+        expanded, _ = self.run_play("converge.yml", limit="node2,node3")
+        self.assertEqual(set(expanded), {"node2", "node3"})
+        self.assertTrue(all(self.read(host, "active") == "release=v2\n" for host in HOSTS))
+
     def test_check_mode_does_not_write_fixture_and_validated_copy_rejects_bad_config(self):
         self.run_play("converge.yml")
         self.run_play("converge.yml", variables={"release": "v1"}, extra=("--check", "--diff"))
