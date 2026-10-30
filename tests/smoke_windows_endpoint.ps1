@@ -73,7 +73,10 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture ($existingMappings.Count -eq 0)
     $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $ca.Thumbprint -Credential $credential -Force
     $mappingPath=$mapping.PSPath
-    $target=@{kind='windows-jea-v1';server='localhost';port=$port;configuration_name=$endpoint;ca_file=(Join-Path $root 'ca.pem');authentication=@{method='certificate';certificate_pem=(Join-Path $root 'client.pem');certificate_key_pem=(Join-Path $root 'client.key')};binding_digest=$binding}
+    # Match the exact IPv4 listener; localhost can select ::1 while HTTP.sys
+    # has a port binding but WinRM has no matching IPv6 listener. The server
+    # certificate explicitly includes the verified 127.0.0.1 IP SAN.
+    $target=@{kind='windows-jea-v1';server='127.0.0.1';port=$port;configuration_name=$endpoint;ca_file=(Join-Path $root 'ca.pem');authentication=@{method='certificate';certificate_pem=(Join-Path $root 'client.pem');certificate_key_pem=(Join-Path $root 'client.key')};binding_digest=$binding}
     $target|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $root 'target.json') -Encoding utf8
     $digest=& $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') digest --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0 -and $digest -cmatch '^sha256:[0-9a-f]{64}$')

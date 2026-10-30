@@ -2,11 +2,13 @@
 import argparse
 from datetime import datetime, timedelta, timezone
 import importlib.util
+import ipaddress
 import json
 from pathlib import Path
 import socket
 import ssl
 import sys
+from unittest import mock
 
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('native_windows_bridge',ROOT/'tools/windows_bridge.py')
@@ -39,7 +41,7 @@ def certificates(folder, username):
             .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()),critical=False)
             .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),critical=False)
             .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH if server else ExtendedKeyUsageOID.CLIENT_AUTH]),critical=False))
-        if server:builder=builder.add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost')]),critical=False)
+        if server:builder=builder.add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost'),x509.IPAddress(ipaddress.ip_address('127.0.0.1'))]),critical=False)
         else:
             upn=(username+'@localhost').encode()
             builder=builder.add_extension(x509.SubjectAlternativeName([x509.OtherName(ObjectIdentifier('1.3.6.1.4.1.311.20.2.3'),bytes((12,len(upn)))+upn)]),critical=False)
@@ -72,10 +74,27 @@ def exercise(folder):
     target.write_text('external-change')
     assert B.run(original)==({'state':'after'},0)
     assert target.read_text()=='external-change','replay dispatched a second write'
-    for field,bad_value in (('ca_file',str(folder/'client.pem')),('server','127.0.0.1')):
+    # An invalid DNS name is resolved to the *same reachable IPv4 listener*
+    # only in this negative fixture. A connection failure cannot satisfy a
+    # claimed certificate/hostname denial; require requests' actual SSLError.
+    from requests.exceptions import SSLError
+    original_lookup=socket.getaddrinfo
+    def fixture_lookup(host,*args,**kwargs):
+        return original_lookup('127.0.0.1' if host=='wrong-fixture.invalid' else host,*args,**kwargs)
+    tls_failures=[]
+    class BadTLS(B.PSRP):
+        def __enter__(self):
+            try:return super().__enter__()
+            except SSLError:
+                tls_failures.append(True)
+                raise
+    for field,bad_value in (('ca_file',str(folder/'client.pem')),('server','wrong-fixture.invalid')):
         altered=dict(resource);altered[field]=bad_value
         refused=packet(altered,operation='ops-native-tls-'+field.replace('_','-'))
-        assert B.run(refused)[1]==3,'TLS failure was not rejected before task dispatch'
+        count=len(tls_failures)
+        with mock.patch.object(socket,'getaddrinfo',fixture_lookup):
+            assert B.run(refused,transport=BadTLS)[1]==3,'TLS failure was not rejected before task dispatch'
+        assert len(tls_failures)==count+1,'missing actual certificate validation failure'
         assert target.read_text()=='external-change'
     # The same certificate-mapped nonadmin connector must not receive a raw
     # filesystem cmdlet or a code evaluation primitive in this actual endpoint.
@@ -130,6 +149,7 @@ def exercise(folder):
 
 def diagnose_tls(folder):
     resource=B.decode((folder/'target.json').read_bytes())
+    print('TLS_DIAGNOSTIC resolver',socket.getaddrinfo('localhost',resource['port'],type=socket.SOCK_STREAM))
     for version in (ssl.TLSVersion.TLSv1_3,ssl.TLSVersion.TLSv1_2):
         stage='context'
         try:
