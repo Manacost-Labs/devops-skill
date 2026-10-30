@@ -70,6 +70,7 @@ class EdgeFixture(DockerFixture):
     def __init__(self, engine):
         super().__init__()
         self.engine = engine
+        self.binary_digests = {}
         try:
             self.material = self.folder / "material"
             for name in ("config", "dynamic", "candidate", "certs", "dns", "bin"):
@@ -100,7 +101,7 @@ class EdgeFixture(DockerFixture):
                     if time.monotonic() > deadline:
                         raise
                     time.sleep(.25)
-            for name, identity, arguments in ((engine, self.proxy, {"nginx": ["nginx", "-v"], "caddy": ["caddy", "version"], "traefik": ["traefik", "version"]}[engine]), ("dns", self.dns, ["/coredns", "-version"])):
+            for name, identity, arguments in ((engine, self.proxy, {"nginx": ["nginx", "-v"], "caddy": ["/fixture/bin/caddy", "version"], "traefik": ["traefik", "version"]}[engine]), ("dns", self.dns, ["/fixture/bin/dns", "-version"])):
                 self.owned_container(identity)
                 result = self.docker("exec", identity, *arguments)
                 print(name + " native version: " + (result.stdout + result.stderr).strip()[:500], flush=True)
@@ -130,13 +131,24 @@ class EdgeFixture(DockerFixture):
         if source_binary:
             # File-capability executables cannot exec with an empty bounding set.
             # Copy only the pinned image's owned, never-started binary; no setcap,
-            # build or capability grant. docker cp does not preserve file xattrs.
+            # build or capability grant. Copy bytes into a fresh owned inode so
+            # correctness does not depend on docker cp preserving file xattrs.
             binary = self.material / "bin" / name
             if not binary.exists():
-                self.docker("cp", identity + ":" + source_binary, str(binary))
-                if binary.is_symlink() or not stat.S_ISREG(binary.stat().st_mode) or "security.capability" in os.listxattr(binary):
-                    raise RuntimeError("regular capability-free fixture binary required")
+                extracted = binary.with_suffix(".image-source")
+                self.docker("cp", identity + ":" + source_binary, str(extracted))
+                if extracted.is_symlink() or not stat.S_ISREG(extracted.stat().st_mode) or extracted.stat().st_size > 100 * 1024 * 1024:
+                    raise RuntimeError("bounded regular pinned-image executable required")
+                content = extracted.read_bytes()
+                with binary.open("xb") as output:
+                    output.write(content)
+                self.binary_digests[name] = hashlib.sha256(content).hexdigest()
                 binary.chmod(0o755)
+                extracted.unlink()
+            if (binary.is_symlink() or not stat.S_ISREG(binary.stat().st_mode)
+                    or binary.stat().st_uid != os.getuid() or "security.capability" in os.listxattr(binary)
+                    or hashlib.sha256(binary.read_bytes()).hexdigest() != self.binary_digests.get(name)):
+                raise RuntimeError("owned unchanged capability-free fixture binary required")
         return identity
 
     def address(self, identity):
@@ -229,9 +241,9 @@ http {{ access_log off; client_body_temp_path /tmp/client; proxy_temp_path /tmp/
         atomic(self.material / suffix, self.config(version, broken=broken))
         if reload and self.engine != "traefik":
             self.owned_container(self.proxy)
-            validation = ["nginx", "-t", "-c", "/fixture/config/nginx.conf"] if self.engine == "nginx" else ["caddy", "validate", "--config", "/fixture/config/caddy.json"]
+            validation = ["nginx", "-t", "-c", "/fixture/config/nginx.conf"] if self.engine == "nginx" else ["/fixture/bin/caddy", "validate", "--config", "/fixture/config/caddy.json"]
             self.docker("exec", self.proxy, *validation)
-            arguments = ["nginx", "-s", "reload", "-c", "/fixture/config/nginx.conf"] if self.engine == "nginx" else ["caddy", "reload", "--config", "/fixture/config/caddy.json", "--force"]
+            arguments = ["nginx", "-s", "reload", "-c", "/fixture/config/nginx.conf"] if self.engine == "nginx" else ["/fixture/bin/caddy", "reload", "--config", "/fixture/config/caddy.json", "--force"]
             self.docker("exec", self.proxy, *arguments)
 
     def probe(self, path="/", *, hostname=HOST, host_header=None, trust=True, headers=None, identity=None):
@@ -356,7 +368,7 @@ class EdgeSmoke(unittest.TestCase):
         path = fixture.material / f"candidate/invalid.{extension}"
         atomic(path, fixture.config("v1", mismatch=True))
         if ENGINE in {"nginx", "caddy"}:
-            arguments = ["nginx", "-t", "-c", "/fixture/candidate/invalid.conf"] if ENGINE == "nginx" else ["caddy", "validate", "--config", "/fixture/candidate/invalid.json"]
+            arguments = ["nginx", "-t", "-c", "/fixture/candidate/invalid.conf"] if ENGINE == "nginx" else ["/fixture/bin/caddy", "validate", "--config", "/fixture/candidate/invalid.json"]
             fixture.owned_container(fixture.proxy)
             result = fixture.docker("exec", fixture.proxy, *arguments, expected=None)
             self.assertNotEqual(result.returncode, 0)
