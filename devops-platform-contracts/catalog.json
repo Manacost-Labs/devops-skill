@@ -1,6 +1,6 @@
 {
   "name": "devops-skill-platform",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "contract_version": "v2",
   "skills": {
     "devops-platform-contracts": {
@@ -44,7 +44,7 @@
       "role": "executor"
     },
     "iac-operations": {
-      "version": "0.3.1",
+      "version": "0.4.0",
       "role": "executor"
     },
     "cicd-operations": {

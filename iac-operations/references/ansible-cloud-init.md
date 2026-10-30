@@ -1,12 +1,8 @@
-# Bounded Ansible and cloud-init
+# Configuration routing and cloud-init
 
 ## Ansible
 
-Pin collection and role sources. Verify inventory origin, environment, groups, exact `--limit`, connection user, become policy, strategy, forks, serial size, and vault/secret references. Reject dynamic-inventory output that crosses the approved account or environment.
-
-Run syntax validation and, where modules support it, check mode with diff against a small canary. Check mode is advisory: command/shell tasks, lookups, API calls, and custom modules may still be inaccurate or have side effects. Review task tags, handlers, `run_once`, delegation, rolling settings, failure thresholds, and rescue/always blocks before execution.
-
-Prefer idempotent modules over shell. Bound fan-out with explicit hosts, serial batches, failure thresholds, and a stop point between batches. Keep one known-good management path for access, firewall, and network changes. Verify configuration syntax, service health, and the user path after each batch.
+Ansible details live in focused references: [inventory and trust](ansible-inventory.md), [repeatability](ansible-repeatability.md), [rolling execution](ansible-rollout.md), and [partial-failure recovery](ansible-recovery.md). Use the Ansible workflow in `SKILL.md`; Terraform saved binary plans and state lineage are not Ansible features. This file retains the cloud-init bootstrap boundary.
 
 ## Cloud-init
 

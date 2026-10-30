@@ -1,0 +1,74 @@
+---
+# Intentional failure injection and file-state recovery in a disposable lab.
+- name: Roll synthetic file service in explicit batches
+  hosts: app
+  gather_facts: false
+  serial: 1
+  order: sorted
+  any_errors_fatal: true
+  tasks:
+    - name: Read active release before selecting work
+      ansible.builtin.slurp:
+        src: "{{ host_root }}/active"
+      register: active_before
+    - name: Read observed traffic state
+      ansible.builtin.slurp:
+        src: "{{ host_root }}/traffic"
+      register: traffic_before
+    - name: Change only a host requiring convergence
+      when: active_before.content | b64decode != 'release=' ~ release ~ '\n' or traffic_before.content | b64decode != 'ready\n'
+      block:
+        - name: Drain the synthetic node
+          ansible.builtin.copy:
+            content: "excluded\n"
+            dest: "{{ host_root }}/traffic"
+            mode: '0600'
+        - name: Install validated new config
+          ansible.builtin.copy:
+            content: "release={{ release }}\n"
+            dest: "{{ host_root }}/config"
+            mode: '0600'
+            validate: "{{ ansible_playbook_python }} {{ lab_root }}/validate.py %s"
+        - name: Inject failure after configuration changed
+          ansible.builtin.assert:
+            that: inventory_hostname != fail_host
+        - name: Inject connection loss after the actual config replacement
+          ansible.builtin.copy:
+            content: "disconnected\n"
+            dest: "{{ host_root }}/connection-lost"
+            mode: '0600'
+          when: inventory_hostname == disconnect_host
+        - name: Activate the synthetic service
+          ansible.builtin.command:
+            argv: ["{{ ansible_playbook_python }}", "{{ lab_root }}/activate.py", "{{ host_root }}"]
+        - name: Observe active release
+          ansible.builtin.slurp:
+            src: "{{ host_root }}/active"
+          register: active_after
+        - name: Accept actual synthetic release
+          ansible.builtin.assert:
+            that: active_after.content | b64decode == 'release=' ~ release ~ '\n'
+        - name: Return an accepted node to service
+          ansible.builtin.copy:
+            content: "ready\n"
+            dest: "{{ host_root }}/traffic"
+            mode: '0600'
+      rescue:
+        - name: Inject recovery failure
+          ansible.builtin.assert:
+            that: not recovery_fails
+        - name: Restore reviewed synthetic baseline file
+          ansible.builtin.copy:
+            content: "release=v1\n"
+            dest: "{{ host_root }}/config"
+            mode: '0600'
+        - name: Keep failure visible after bounded recovery
+          ansible.builtin.fail:
+            msg: Synthetic rollout stopped; failed node remains excluded
+          when: halt_after_rescue
+      always:
+        - name: Capture last observed state without enabling traffic
+          ansible.builtin.copy:
+            content: "observed\n"
+            dest: "{{ host_root }}/observed"
+            mode: '0600'

@@ -1,0 +1,19 @@
+---
+- name: Observe run_once scope with serial
+  hosts: app
+  gather_facts: false
+  serial: 1
+  order: sorted
+  tasks:
+    - name: Record one invocation per batch
+      ansible.builtin.copy:
+        content: "batch\n"
+        dest: "{{ host_root }}/batch-once"
+        mode: '0600'
+      run_once: true
+    - name: Record one explicitly selected singleton
+      ansible.builtin.copy:
+        content: "singleton\n"
+        dest: "{{ host_root }}/singleton"
+        mode: '0600'
+      when: inventory_hostname == ansible_play_hosts_all[0]
