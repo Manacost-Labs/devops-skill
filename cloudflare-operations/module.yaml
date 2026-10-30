@@ -1,60 +1,87 @@
 name: cloudflare-operations
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash(curl:*)
+- Read
+- Grep
+- Glob
+- Bash(python cloudflare-operations/scripts/state-guard.py:*)
+- Bash(python cloudflare-operations/scripts/capture-readonly.py:*)
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+- devops-platform-contracts >= 0.7.0
+- devops-core >= 0.7.0
 capabilities:
-  - cloudflare-zone-audit
-  - cloudflare-dns-operations
-  - cloudflare-cache-invalidation
-  - cloudflare-waf-rate-limit-operations
-  - cloudflare-access-tunnel-operations
-  - cloudflare-workers-deployment
-  - cloudflare-origin-protection
+- cloudflare-zone-audit
+- cloudflare-dns-operations
+- cloudflare-cache-invalidation
+- cloudflare-waf-rate-limit-operations
+- cloudflare-access-tunnel-operations
+- cloudflare-workers-deployment
+- cloudflare-origin-protection
 risk_domains:
-  - dns-and-proxying
-  - cache-invalidation
-  - waf-and-rate-limits
-  - identity-and-access
-  - tunnel-routing
-  - edge-code-deployment
-  - origin-exposure
+- dns-and-proxying
+- cache-invalidation
+- waf-and-rate-limits
+- identity-and-access
+- tunnel-routing
+- edge-code-deployment
+- origin-exposure
 platforms:
-  - cloudflare
+- cloudflare
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
-    - https://developers.cloudflare.com/api/
-    - https://developers.cloudflare.com/fundamentals/api/reference/permissions/
-    - https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/
-    - https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/
-    - https://developers.cloudflare.com/cache/how-to/purge-cache/
-    - https://developers.cloudflare.com/waf/
-    - https://developers.cloudflare.com/waf/rate-limiting-rules/
-    - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
-    - https://developers.cloudflare.com/workers/
-    - https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/
+  - https://developers.cloudflare.com/api/
+  - https://developers.cloudflare.com/fundamentals/api/reference/permissions/
+  - https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/
+  - https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/
+  - https://developers.cloudflare.com/cache/how-to/purge-cache/
+  - https://developers.cloudflare.com/waf/
+  - https://developers.cloudflare.com/waf/rate-limiting-rules/
+  - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+  - https://developers.cloudflare.com/workers/
+  - https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/
+  - https://developers.cloudflare.com/cloudflare-one/access-controls/policies/
+  - https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/
+  - https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/applications/
+  - https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/policies/
+  - https://developers.cloudflare.com/ruleset-engine/rulesets-api/update/
+  - https://developers.cloudflare.com/ruleset-engine/rulesets-api/update-rule/
+  - https://developers.cloudflare.com/ruleset-engine/reference/phases-list/
+  - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/configuration-file/
+  - https://developers.cloudflare.com/api/resources/zero_trust/subresources/tunnels/subresources/cloudflared/subresources/configurations/
+  - https://developers.cloudflare.com/workers/versions-and-deployments/
+  - https://developers.cloudflare.com/workers/versions-and-deployments/gradual-deployments/
+  - https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/
+  - https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/deployments/
   capability_sources:
     cloudflare-zone-audit:
-      - https://developers.cloudflare.com/api/
-      - https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/
+    - https://developers.cloudflare.com/api/
+    - https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/
     cloudflare-dns-operations:
-      - https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/
+    - https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/
     cloudflare-cache-invalidation:
-      - https://developers.cloudflare.com/cache/how-to/purge-cache/
+    - https://developers.cloudflare.com/cache/how-to/purge-cache/
     cloudflare-waf-rate-limit-operations:
-      - https://developers.cloudflare.com/waf/
-      - https://developers.cloudflare.com/waf/rate-limiting-rules/
+    - https://developers.cloudflare.com/waf/
+    - https://developers.cloudflare.com/waf/rate-limiting-rules/
+    - https://developers.cloudflare.com/ruleset-engine/rulesets-api/update/
+    - https://developers.cloudflare.com/ruleset-engine/rulesets-api/update-rule/
+    - https://developers.cloudflare.com/ruleset-engine/reference/phases-list/
     cloudflare-access-tunnel-operations:
-      - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+    - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+    - https://developers.cloudflare.com/cloudflare-one/access-controls/policies/
+    - https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/
+    - https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/applications/
+    - https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/policies/
+    - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/configuration-file/
+    - https://developers.cloudflare.com/api/resources/zero_trust/subresources/tunnels/subresources/cloudflared/subresources/configurations/
     cloudflare-workers-deployment:
-      - https://developers.cloudflare.com/workers/
+    - https://developers.cloudflare.com/workers/
+    - https://developers.cloudflare.com/workers/versions-and-deployments/
+    - https://developers.cloudflare.com/workers/versions-and-deployments/gradual-deployments/
+    - https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/
+    - https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/deployments/
     cloudflare-origin-protection:
-      - https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/
+    - https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/

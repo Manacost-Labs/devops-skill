@@ -27,6 +27,9 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 - Deepen enterprise-networking 0.4.0 for Linux WireGuard, FRRouting IPv4 BGP, iproute2 and nftables, including bounded offline route/ACL evidence analysis and implementation-specific recovery procedures.
 - Add isolated native Linux drills for tunnel loss/recovery, prefix filtering, asymmetric return paths, MTU and scoped ACL rollback. Record explicit limits for vendor, managed VPN, IPv6 and target-specific acceptance.
 
+- Deepen cloudflare-operations 0.4.0 with Access policy/path precedence, WAF/ruleset replacement semantics, Tunnel connector/configuration/route recovery and Workers version/data compatibility. Preserve the protected task contract and production risk floors.
+- Add credential-free drift/partial-effect comparisons, a bounded read-only API observation helper, cross-platform adversarial/loopback CI, and a prepared disposable-account drill. Live provider recovery is explicitly not run while the test account is unavailable.
+
 ## 0.14.0 — 2026-10-30
 
 - Deepen DNS authority/views/caches and cutover, TLS issuance/renewal and safe pair activation, Nginx/Caddy/Traefik routing/trust and actual-state recovery in network-edge-operations 0.3.0. Preserve mode authority, risk floors, gate/journal and provider/application ownership.
