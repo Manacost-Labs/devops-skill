@@ -10,6 +10,8 @@ DNS, TLS and reverse proxies now cover authoritative/cache-aware diagnosis, cert
 
 CI/CD now covers GitHub Actions trust, effective secrets/OIDC rights, artifact and signed-provenance admission, staged deployments and recovery after partial effects. See [CI/CD scope and actual workflow/artifact checks](docs/cicd-operations-depth.md).
 
+Secrets and access now include concrete HashiCorp Vault grants, consumer rotation and partial recovery, session/issuer revocation, emergency closeout and observed expiry. See [Vault procedure scope and actual-engine CI](docs/secrets-access-depth.md).
+
 Terraform/OpenTofu now cover exact state/backend ownership, lock contention, drift, stale plans and recovery after partial apply or failed state persistence. See [state and recovery scope with native CI](docs/terraform-operations-depth.md).
 
 Ansible now covers repeatable configuration, exact group/host targeting, gradual fleet updates and recovery after a partial failure. See [Ansible scope and native CI evidence](docs/ansible-operations-depth.md).
@@ -217,7 +219,7 @@ to work around this refusal.
 
 ## Provider freshness
 
-Windows Server, Linux, reliability, database operations, Cloudflare, IaC, CI/CD, GitHub operations, data-resilience, AWS, Google Cloud, Azure, Selectel, and Kubernetes manifests declare official documentation sources, map every capability to those sources, and record `last_verified`. Validation rejects missing capability coverage, unapproved source hosts, future dates, and release metadata older than 183 days. This does not make memorized behavior safe: a material change must refresh the exact official operation page and run read-only discovery against the actual account, project, subscription, cluster, tool, or database topology.
+Windows Server, Linux, reliability, database operations, secrets/access, Cloudflare, IaC, CI/CD, GitHub operations, data-resilience, AWS, Google Cloud, Azure, Selectel, and Kubernetes manifests declare official documentation sources, map every capability to those sources, and record `last_verified`. Validation rejects missing capability coverage, unapproved source hosts, future dates, and release metadata older than 183 days. This does not make memorized behavior safe: a material change must refresh the exact official operation page and run read-only discovery against the actual account, project, subscription, cluster, tool, or database topology.
 
 ## Development and release
 

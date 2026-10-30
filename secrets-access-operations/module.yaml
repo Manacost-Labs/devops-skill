@@ -1,32 +1,90 @@
 name: secrets-access-operations
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+- devops-platform-contracts >= 0.6.0
+- devops-core >= 0.6.0
 capabilities:
-  - secret-reference-governance
-  - workload-identity
-  - just-in-time-access
-  - constrained-administration
-  - credential-rotation
-  - access-revocation
-  - break-glass-access
-  - privileged-access-review
-  - provider-access-handoff
+- secret-reference-governance
+- workload-identity
+- just-in-time-access
+- constrained-administration
+- credential-rotation
+- access-revocation
+- break-glass-access
+- privileged-access-review
+- provider-access-handoff
+- vault-short-lived-grant-procedures
+- vault-consumer-rotation-recovery
+- vault-session-revocation-expiry
 risk_domains:
-  - identity-and-access
-  - secret-handling
-  - privileged-control
-  - production-state
+- identity-and-access
+- secret-handling
+- privileged-control
+- production-state
 platforms:
-  - Cloud IAM
-  - Vaults and credential brokers
-  - Enterprise directories
+- Cloud IAM
+- Vaults and credential brokers
+- Enterprise directories
+- HashiCorp Vault service tokens and KV v2
+source_freshness:
+  last_verified: '2026-10-30'
+  refresh_before_change: true
+  official_sources:
+  - https://developer.hashicorp.com/vault/api-docs/auth/token
+  - https://developer.hashicorp.com/vault/docs/concepts/tokens
+  - https://developer.hashicorp.com/vault/docs/concepts/lease
+  - https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2
+  - https://developer.hashicorp.com/vault/docs/concepts/response-wrapping
+  - https://developer.hashicorp.com/vault/api-docs/system/leases
+  - https://developer.hashicorp.com/vault/api-docs/system/generate-root
+  - https://developer.hashicorp.com/vault/docs/commands/operator/generate-root
+  - https://developer.hashicorp.com/vault/docs/auth/jwt
+  - https://developer.hashicorp.com/vault/docs/concepts/policies
+  capability_sources:
+    secret-reference-governance:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/docs/concepts/tokens
+    workload-identity:
+    - https://developer.hashicorp.com/vault/docs/auth/jwt
+    just-in-time-access:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/docs/concepts/tokens
+    constrained-administration:
+    - https://developer.hashicorp.com/vault/docs/concepts/policies
+    credential-rotation:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2
+    access-revocation:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/docs/concepts/tokens
+    break-glass-access:
+    - https://developer.hashicorp.com/vault/api-docs/system/generate-root
+    - https://developer.hashicorp.com/vault/docs/commands/operator/generate-root
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    privileged-access-review:
+    - https://developer.hashicorp.com/vault/docs/concepts/policies
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    provider-access-handoff:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/docs/concepts/tokens
+    vault-short-lived-grant-procedures:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/docs/concepts/tokens
+    - https://developer.hashicorp.com/vault/docs/concepts/response-wrapping
+    vault-consumer-rotation-recovery:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2
+    - https://developer.hashicorp.com/vault/api-docs/system/leases
+    vault-session-revocation-expiry:
+    - https://developer.hashicorp.com/vault/api-docs/auth/token
+    - https://developer.hashicorp.com/vault/docs/concepts/tokens
+    - https://developer.hashicorp.com/vault/docs/concepts/lease
+    - https://developer.hashicorp.com/vault/api-docs/system/leases

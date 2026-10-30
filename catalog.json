@@ -36,7 +36,7 @@
       "role": "executor"
     },
     "secrets-access-operations": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "cloudflare-operations": {
