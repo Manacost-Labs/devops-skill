@@ -8,6 +8,8 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 
 Operate VPN, BGP, routing, segmentation, and hybrid connectivity under the devops-core safety contract and platform contract v2. Route DNS, TLS, HTTP, public edge, host firewall, and provider-resource work to their dedicated modules.
 
+On platform 0.15+, local operation requests, gate results and snapshot comparisons are planning/consistency evidence only. Live mutations require an administrator-registered typed task through the protected broker with externally signed finite authority. If the required networking task is not registered, hand off to its owner; never substitute arbitrary argv, a legacy approval file or a helper allowlist entry. The disposable repository drills are development tests, not a live-target executor.
+
 The maintained implementation is Linux WireGuard, FRRouting IPv4-unicast BGP, iproute2 policy routing and nftables segmentation. Read [supported implementations](references/supported-implementations.md) before choosing commands or claiming support. IPsec/strongSwan, vendor routers, EVPN/MPLS, managed VPN gateways and other implementations require a confirmed owner/runbook; general VPN/BGP vocabulary does not establish implementation support.
 
 ## Workflow
