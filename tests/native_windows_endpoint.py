@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 import importlib.util
 import json
 from pathlib import Path
+import socket
+import ssl
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -126,14 +128,38 @@ def exercise(folder):
     print('NATIVE_WINDOWS_JEA_PASS: actual HTTPS certificate connector, JEA allow/deny, replay, lost reply, quarantine; AD not_run')
 
 
+def diagnose_tls(folder):
+    resource=B.decode((folder/'target.json').read_bytes())
+    for version in (ssl.TLSVersion.TLSv1_3,ssl.TLSVersion.TLSv1_2):
+        stage='context'
+        try:
+            context=ssl.create_default_context(cafile=resource['ca_file'])
+            context.check_hostname=True;context.verify_mode=ssl.CERT_REQUIRED
+            context.minimum_version=version;context.maximum_version=version
+            context.post_handshake_auth=True;context.set_alpn_protocols(['http/1.1'])
+            context.load_cert_chain(str(folder/'client.pem'),str(folder/'client.key'))
+            stage='connect'
+            with socket.create_connection(('127.0.0.1',resource['port']),timeout=5) as connection:
+                stage='handshake'
+                with context.wrap_socket(connection,server_hostname='localhost') as channel:
+                    print('TLS_DIAGNOSTIC',version.name,'handshake',channel.version(),channel.cipher()[0])
+                    stage='send'
+                    channel.sendall(b'GET /wsman HTTP/1.1\r\nHost: localhost\r\nAuthorization: http://schemas.dmtf.org/wbem/wsman/1/wsman/secprofile/https/mutual\r\nConnection: close\r\n\r\n')
+                    stage='read'
+                    line=channel.recv(2048).split(b'\r\n',1)[0].decode('ascii','replace')
+                    print('TLS_DIAGNOSTIC',version.name,'status',line[:160])
+        except Exception as error:print('TLS_DIAGNOSTIC',version.name,'failed_stage',stage,'error',type(error).__name__,str(error)[:300])
+
+
 def main():
     parser=argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument('action',choices=('certificates','digest','exercise'))
+    parser.add_argument('action',choices=('certificates','digest','diagnose-tls','exercise'))
     parser.add_argument('--folder',type=Path,required=True)
     parser.add_argument('--username')
     args=parser.parse_args()
     if args.action=='certificates':certificates(args.folder,args.username)
     elif args.action=='digest':print(B.digest(B.decode((args.folder/'target.json').read_bytes())))
+    elif args.action=='diagnose-tls':diagnose_tls(args.folder)
     else:exercise(args.folder)
 
 

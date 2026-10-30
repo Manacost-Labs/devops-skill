@@ -12,6 +12,7 @@ $tag=[guid]::NewGuid().ToString('N')
 $root=Join-Path $env:RUNNER_TEMP ('devops-jea-'+$tag)
 $name='DvJ'+$tag.Substring(0,10);$groupName='DvJW'+$tag.Substring(0,10);$endpoint='DevopsBound-'+$tag
 $createdUser=$null;$createdGroup=$null;$certs=@();$listenerPath=$null;$mappingPath=$null;$registered=$false
+$fixtureStart=Get-Date
 $serviceBefore=(Get-Service WinRM).Status;$certificateBefore=$null
 function Grant-Fixture([string]$Path,$Sid,[Security.AccessControl.FileSystemRights]$Rights,[switch]$Private){
     if((Get-Item -LiteralPath $Path).PSIsContainer){$acl=[Security.AccessControl.DirectorySecurity]::new()}else{$acl=[Security.AccessControl.FileSecurity]::new()}
@@ -27,6 +28,7 @@ try{
     $null=New-Item -ItemType Directory -Path $root
     $password=ConvertTo-SecureString ([guid]::NewGuid().ToString('N')+'aA!7') -AsPlainText -Force
     $createdUser=New-LocalUser -Name $name -Password $password -Description ('DevopsJEA '+$tag)
+    Add-LocalGroupMember -SID ([Security.Principal.SecurityIdentifier]::new('S-1-5-32-545')) -Member $createdUser
     $createdGroup=New-LocalGroup -Name $groupName -Description ('DevopsJEA '+$tag)
     Grant-Fixture $root $createdGroup.SID ([Security.AccessControl.FileSystemRights]::ReadAndExecute)
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') certificates --folder $root --username $name
@@ -90,8 +92,22 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $observed=Get-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address='IP:127.0.0.1';Transport='HTTPS'}
     Require-Fixture ([int]$observed.Port -eq $port -and $observed.Hostname -ceq 'localhost' -and $observed.CertificateThumbprint -ieq $server.Thumbprint -and $observed.Enabled -ieq 'true')
     Require-Fixture (@($observed.ListeningOn).Count -eq 1 -and @($observed.ListeningOn)[0] -ceq '127.0.0.1')
+    Require-Fixture $server.HasPrivateKey
+    & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') diagnose-tls --folder $root
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') exercise --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0)
+}catch{
+    foreach($log in @('System','Microsoft-Windows-WinRM/Operational')){
+        try{
+            $events=Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=$fixtureStart} -MaxEvents 24 -ErrorAction Stop
+            foreach($event in $events){if($log -ne 'System' -or $event.ProviderName -eq 'Schannel'){
+                $message=[string]$event.Message
+                if($message.Length -gt 1800){$message=$message.Substring(0,1800)}
+                @{fixture_diagnostic_log=$log;id=$event.Id;level=$event.LevelDisplayName;message=$message}|ConvertTo-Json -Compress
+            }}
+        }catch{ 'FIXTURE_EVENT_DIAGNOSTIC_UNAVAILABLE' }
+    }
+    throw
 }finally{
     if($registered){Unregister-PSSessionConfiguration -Name $endpoint -NoServiceRestart -Force | Out-Null}
     if($mappingPath){Remove-Item -LiteralPath $mappingPath -Recurse -Force}
