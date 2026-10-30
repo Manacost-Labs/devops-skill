@@ -88,6 +88,10 @@ def immutable(path):
         state = item.stat()
         if state.st_mode & stat.S_ISVTX and stat.S_ISDIR(state.st_mode) and item != path:
             # Sticky /tmp parent cannot replace an existing root-owned child.
+            # The directory owner itself can replace children despite sticky;
+            # a writable sticky ancestor owned by the agent is not protection.
+            if state.st_uid != 0:
+                raise C.Denied("sticky managed ancestors must be root-owned")
             continue
         if os.statvfs(item).f_flag & os.ST_RDONLY:
             continue

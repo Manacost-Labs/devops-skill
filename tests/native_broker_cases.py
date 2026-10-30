@@ -115,6 +115,17 @@ class NativeBroker(unittest.TestCase):
                 self.assertNotEqual(result.returncode,0,path)
         self.assertEqual((self.folder/'target/value').read_text(),'before')
 
+    def test_agent_owned_sticky_ancestor_is_not_immutable(self):
+        ancestor=self.folder/'untrusted-sticky'; ancestor.mkdir(mode=0o1777); ancestor.chmod(0o1777)
+        program=ancestor/'root-owned-program'; program.write_text('registered bytes'); program.chmod(0o444)
+        os.chown(ancestor,65534,65534)
+        with self.assertRaises(ValueError): S.immutable(program)
+        # Prove the real directory owner can substitute the otherwise root-owned
+        # leaf; a sticky bit alone is not an immutable-path guarantee.
+        result=self.agent("from pathlib import Path; import sys; p=Path(sys.argv[1]);p.unlink();p.write_text('substituted')",program)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(program.read_text(),'substituted')
+
     def test_real_tls_reusable_grant_and_idempotent_receipt(self):
         for index in range(2):
             packet=self.packet(operation='ops-native-reuse-'+str(index))
