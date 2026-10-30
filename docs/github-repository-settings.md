@@ -38,7 +38,9 @@ Create a ruleset or branch protection rule targeting main:
   - Python 3.13 / windows-2025
   - Dependency review
   - Ansible / repeatability and partial recovery
-- [ ] Do not require the manual Verify 0.11.0 RC candidate job for ordinary pull requests.
+  - IaC / terraform state and recovery
+  - IaC / tofu state and recovery
+- [ ] Do not require the manual Verify 0.12.0 RC candidate job for ordinary pull requests.
 
 CODEOWNERS currently names one account. That is enough to route portfolio maintenance review, but it does not implement separation of duties. Production or enterprise use requires adding a second qualified identity and configuring the ruleset so the author cannot satisfy their own required approval.
 

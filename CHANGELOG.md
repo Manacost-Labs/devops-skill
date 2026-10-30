@@ -4,6 +4,11 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.12.0 — 2026-10-30
+
+- Deepen Terraform/OpenTofu state/backend identity, locking, drift and saved-plan discipline, migration and partial-apply/persistence recovery in iac-operations 0.5.0. Preserve core mode/admission/journal and distinguish state metadata from infrastructure/data rollback.
+- Add native checksum-pinned Terraform and OpenTofu CI with an offline pinned local provider and owned loopback state/lock backend, including contention, stale plans, drift blindness, partial success, failed/ambiguous uploads and binding/migration checks. Document synthetic and cloud/engine compatibility limits.
+
 ## 0.11.0 — 2026-10-30
 
 - Deepen Ansible inventory/identity and controller trust, repeatability/handlers/check-mode validation, capacity-aware rolling updates and state-aware partial-failure recovery in iac-operations 0.4.0.
