@@ -30,7 +30,7 @@ Coverage includes:
 - Intersection/exclusion versus union group selection and preservation of unselected host state.
 - Middle-node failure after config replacement, bounded baseline-file recovery, nonzero final outcome, preserved traffic exclusion, later batch untouched, targeted resume from actual mixed state, and no changes on a subsequent unchanged run.
 - The negative control: successful rescue without re-raising permits later batches and exit zero despite an excluded failed host. The fixture exposes this hazard; it is not an accepted rollout.
-- Recovery failing after configuration changed, injected unreachable behavior outside rescue/always, the strict 49-versus-50 percentage boundary for one failure in a two-host batch, and `run_once` executing once per serial batch rather than once globally.
+- Recovery failing after configuration changed, injected connection loss both before execution and after a real file replacement inside the change block (without rescue/always completion), the strict 49-versus-50 percentage boundary for one failure in a two-host batch, and `run_once` executing once per serial batch rather than once globally.
 
 This fixture validates Ansible orchestration and local file state. It does not test remote SSH/WinRM authentication, operating-system services/reboots, actual load-balancer drain, controller crash durability, database/schema recovery, network partitions, capacity/quorum or production downtime. Those require isolated target-specific rehearsals with the corresponding host/data/network/reliability module. The synthetic playbooks and callback/connection plugins are test artifacts, not production templates or runtime security controls.
 

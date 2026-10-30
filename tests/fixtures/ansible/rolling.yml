@@ -32,6 +32,12 @@
         - name: Inject failure after configuration changed
           ansible.builtin.assert:
             that: inventory_hostname != fail_host
+        - name: Inject connection loss after the actual config replacement
+          ansible.builtin.copy:
+            content: "disconnected\n"
+            dest: "{{ host_root }}/connection-lost"
+            mode: '0600'
+          when: inventory_hostname == disconnect_host
         - name: Activate the synthetic service
           ansible.builtin.command:
             argv: ["{{ ansible_playbook_python }}", "{{ lab_root }}/activate.py", "{{ host_root }}"]

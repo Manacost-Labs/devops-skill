@@ -50,7 +50,7 @@ class NativeAnsibleTests(unittest.TestCase):
         self.inventory = {"all": {"vars": {
             "ansible_connection": "local", "ansible_python_interpreter": sys.executable,
             "ansible_become": False, "lab_root": str(self.lab),
-            "release": "v2", "fail_host": "", "recovery_fails": False, "halt_after_rescue": True,
+            "release": "v2", "fail_host": "", "disconnect_host": "", "recovery_fails": False, "halt_after_rescue": True,
         }, "children": {
             "app": {"hosts": variables},
             "production": {"hosts": {"node1": {}, "node2": {}}},
@@ -69,6 +69,7 @@ class NativeAnsibleTests(unittest.TestCase):
             "ANSIBLE_CALLBACK_PLUGINS": str(FIXTURES / "callback_plugins"),
             "ANSIBLE_CALLBACKS_ENABLED": "fixture_evidence",
             "ANSIBLE_CONNECTION_PLUGINS": str(FIXTURES / "connection_plugins"),
+            "ANSIBLE_LAB_DISCONNECT": str(self.lab / "node2/connection-lost"),
         })
         self.sequence = 0
 
@@ -176,15 +177,26 @@ class NativeAnsibleTests(unittest.TestCase):
         self.assertEqual(self.read("node3", "config"), "release=v1\n")
         self.assertNotIn("node3", stats)
 
-    def test_unreachable_does_not_enter_rescue_or_always(self):
+    def test_connection_loss_after_config_change_does_not_enter_rescue_or_complete_always(self):
         self.inventory["all"]["children"]["app"]["hosts"]["node2"]["ansible_connection"] = "fixture_unreachable"
-        stats, events = self.run_play("rolling.yml", expected=1)
-        self.assertEqual(stats["node2"]["unreachable"], 1)
+        stats, events = self.run_play("rolling.yml", variables={"disconnect_host": "node2"}, expected=1)
+        self.assertGreaterEqual(stats["node2"]["unreachable"], 1)
         self.assertEqual(stats["node2"]["rescued"], 0)
         self.assertIn({"event": "unreachable", "host": "node2"}, events)
+        self.assertEqual(self.read("node2", "config"), "release=v2\n")
+        self.assertEqual(self.read("node2", "active"), "release=v1\n")
+        self.assertEqual(self.read("node2", "traffic"), "excluded\n")
         self.assertFalse((self.lab / "node2/observed").exists())
         self.assertNotIn("node3", stats)
         self.assertEqual(self.read("node3", "config"), "release=v1\n")
+
+    def test_initial_connection_loss_is_unknown_not_success(self):
+        self.inventory["all"]["children"]["app"]["hosts"]["node2"]["ansible_connection"] = "fixture_unreachable"
+        (self.lab / "node2/connection-lost").write_text("disconnected\n", encoding="utf-8")
+        stats, _ = self.run_play("rolling.yml", expected=1)
+        self.assertGreaterEqual(stats["node2"]["unreachable"], 1)
+        self.assertEqual(self.read("node2", "config"), "release=v1\n")
+        self.assertNotIn("node3", stats)
 
     def test_failure_percentage_requires_exceeding_not_reaching_threshold(self):
         below, _ = self.run_play("threshold.yml", variables={"threshold": 49}, expected=1)
