@@ -25,11 +25,18 @@ def policy_binding(filename="default-policy.json"):
     canonical = json.dumps(policy, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return {"id":policy["policy_id"], "version":policy["version"], "digest":"sha256:"+hashlib.sha256(canonical).hexdigest()}
 
+def bind_approvals(request):
+    payload = {key: value for key, value in request.items() if key != "approvals"}
+    binding = "sha256:" + hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    for approval in request["approvals"]: approval["operation_digest"] = binding
+    return request
+
+
 def operation(risk="R2", action="container_rollout", approvals=1, policy_name="default-policy.json"):
     digest = "sha256:" + "1" * 64
     binding = policy_binding(policy_name)
     values = [{"approver":f"user:owner-{index}","role":f"role-{index}","target":"example-lab","plan_digest":digest,"policy_digest":binding["digest"],"approved_at":"2026-08-17T10:00:00Z","expires_at":"2026-08-17T11:00:00Z","evidence_ref":f"ticket:CHG-{index}"} for index in range(approvals)]
-    return {
+    return bind_approvals({
         "schema_version":"2.0","operation_id":"ops-test-000001","objective":"Deploy the approved immutable release","data_classification":"internal",
         "policy":binding,
         "target":{"name":"example-lab","environment":"lab","owner":"team:platform","profile_digest":"sha256:"+"0"*64},
@@ -37,7 +44,7 @@ def operation(risk="R2", action="container_rollout", approvals=1, policy_name="d
         "execution":{"executor":"service:codex","requested_at":"2026-08-17T09:55:00Z","window_start":"2026-08-17T10:00:00Z","window_end":"2026-08-17T11:00:00Z","idempotency_key":"example-000001","change_lock_ref":None},
         "approvals":values,
         "recovery":{"required":False,"method":"previous release","artifact_ref":"release:previous","restore_tested_at":None,"rpo_minutes":None,"rto_minutes":5},
-        "verification":{"criteria":["external path returns 2xx"],"observation_window_minutes":10},"exception":None}
+        "verification":{"criteria":["external path returns 2xx"],"observation_window_minutes":10},"exception":None})
 
 class PlatformTests(unittest.TestCase):
     def run(self, *args, **kwargs): return super().run(*args, **kwargs)
@@ -47,7 +54,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.8.0")
+        self.assertEqual(catalog["version"], "0.9.0")
         self.assertEqual(len(catalog["skills"]), 23)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
@@ -400,6 +407,7 @@ class PlatformTests(unittest.TestCase):
             request = operation(risk="R3", action="production_deploy", approvals=2, policy_name="enterprise-policy.json")
             request["target"]["environment"] = "production"
             request["execution"]["change_lock_ref"] = "change-lock:prod"
+            bind_approvals(request)
             result = self.gate(request, directory, "enterprise-policy.json")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_gate_binds_registered_policy_and_each_approval(self):
@@ -521,7 +529,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.8.0")
+                self.assertEqual(manifest["version"], "0.9.0")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)

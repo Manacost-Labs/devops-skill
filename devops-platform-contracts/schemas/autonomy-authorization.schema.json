@@ -1,0 +1,250 @@
+{
+  "$id": "https://example.invalid/devops/autonomy-authorization-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "active"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "authorizations": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "actions": {
+      "items": {
+        "maxLength": 500,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "allow_external_side_effects": {
+      "type": "boolean"
+    },
+    "allow_stateful": {
+      "type": "boolean"
+    },
+    "authorization_id": {
+      "pattern": "^authority-[a-z0-9][a-z0-9-]{5,79}$",
+      "type": "string"
+    },
+    "authorizations": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "approver": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence_ref": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "payload_digest": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "role": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "approved_at",
+          "approver",
+          "evidence_ref",
+          "expires_at",
+          "payload_digest",
+          "role"
+        ],
+        "type": "object"
+      },
+      "maxItems": 16,
+      "type": "array"
+    },
+    "data_classifications": {
+      "items": {
+        "maxLength": 500,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "executor": {
+      "maxLength": 500,
+      "minLength": 1,
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "balanced",
+        "semi-auto",
+        "full-auto"
+      ]
+    },
+    "policy": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,79}$",
+          "type": "string"
+        },
+        "version": {
+          "const": "2.0"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "digest"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "scope": {
+      "items": {
+        "maxLength": 500,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "active",
+        "revoked"
+      ]
+    },
+    "target": {
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "enum": [
+            "lab",
+            "dev",
+            "staging",
+            "production"
+          ]
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "owner": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "profile_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "environment",
+        "owner",
+        "profile_digest"
+      ],
+      "type": "object"
+    },
+    "trusted_environment": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "credential_scope_ref": {
+              "maxLength": 500,
+              "minLength": 4,
+              "type": "string"
+            },
+            "isolation_ref": {
+              "maxLength": 500,
+              "minLength": 4,
+              "type": "string"
+            },
+            "owner_evidence_ref": {
+              "maxLength": 500,
+              "minLength": 4,
+              "type": "string"
+            }
+          },
+          "required": [
+            "isolation_ref",
+            "credential_scope_ref",
+            "owner_evidence_ref"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "window_end": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "window_start": {
+      "format": "date-time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "actions",
+    "allow_external_side_effects",
+    "allow_stateful",
+    "authorization_id",
+    "authorizations",
+    "data_classifications",
+    "executor",
+    "mode",
+    "policy",
+    "schema_version",
+    "scope",
+    "status",
+    "target",
+    "trusted_environment",
+    "window_end",
+    "window_start"
+  ],
+  "title": "Scoped operator-issued delegated authority; not an identity signature",
+  "type": "object"
+}

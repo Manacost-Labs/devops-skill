@@ -6,7 +6,7 @@ hook. Exit 3 means blocked before launch; 74 means execution began but its final
 audit record could not be saved. A timeout (124) may already have changed state.
 """
 from __future__ import annotations
-import argparse, hashlib, importlib.util, json, os, re, subprocess, sys, uuid
+import argparse, hashlib, importlib.util, json, os, re, stat, subprocess, sys, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,6 +31,25 @@ VALUE_SECRETS = (
 
 def canonical_command_digest(argv):
     return "sha256:" + hashlib.sha256(json.dumps(list(argv), ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+def read_operation(path):
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result: raise ValueError("duplicate operation field")
+            result[key] = value
+        return result
+    if not stat.S_ISREG(path.lstat().st_mode):
+        raise ValueError("operation must be a regular file")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
+    with os.fdopen(os.open(path, flags), "rb") as source:
+        metadata = os.fstat(source.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > 1048576:
+            raise ValueError("operation is nonregular or oversized")
+        raw = source.read(1048577)
+    if len(raw) > 1048576: raise ValueError("operation exceeds input bound")
+    return json.loads(raw.decode("utf-8-sig"), object_pairs_hook=unique_pairs,
+                      parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite operation JSON")))
 
 def redact(text):
     text = KEY_VALUE_SECRET.sub(lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", text)
@@ -101,7 +120,7 @@ def execute():
         entry["command"] = redact(subprocess.list2cmdline(command))
         digest = canonical_command_digest(command)
         entry["command_digest"] = digest
-        request = json.loads(args.operation.read_text(encoding="utf-8-sig"))
+        request = read_operation(args.operation)
         if not isinstance(request, dict):
             return blocked("operation request must be a JSON object", args.ledger, entry, "blocked_request")
         entry["operation_id"] = request.get("operation_id") if isinstance(request.get("operation_id"), str) else None
@@ -111,19 +130,32 @@ def execute():
             return blocked("operation request does not declare change.plan_digest", args.ledger, entry, "blocked_request")
         if plan_digest != digest:
             return blocked(f"command digest {digest} does not match approved plan digest {plan_digest}", args.ledger, entry, "blocked_digest_mismatch")
-        gate_arguments = [sys.executable, str(GATE), "--request", str(args.operation), "--policy", args.policy]
+        # Validate the exact object bound to this argv, not a second mutable
+        # read of a path that could change between parent and gate processes.
+        gate_arguments = [sys.executable, str(GATE), "--request-stdin", "--policy", args.policy]
         if args.at:
             gate_arguments += ["--at", args.at]
-        gate = subprocess.run(gate_arguments, capture_output=True, text=True, check=False)
+        gate = subprocess.run(gate_arguments, input=json.dumps(request, ensure_ascii=True, allow_nan=False),
+                              capture_output=True, text=True, check=False)
         print(redact((gate.stdout + gate.stderr).strip()))
         if gate.returncode or not gate.stdout.startswith("ALLOWED:"):
             return blocked("operation gate refused execution immediately before launch", args.ledger, entry, "blocked_gate")
+        if "autonomy" in request:
+            # The fresh gate validated these references; never copy grant bodies.
+            entry["autonomy"] = request["autonomy"]
         # A durable intent must exist before any child can make a change.
         entry.update(status="launch_intent", exit_code=None, reason=None)
         try:
             append_ledger(args.ledger, entry)
         except OSError:
             return blocked("execution journal could not persist intent", args.ledger, entry, "blocked_ledger")
+        # Journal fsync can stall. Recheck after it to avoid extending admission
+        # beyond a grant's expiry/revocation while waiting for durable storage.
+        final_gate = subprocess.run(gate_arguments, input=json.dumps(request, ensure_ascii=True, allow_nan=False),
+                                    capture_output=True, text=True, check=False)
+        if final_gate.returncode or not final_gate.stdout.startswith("ALLOWED:"):
+            print(redact((final_gate.stdout + final_gate.stderr).strip()))
+            return blocked("final admission expired, changed or was refused after durable intent; no child launched", args.ledger, entry, "blocked_final_gate")
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except OSError:

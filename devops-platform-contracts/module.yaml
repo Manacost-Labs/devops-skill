@@ -1,5 +1,5 @@
 name: devops-platform-contracts
-version: 0.4.3
+version: 0.5.0
 kind: policy-and-validation
 allowed_tools:
 - Read
@@ -9,12 +9,14 @@ allowed_tools:
 - Bash(python devops-platform-contracts/scripts/operation_gate.py:*)
 - Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
 - Bash(python devops-platform-contracts/scripts/ledger_chain.py:*)
+- Bash(python devops-platform-contracts/scripts/autonomy.py:*)
 capabilities:
 - module-registry
 - compatibility-validation
 - safety-policy
 - contract-schemas
 - evaluation-suite
+- scoped-autonomy-authority
 provides:
 - devops-platform-contract-v2
 - chained-operation-ledger-v1

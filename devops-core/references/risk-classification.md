@@ -2,13 +2,15 @@
 
 Classify by the highest applicable risk. Lower-risk work never authorizes a higher-risk follow-up.
 
+Risk describes impact; autonomy describes how prior authority can cover that impact. Read `autonomy-modes.md`. Do not lower a production deployment to R2 to fit Balanced or infer permission from a mode name. Destructive/irreversible effects need separate exact admission in every mode.
+
 | Class | Meaning | Examples | Requirement |
 |---|---|---|---|
 | R0 | Read-only | Status, logs, inventory, DNS lookup, dry-run | Redact sensitive output. |
 | R1 | Local or reversible | Draft config, test build, approved staging change | Preflight and verification. |
 | R2 | Externally impactful | Shared-service change, new paid resource, staging deploy | Change card; explicit approval unless scope/cost was granted. |
-| R3 | Production-impacting | Production deploy, DNS, TLS, firewall, WAF, IAM, secret reference change | Change card, exact approval, rollback or restore path. |
-| R4 | Destructive or hard to reverse | Deletion, migration, failover, state surgery, access revocation | Separate exact approval; backup/snapshot and restore test for stateful work. |
+| R3 | Production-impacting | Production deploy, DNS, TLS, firewall, WAF, IAM, secret reference change | Change card, scoped prior authority or exact approval, recovery and verification. |
+| R4 | Destructive or hard to reverse | Deletion, migration, failover, state surgery, access revocation | Full Auto can cover issued recoverable work; destructive/irreversible effects always need separate exact admission; backup/restore proof for stateful work. |
 
 State includes databases, persistent volumes, object storage, Terraform state, cloud resources, and critical configuration. Do not perform a stateful R3/R4 action if recovery is unproven.
 

@@ -39,7 +39,8 @@
         "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "stateful": {"type": "boolean"},
         "destructive": {"type": "boolean"},
-        "external_side_effects": {"type": "boolean"}
+        "external_side_effects": {"type": "boolean"},
+        "irreversible": {"type": "boolean"}
       }
     },
     "execution": {
@@ -58,11 +59,12 @@
       "type": "array",
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["approver", "role", "target", "plan_digest", "policy_digest", "approved_at", "expires_at", "evidence_ref"],
+        "required": ["approver", "role", "target", "plan_digest", "operation_digest", "policy_digest", "approved_at", "expires_at", "evidence_ref"],
         "properties": {
           "approver": {"type": "string", "minLength": 3}, "role": {"type": "string", "minLength": 2},
           "target": {"type": "string", "minLength": 1}, "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
           "policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "operation_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
           "approved_at": {"type": "string", "format": "date-time"}, "expires_at": {"type": "string", "format": "date-time"},
           "evidence_ref": {"type": "string", "minLength": 4}
         }
@@ -95,6 +97,71 @@
           }
         }
       ]
+    },
+    "autonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "authorization_id",
+        "authorization_digest"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "safe",
+            "balanced",
+            "semi-auto",
+            "full-auto"
+          ]
+        },
+        "authorization_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^authority-[a-z0-9][a-z0-9-]{5,79}$"
+        },
+        "authorization_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "safe"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "authorization_id": {
+                "type": "null"
+              },
+              "authorization_digest": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "authorization_id": {
+                "type": "string"
+              },
+              "authorization_digest": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
     }
-  }
+  },
+  "allOf": [{"if": {"required": ["autonomy"], "properties": {"autonomy": {"properties": {"mode": {"enum": ["balanced", "semi-auto", "full-auto"]}}}}}, "then": {"properties": {"change": {"required": ["irreversible"]}}}}]
 }

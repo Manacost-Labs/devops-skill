@@ -1,5 +1,5 @@
 name: devops-core
-version: 0.4.3
+version: 0.5.0
 kind: coordinator
 allowed_tools:
 - Read
@@ -15,9 +15,10 @@ capabilities:
 - module-routing
 - change-control
 - evidence-and-handoff
+- autonomy-mode-coordination
 provides:
 - safety-contract-v2
 - operation-ledger-v2
 - untrusted-content-boundary-v1
 requires:
-- devops-platform-contracts >= 0.3.0
+- devops-platform-contracts >= 0.5.0

@@ -26,6 +26,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -67,7 +68,7 @@ def target_profile_digest(path: Path) -> str:
     return value
 
 
-def minimum_risk(policy: dict[str, Any], action: str, environment: str, stateful: bool, destructive: bool, external: bool) -> tuple[str, list[str]]:
+def minimum_risk(policy: dict[str, Any], action: str, environment: str, stateful: bool, destructive: bool, external: bool, irreversible: bool = False) -> tuple[str, list[str]]:
     minimum = "R0"
     reasons: list[str] = []
 
@@ -85,6 +86,8 @@ def minimum_risk(policy: dict[str, Any], action: str, environment: str, stateful
         raise_to("R3", f"policy lists '{action}' as always requiring approval, which needs at least R3")
     if destructive:
         raise_to("R4", "destructive work must be classified R4")
+    if irreversible:
+        raise_to("R4", "irreversible work must be classified R4")
     if stateful and not destructive:
         reasons.append("stateful work at R4 or destructive work requires proven recovery")
     return minimum, reasons
@@ -92,6 +95,8 @@ def minimum_risk(policy: dict[str, Any], action: str, environment: str, stateful
 
 def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tuple[dict[str, Any], list[str]]:
     policy, policy_digest = gate.load_registered_policy(args.policy)
+    if args.at and os.environ.get(gate.AUTONOMY.AUTHORITY_ENV):
+        raise ValueError("test clocks are forbidden with a configured authority store")
     profile_path = Path(args.target_profile)
     profile = yaml.safe_load(profile_path.read_text(encoding="utf-8-sig"))
     if not isinstance(profile, dict):
@@ -108,7 +113,7 @@ def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tu
         raise ValueError(f"data classification '{classification}' is not allowed by {policy['policy_id']}")
 
     plan_digest = canonical_command_digest(command)
-    floor, notes = minimum_risk(policy, args.action, environment, args.stateful, args.destructive, args.external_side_effects)
+    floor, notes = minimum_risk(policy, args.action, environment, args.stateful, args.destructive, args.external_side_effects, args.irreversible)
     if RISK_RANK[args.risk] < RISK_RANK[floor]:
         raise ValueError(f"--risk {args.risk} understates this change; policy and flags require at least {floor}: " + "; ".join(notes))
     if args.destructive and args.risk != "R4":
@@ -127,16 +132,19 @@ def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tu
     slug = UNSAFE_ID.sub("-", name).strip("-")[:60] or "target"
     short = plan_digest[7:15]
     required_approvals = policy["minimum_approvals"][args.risk]
+    if args.irreversible or args.destructive:
+        required_approvals = max(required_approvals, 1)
     if args.action in set(policy["always_require_approval"]) or args.external_side_effects:
         required_approvals = max(required_approvals, 1)
     needs_lock = args.risk in set(policy["require_change_lock"])
-    needs_recovery = args.action in set(policy["require_recovery_evidence"]) or (args.stateful and (args.risk == "R4" or args.destructive))
+    needs_recovery = args.action in set(policy["require_recovery_evidence"]) or (args.stateful and (args.risk in {"R3", "R4"} or args.destructive))
 
     approval_slot = {
         "approver": "",
         "role": "",
         "target": name,
         "plan_digest": plan_digest,
+        "operation_digest": "",
         "policy_digest": policy_digest,
         "approved_at": None,
         "expires_at": None,
@@ -178,12 +186,49 @@ def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tu
         "verification": {"criteria": list(args.verify), "observation_window_minutes": args.observation_minutes},
         "exception": None,
     }
+    if args.irreversible or args.mode is not None:
+        request["change"]["irreversible"] = args.irreversible
+    if args.mode is not None:
+        if args.mode == "safe":
+            if args.authorization_id:
+                raise ValueError("Safe mode does not use an authorization ID")
+            selection = {"mode": "safe", "authorization_id": None, "authorization_digest": None}
+        else:
+            record = gate.AUTONOMY.load_authorization(args.authorization_id)
+            # Reuse the remaining grant window instead of asking to extend it
+            # whenever a later command starts a fresh default operation window.
+            grant_end = gate.AUTONOMY.timestamp(record["window_end"], "authority end")
+            request["execution"]["window_end"] = min(window_end, grant_end).isoformat().replace("+00:00", "Z")
+            selection = {"mode": args.mode, "authorization_id": args.authorization_id,
+                         "authorization_digest": gate.AUTONOMY.digest(record)}
+        request["autonomy"] = selection
+        delegated, manual, authority_errors = gate.AUTONOMY.assess(request, policy, policy_digest, now)
+        if authority_errors:
+            raise ValueError("; ".join(authority_errors))
+        if delegated:
+            required_approvals = 0
+            if args.risk in {"R3", "R4"}:
+                needs_lock = True
+                request["execution"]["change_lock_ref"] = args.change_lock or ""
+                if args.stateful:
+                    needs_recovery = True
+                    request["recovery"]["required"] = True
+                    for field in ("method", "artifact_ref"):
+                        if request["recovery"][field] is None: request["recovery"][field] = ""
+        elif manual:
+            required_approvals = max(required_approvals, 1)
+        request["approvals"] = [dict(approval_slot) for _ in range(required_approvals)]
+    elif args.authorization_id:
+        raise ValueError("--authorization-id requires an explicit delegated --mode")
 
     todo: list[str] = []
+    if not args.verify:
+        todo.append("record concrete acceptance criteria in verification.criteria")
     if required_approvals:
         distinct = " from distinct approvers with distinct roles" if required_approvals > 1 else ""
         todo.append(f"fill {required_approvals} approval slot(s){distinct}: approver, role, evidence_ref, approved_at, expires_at (within {ttl} minutes)")
-    if policy["require_separation_of_duties"][args.risk]:
+        todo.append("after completing all operation facts, calculate --print-operation-digest with the gate and bind every real per-operation approval to that operation_digest")
+    if required_approvals and policy["require_separation_of_duties"][args.risk]:
         todo.append(f"separation of duties applies at {args.risk}: the executor '{args.executor}' must not appear as an approver")
     if needs_lock and not args.change_lock:
         todo.append(f"acquire a target-scoped change lock and set execution.change_lock_ref ({args.risk} requires it)")
@@ -210,12 +255,15 @@ def build_plan() -> int:
     parser.add_argument("--verify", action="append", default=[], help="Acceptance criterion; repeatable, required at R2+.")
     parser.add_argument("--policy", default="default-policy.json", help="Registered policy basename.")
     parser.add_argument("--executor", default="service:codex", help="Execution identity.")
+    parser.add_argument("--mode", choices=["safe", "balanced", "semi-auto", "full-auto"], help="Omit for Safe compatibility; higher modes require prior protected authority.")
+    parser.add_argument("--authorization-id", help="Operator-issued ID in DEVOPS_AUTHORITY_DIR; never a request/repository file.")
     parser.add_argument("--operation-id", help="Override the generated operation ID.")
     parser.add_argument("--data-classification", help="Override the profile data classification.")
     parser.add_argument("--window-minutes", type=int, default=60, help="Execution window length from now.")
     parser.add_argument("--observation-minutes", type=int, default=10, help="Post-change observation window.")
     parser.add_argument("--stateful", action="store_true", help="The change alters persistent state.")
     parser.add_argument("--destructive", action="store_true", help="The change destroys data or resources (forces R4).")
+    parser.add_argument("--irreversible", action="store_true", help="Irreversible effect; always requires separate exact operation admission at R4.")
     parser.add_argument("--external-side-effects", action="store_true", help="The change is observable outside the target.")
     parser.add_argument("--change-lock", help="Target-scoped change lock reference.")
     parser.add_argument("--recovery-method", help="How the change is reversed.")
@@ -255,8 +303,9 @@ def build_plan() -> int:
         f"POLICY: {request['policy']['id']} {request['policy']['digest']}",
         f"TARGET: {request['target']['name']} ({request['target']['environment']}) {request['target']['profile_digest']}",
         f"RISK: {request['change']['risk']}",
+        f"AUTONOMY: {request.get('autonomy', {}).get('mode', 'safe')} (policy and bounded authority still apply)",
         "",
-        "NOT YET AUTHORIZED. This request is deliberately incomplete:",
+        "NOT YET AUTHORIZED. This request is deliberately incomplete:" if todo else "READY FOR FRESH GATE CHECK. No additional human confirmation is required within validated authority:",
     ]
     summary += [f"  - {item}" for item in todo] or ["  - nothing further is required by policy for this risk class"]
     summary += [

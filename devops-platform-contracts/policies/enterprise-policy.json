@@ -15,5 +15,6 @@
     "never_waive": ["target_identity", "literal_secrets", "evidence_preservation", "post_change_verification"]
   },
   "ledger": {"hash_chain": true, "external_immutable_sink_required": true},
-  "data": {"allowed_classifications": ["public", "internal", "confidential", "restricted"], "default": "restricted"}
+  "data": {"allowed_classifications": ["public", "internal", "confidential", "restricted"], "default": "restricted"},
+  "autonomy": {"maximum_mode": "safe", "grant_ttl_minutes": 60, "allow_production": false}
 }

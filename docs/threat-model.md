@@ -27,6 +27,7 @@ Target credentials, tenants, accounts, projects, subscriptions, clusters, and en
 | Confused deputy or cross-tenant action | Owner-bound target profile, profile digest, scoped credential reference, explicit scope | Authoritative target registry and workload identity |
 | Credential disclosure or over-privilege | Literal-secret rejection, least privilege, JIT/JEA, separate access module | External credential broker, DLP, rotation and revocation |
 | Approval replay or plan substitution | Plan/target digests, expiry, execution window, idempotency key, SoD | Identity-backed change system and replay-resistant API |
+| Forged or widened autonomy envelope | Protected external store, exact ID/payload/record/policy/target bindings, issuer separation, mode caps, finite window and revocation, frozen request validation | Real issuer verification, agent-read-only ACLs, bounded credentials/sandbox; metadata references do not authenticate actors |
 | Risk downgrade or destructive surprise | Independent classification, deny-by-default actions, state/destructive flags | Organization policy and accountable risk owner |
 | Concurrent writers and stale state | Target lock, state lock, pre-execution revalidation, stop on drift | Authoritative distributed lock/change queue |
 | Failed migration or rollback | Fresh recovery artifact, isolated restore test, measured RPO/RTO, acceptance window | Independent backup store and recurring exercises |

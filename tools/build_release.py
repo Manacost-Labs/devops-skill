@@ -94,7 +94,13 @@ def safe_tree_files(folder: Path) -> list[Path]:
 
 def safe_read(path: Path) -> bytes:
     require_regular_file(path, ROOT)
-    return path.read_bytes()
+    data = path.read_bytes()
+    if path.suffix.lower() == ".json":
+        try: value = json.loads(data.decode("utf-8-sig"))
+        except (ValueError, UnicodeError): value = None
+        if isinstance(value, dict) and value.get("schema_version") == "1.0" and value.get("status") in {"active", "revoked"} and isinstance(value.get("authorization_id"), str) and value["authorization_id"].startswith("authority-"):
+            raise ValueError("issued private autonomy records must not enter release archives")
+    return data
 
 
 def files_for_release(catalog: dict) -> list[Path]:
