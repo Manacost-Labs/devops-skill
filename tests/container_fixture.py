@@ -98,6 +98,25 @@ def fixture_environment(original, folder):
     return environment
 
 
+def runtime_evidence(info, components):
+    # Selected bounded metadata only; never dump daemon config or component details.
+    result = {}
+    for key in ("CgroupVersion", "CgroupDriver"):
+        value = info.get(key)
+        if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9.+_:-]{1,128}", value):
+            result[key] = value
+    for item in components:
+        name = item.get("Name")
+        if name not in {"Engine", "containerd", "runc", "docker-init"}:
+            continue
+        details = item.get("Details")
+        for key, value in ((name, item.get("Version")),
+                           (name+"_commit", details.get("GitCommit") if isinstance(details, dict) else None)):
+            if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9.+_:-]{1,128}", value):
+                result[key] = value
+    return result
+
+
 class DockerFixture:
     def __init__(self):
         if (os.name != "posix" or os.environ.get("GITHUB_ACTIONS") != "true"
@@ -121,10 +140,7 @@ class DockerFixture:
                 raise RuntimeError("Linux daemon identity required")
             self.daemon_id = info["ID"]
             components = json.loads(self.docker("version", "--format", "{{json .Server.Components}}").stdout)
-            self.runtime_versions = {item["Name"]: item["Version"] for item in components
-                                     if item.get("Name") in {"Engine", "containerd", "runc", "docker-init"}
-                                     and isinstance(item.get("Version"), str)
-                                     and re.fullmatch(r"[A-Za-z0-9.+_:-]{1,128}", item["Version"])}
+            self.runtime_versions = runtime_evidence(info, components)
             self.docker("pull", IMAGE, timeout=240)
             self.image_id = self.inspect("image", IMAGE)["Id"]
         except Exception:
@@ -160,11 +176,13 @@ class DockerFixture:
         self.networks.append(identity)
         return identity
 
-    def create(self, code, arguments=(), *, network="none", mounts=(), alias=None):
+    def create(self, code, arguments=(), *, network="none", mounts=(), alias=None, interactive=False):
         name = self.tag+"-"+str(len(self.containers))
         options = ["--name", name, "--label", OWNER+"="+self.tag, "--network", network,
                    "--memory", "64m", "--memory-swap", "64m", "--cpus", "1",
                    "--pids-limit", "64", "--cap-drop", "ALL", "--security-opt", "no-new-privileges"]
+        if interactive:
+            options += ["--interactive"]
         if alias:
             options += ["--network-alias", alias]
         for mount in mounts:

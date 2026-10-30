@@ -8,6 +8,14 @@ import time
 from container_fixture import APP, HTTP, REQUEST, ROOT, DockerFixture, command
 
 
+OOM_PROGRAM = """
+import sys
+if sys.stdin.readline() != 'allocate\\n':
+    sys.exit(97)
+block=bytearray(256*1024*1024)
+"""
+
+
 def snapshot(fixture, identity, *, deadline=None):
     # Summarize the same inspection that passed full ID and owner-label checks.
     raw = json.dumps([fixture.owned_container(identity, deadline=deadline)])
@@ -41,12 +49,33 @@ def wait_for_oom_report(fixture, identity, *, timeout=10, clock=time.monotonic, 
     raise RuntimeError("explicit runtime OOM evidence not observed within budget")
 
 
+def exercise_oom(fixture):
+    # PID1 cannot allocate until Start returned and this fresh lifecycle was observed.
+    identity = fixture.create(OOM_PROGRAM, interactive=True)
+    fixture.docker("start", identity)
+    before = fixture.owned_container(identity)
+    state, config, limits = (before.get(key, {}) for key in ("State", "Config", "HostConfig"))
+    if (state.get("Status") != "running" or state.get("Running") is not True
+            or state.get("OOMKilled") is not False or type(state.get("ExitCode")) is not int
+            or state["ExitCode"] != 0 or type(before.get("RestartCount")) is not int
+            or before["RestartCount"] != 0 or config.get("OpenStdin") is not True
+            or config.get("Tty") is not False or limits.get("Memory") != 64*1024*1024
+            or limits.get("MemorySwap") != 64*1024*1024):
+        raise RuntimeError("fresh running non-OOM interactive fixture required before allocation")
+    fixture.docker("attach", "--sig-proxy=false", identity, input="allocate\n", expected=137, timeout=30)
+    if int(fixture.docker("wait", identity, timeout=10).stdout.strip()) != 137:
+        raise RuntimeError("unexpected OOM fixture exit")
+    return wait_for_oom_report(fixture, identity)
+
+
 def main():
     fixture = DockerFixture()
     try:
-        identity, _ = fixture.execute("block=bytearray(256*1024*1024)", expected=137)
-        report = wait_for_oom_report(fixture, identity)
-        assert report["oom_killed"] is True and report["exit_code"] == 137
+        # Predetermined independent lifecycles; the first failure stops the run.
+        for index in range(3):
+            report = exercise_oom(fixture)
+            assert report["oom_killed"] is True and report["exit_code"] == 137
+            print("OK: armed PID1 OOM lifecycle "+str(index+1)+"/3", flush=True)
         # Namespace PID1 has special signal rules: kill from its owning daemon.
         killed = fixture.create("import time; time.sleep(60)")
         fixture.docker("start", killed)
