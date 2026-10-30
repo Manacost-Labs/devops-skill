@@ -348,6 +348,86 @@ class NativeFixtureBoundaryTests(unittest.TestCase):
 
 class OomObservationTests(unittest.TestCase):
     @staticmethod
+    def armed_state():
+        return {"Id": IDENTITY, "RestartCount": 0,
+                "State": {"Status": "running", "Running": True, "ExitCode": 0, "OOMKilled": False},
+                "Config": {"OpenStdin": True, "Tty": False},
+                "HostConfig": {"Memory": 64*1024*1024, "MemorySwap": 64*1024*1024}}
+
+    def test_allocation_waits_for_exact_token_and_rejects_eof(self):
+        import smoke_containers as native
+        for token in ("", "wrong\n", "allocate", "allocate extra\n"):
+            with self.subTest(token=token), mock.patch.object(sys, "stdin", io.StringIO(token)), \
+                    mock.patch("builtins.bytearray") as allocate:
+                with self.assertRaises(SystemExit) as failure:
+                    exec(native.OOM_PROGRAM, {})
+                self.assertEqual(failure.exception.code, 97)
+                allocate.assert_not_called()
+        with mock.patch.object(sys, "stdin", io.StringIO("allocate\n")), mock.patch("builtins.bytearray") as allocate:
+            exec(native.OOM_PROGRAM, {})
+            allocate.assert_called_once_with(256*1024*1024)
+
+    def test_start_and_owned_running_observation_precede_allocation_trigger(self):
+        import smoke_containers as native
+        fixture = mock.Mock()
+        fixture.create.return_value = IDENTITY
+        fixture.owned_container.return_value = self.armed_state()
+        fixture.docker.return_value = SimpleNamespace(stdout="137\n")
+        with mock.patch.object(native, "wait_for_oom_report", return_value=self.report(oom_killed=True)) as observe:
+            result = native.exercise_oom(fixture)
+        self.assertTrue(result["oom_killed"])
+        self.assertEqual(fixture.mock_calls, [
+            mock.call.create(native.OOM_PROGRAM, interactive=True), mock.call.docker("start", IDENTITY),
+            mock.call.owned_container(IDENTITY),
+            mock.call.docker("attach", "--sig-proxy=false", IDENTITY, input="allocate\n", expected=137, timeout=30),
+            mock.call.docker("wait", IDENTITY, timeout=10)])
+        observe.assert_called_once_with(fixture, IDENTITY)
+
+    def test_unarmed_stale_or_unbounded_container_never_receives_trigger(self):
+        import smoke_containers as native
+        changes = [("State", "Status", "exited"), ("State", "Running", False), ("State", "Running", 1),
+                   ("State", "OOMKilled", True), ("State", "OOMKilled", None),
+                   ("State", "ExitCode", True), ("State", "ExitCode", 137),
+                   ("Config", "OpenStdin", False), ("Config", "OpenStdin", 1), ("Config", "Tty", True),
+                   ("HostConfig", "Memory", 0), ("HostConfig", "MemorySwap", -1)]
+        states = []
+        for section, key, value in changes:
+            state = self.armed_state(); state[section][key] = value; states.append(state)
+        for value in (None, True, 1):
+            state = self.armed_state(); state["RestartCount"] = value; states.append(state)
+        for state in states:
+            fixture = mock.Mock(); fixture.create.return_value = IDENTITY
+            fixture.owned_container.return_value = state
+            with self.subTest(state=state), mock.patch.object(native, "wait_for_oom_report") as observe:
+                with self.assertRaises(RuntimeError): native.exercise_oom(fixture)
+                fixture.docker.assert_called_once_with("start", IDENTITY)
+                observe.assert_not_called()
+
+    def test_attach_failure_or_unexpected_exit_cannot_become_oom_success(self):
+        import smoke_containers as native
+        fixture = mock.Mock(); fixture.create.return_value = IDENTITY
+        fixture.owned_container.return_value = self.armed_state()
+        for failure in (RuntimeError("attach failed"), subprocess.TimeoutExpired("attach", 30)):
+            fixture.docker.side_effect = [SimpleNamespace(stdout=""), failure]
+            with mock.patch.object(native, "wait_for_oom_report") as observe:
+                with self.assertRaises(type(failure)): native.exercise_oom(fixture)
+                observe.assert_not_called()
+        fixture.docker.side_effect = [SimpleNamespace(stdout=""), SimpleNamespace(stdout=""), SimpleNamespace(stdout="0\n")]
+        with mock.patch.object(native, "wait_for_oom_report") as observe:
+            with self.assertRaises(RuntimeError): native.exercise_oom(fixture)
+            observe.assert_not_called()
+
+    def test_selected_runtime_evidence_omits_unbounded_details_and_unknown_components(self):
+        import container_fixture as native
+        result = native.runtime_evidence({"CgroupVersion": "2", "CgroupDriver": "systemd", "secret": "sensitive-marker"},
+                [{"Name": "Engine", "Version": "28.0.4", "Details": {"GitCommit": "abcd1234", "secret": "sensitive-marker"}},
+                 {"Name": "runc", "Version": "x"*129, "Details": {"GitCommit": "bad\nvalue"}},
+                 {"Name": "unrelated", "Version": "sensitive-marker"},
+                 {"Name": "containerd", "Version": "v2.4.2", "Details": None}])
+        self.assertEqual(result, {"CgroupVersion": "2", "CgroupDriver": "systemd", "Engine": "28.0.4",
+                                  "Engine_commit": "abcd1234", "containerd": "v2.4.2"})
+
+    @staticmethod
     def report(**changes):
         return {"container_id": IDENTITY, "state": "exited", "running": False,
                 "exit_code": 137, "oom_killed": False, **changes}
