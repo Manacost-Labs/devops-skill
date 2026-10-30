@@ -151,11 +151,18 @@ def profile_digest(path):
 
 def context(sid=None, cwd=None):
     settings = config()
-    if settings is None: return None
     if sid is None and not (os.environ.get("CODEX_THREAD_ID") or os.environ.get("CODEX_SESSION_ID")): return None
     sid = session_id(sid)
     selected = raw_selection(sid)
-    if selected is None: return None
+    if selected is not None and settings is None: raise ChatError("chat configuration is unavailable; no mode fallback permitted")
+    if selected is None:
+        path = latch_path(sid)
+        if not path.exists() and not path.is_symlink(): return None
+        restriction = read(path)
+        if restriction.get("session_id") != sid or restriction.get("safe") is not True: raise ChatError("invalid Safe restriction")
+        selected = {"schema_version": "1.0", "runtime_id": runtime_id(), "session_id": sid, "workspace": workspace(cwd),
+                    "selection": {"mode": "safe", "authorization_id": None, "authorization_digest": None},
+                    "profile_path": None, "card_digest": None, "safety_epoch": safety_epoch(sid), "updated_at": restriction.get("requested_at")}
     if not same_path(selected["workspace"], workspace(cwd)):
         raise ChatError("chat mode belongs to another workspace; prepare new boundaries")
     if selected["safety_epoch"] != safety_epoch(sid):
@@ -163,7 +170,7 @@ def context(sid=None, cwd=None):
     selection = selected["selection"]
     authority().exact(selection, {"mode", "authorization_id", "authorization_digest"}, "chat mode selection")
     if selection["mode"] not in authority().MODES: raise ChatError("invalid selected chat mode")
-    return dict(selected, policy_name=settings["policy"])
+    return dict(selected, policy_name=settings["policy"] if settings else None)
 
 
 def authority_directory():
@@ -178,8 +185,8 @@ def enforce(request, policy, policy_digest, now):
     errors = []
     if request.get("autonomy") != selected["selection"]:
         errors.append("operation does not match selected chat mode/authority; re-plan within current boundaries")
-    settings = config(True)
-    if policy["policy_id"] != gate().REGISTERED_POLICIES.get(settings["policy"]):
+    settings = config()
+    if settings and policy["policy_id"] != gate().REGISTERED_POLICIES.get(settings["policy"]):
         errors.append("chat policy cannot be replaced by another registered policy")
     if selected["selection"]["mode"] != "safe":
         target = request.get("target")
@@ -328,7 +335,7 @@ def render(body, token):
 
 def safe(sid=None):
     sid = session_id(sid)
-    atomic_write(latch_path(sid), {"safe": True, "session_id": sid, "nonce": uuid.uuid4().hex})
+    atomic_write(latch_path(sid), {"safe": True, "session_id": sid, "nonce": uuid.uuid4().hex, "requested_at": datetime.now(timezone.utc).isoformat()})
     return "SAFE: higher-mode launches are disabled for this session; no confirmation required."
 
 

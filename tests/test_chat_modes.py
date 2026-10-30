@@ -376,6 +376,18 @@ class ChatModeTests(unittest.TestCase):
             self.assertEqual(self.execute(path, argv).returncode, 3)
         self.assertFalse(marker.exists())
 
+    def test_safe_restriction_applies_before_any_selection_or_chat_setup(self):
+        result = self.cli("tools/devops_mode.py", "safe")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        result, _, marker, _ = self.plan(extra=["--target-profile", str(self.profile), "--mode", "balanced", "--authorization-id", "authority-unselected-example"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("change mode through confirmed chat boundaries", result.stdout)
+        self.assertFalse(marker.exists())
+        result, path, marker, argv = self.plan(2, extra=["--target-profile", str(self.profile)])
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertEqual(json.loads(path.read_text())["autonomy"]["mode"], "safe")
+        self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
+
     def test_new_safe_after_selection_publication_wins_without_deleting_epoch(self):
         self.prepare()
         spec = importlib.util.spec_from_file_location("synthetic_safe_race_chat", self.runtime/"devops-platform-contracts/scripts/chat_modes.py")
