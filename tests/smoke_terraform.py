@@ -231,15 +231,23 @@ class NativeIaCTests(unittest.TestCase):
                 process.terminate()
                 process.communicate(timeout=10)
 
-    def test_force_unlock_only_matches_exact_synthetic_stale_id(self):
+    def test_force_unlock_matches_nonce_or_fails_closed_when_client_omits_it(self):
         self.provision()
         stale = str(uuid.uuid4())
         with self.backend.guard:
             self.backend.lock = {"ID": stale, "Operation": "synthetic-ended-run", "Who": "fixture", "Version": TOOLS[SELECTED_TOOL][0], "Created": "2026-10-30T00:00:00Z", "Path": "synthetic"}
         self.run_cli("force-unlock", "-force", str(uuid.uuid4()), expected=(1,))
         self.assertEqual(self.backend.lock["ID"], stale)
-        self.run_cli("force-unlock", "-force", stale)
-        self.assertIsNone(self.backend.lock)
+        if SELECTED_TOOL == "terraform":
+            # Pinned HTTP client uses lock info acquired by this process, not
+            # the supplied force-unlock ID. Reject its fresh nonce-less request.
+            self.run_cli("force-unlock", "-force", stale, expected=(1,))
+            self.assertEqual(self.backend.lock["ID"], stale)
+            self.assertTrue(all(item["body"] is None and item["path"] == "/lock" for item in self.backend.unlock_requests[-2:]))
+        else:
+            self.run_cli("force-unlock", "-force", stale)
+            self.assertIsNone(self.backend.lock)
+            self.assertEqual(self.backend.unlock_requests[-1]["body"]["ID"], stale)
 
     def test_partial_apply_preserves_success_then_fresh_forward_repair(self):
         self.write_config(provisioner="import sys; sys.exit(7)")
@@ -310,7 +318,7 @@ class NativeIaCTests(unittest.TestCase):
         self.assertNotIn("local_file.renamed", self.addresses())
         self.plan("unmanaged.plan")
 
-    def test_backend_migration_preserves_lineage_and_object(self):
+    def test_backend_migration_preserves_bindings_and_records_new_metadata(self):
         self.provision()
         original = self.state()
         before_file = (self.lab / "object.txt").stat().st_mtime_ns
@@ -318,11 +326,19 @@ class NativeIaCTests(unittest.TestCase):
         self.addCleanup(destination.close)
         self.init(destination, mode="migrate")
         migrated = self.state()
-        self.assertEqual(migrated["lineage"], original["lineage"])
+        # Both pinned HTTP managers copy bindings but create new metadata.
+        self.assertNotEqual(migrated["lineage"], original["lineage"])
+        uuid.UUID(migrated["lineage"])
+        transition = {"source": {"backend": self.backend.url, "lineage": original["lineage"], "serial": original["serial"]},
+                      "destination": {"backend": destination.url, "lineage": migrated["lineage"], "serial": migrated["serial"]}}
+        evidence = self.lab / "migration-evidence.json"
+        evidence.write_text(json.dumps(transition), encoding="utf-8")
+        evidence.chmod(0o600)
         self.assertEqual(self.addresses(migrated), self.addresses(original))
         self.assertEqual(migrated["resources"], original["resources"])
         self.assertIsNotNone(self.backend.snapshot(), "source copy still needs operational retirement")
         self.assertIsNotNone(destination.snapshot())
+        self.assertEqual(json.loads(self.backend.snapshot())["lineage"], original["lineage"])
         self.assertEqual((self.lab / "object.txt").read_text(), "v1")
         self.assertEqual((self.lab / "object.txt").stat().st_mtime_ns, before_file)
         self.plan("migrated.plan", expected=(0,))

@@ -19,6 +19,7 @@ class StateBackend:
         self.guard = threading.Lock()
         self.locked = threading.Event()
         self.grants = 0
+        self.unlock_requests = []
         self.reject_writes = False
         self.commit_then_error = False
         owner = self
@@ -62,8 +63,15 @@ class StateBackend:
             def do_UNLOCK(self):
                 if urlsplit(self.path).path != "/lock":
                     return self.respond(404)
-                incoming = json.loads(self.payload())
+                raw = self.payload()
+                try:
+                    incoming = json.loads(raw) if raw else None
+                except ValueError:
+                    incoming = None
                 with owner.guard:
+                    owner.unlock_requests.append({"body": incoming, "path": self.path})
+                    if not isinstance(incoming, dict) or not incoming.get("ID"):
+                        return self.respond(400)
                     if owner.lock is None or incoming.get("ID") != owner.lock.get("ID"):
                         return self.respond(409, json.dumps(owner.lock or {}).encode())
                     owner.lock = None
