@@ -67,5 +67,16 @@ class EndpointSetupTests(unittest.TestCase):
         self.assertEqual(result.returncode,3,result.stdout+result.stderr)
         self.assertFalse(Path(self.plan['module_root']).exists());self.assertFalse(Path(self.plan['state_root']).exists())
 
+    @unittest.skipUnless(os.name=='nt','Windows PowerShell 5.1 static session preparation')
+    def test_native_session_generation_preserves_unicode_and_module_types(self):
+        self.plan['tasks']['canary-write']['parameters']['value']['enum'].append('проверка')
+        out=self.root/'unicode';P.prepare(self.plan,out)
+        shell=Path(os.environ['SystemRoot'])/'System32/WindowsPowerShell/v1.0/powershell.exe'
+        environment=os.environ.copy();environment['PSModulePath']=str(shell.parent/'Modules')+';'+str(Path(os.environ['ProgramFiles'])/'WindowsPowerShell/Modules')
+        result=subprocess.run([str(shell),'-NoProfile','-NonInteractive','-File',str(ROOT/'tests/check_windows_endpoint_setup.ps1'),'-Bundle',str(out),'-ExpectedEnum','проверка'],
+            capture_output=True,text=True,env=environment,timeout=30)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn('WINDOWS_ENDPOINT_STATIC_SETUP_PASS',result.stdout)
+
 
 if __name__=='__main__':unittest.main()

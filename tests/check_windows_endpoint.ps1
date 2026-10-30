@@ -72,7 +72,7 @@ try {
     $state=New-Fixture 'unregistered-value';$raw='{"value":"../unreviewed"}';$context=Make-Context $raw
     Assert-Refusal $context $raw
     Assert-Test ([IO.File]::ReadAllText((Join-Path $moduleRoot 'testvalue.txt')) -ceq 'before') 'finite parameters'
-    foreach($raw in @('{"value":"before","value":"after"}','{"value":"before","Value":"after"}','{"value":["after"]}')){
+    foreach($raw in @('{"value":"before","value":"after"}','{"value":"before","Value":"after"}','{"value":["after"]}','{"value":"after\u0000"}')){
         $state=New-Fixture ('json-'+[guid]::NewGuid().ToString('N'));$context=Make-Context $raw
         Assert-Refusal $context $raw
         Assert-Test ([IO.File]::ReadAllText((Join-Path $moduleRoot 'testvalue.txt')) -ceq 'before') 'strict JSON before mutation'

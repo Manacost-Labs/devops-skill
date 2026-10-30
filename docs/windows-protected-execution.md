@@ -13,6 +13,11 @@ not isolate an agent that controls the hypervisor or target VMs. Stop privileged
 agent sessions before activation; do not copy the owner's entire Codex/SSH home.
 The active privileged chat cannot become an independent owner by changing a flag.
 
+Use a separate Windows logon/session or equivalently isolated headless executor.
+RunAs on the owner's interactive desktop is insufficient: shared desktop/UI and
+clipboard routes must not let the agent interact with owner tools. The readiness
+script does not establish this session boundary.
+
 The owner protects runtime/interpreter and all ancestors, provisions scoped
 credentials and registers immutable tasks. Keep the Ed25519 issuer outside both
 agent and broker. Independently deliver/verify the installer in an immutable
@@ -100,6 +105,9 @@ run_as_gmsa, module_root (new direct child of Program Files), state_root (new
 direct child of ProgramData), target_id, target_resource (above without
 binding_digest), and tasks. Each task ID maps to source_file (absolute reviewed
 PS1), parameters and result_schema using broker enum/integer/digest shapes:
+
+Task source encoding must be valid for Windows PowerShell 5.1. Generated static
+data uses a UTF-8 BOM so non-ASCII enum values and paths retain their exact meaning.
 
 ```powershell
 python tools/prepare_windows_endpoint.py --plan C:\PrivateReview\endpoint-plan.json --output C:\PrivateReview\new-endpoint-bundle

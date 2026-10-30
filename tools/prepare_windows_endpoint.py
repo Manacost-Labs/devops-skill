@@ -81,10 +81,10 @@ def prepare(plan, output):
     config={'SchemaVersion':'1.0','TargetId':plan['target_id'],'TargetDigest':target_digest,'BindingDigest':binding,
         'StatePath':plan['state_root'],'BootId':'__OWNER_CURRENT_BOOT__','Tasks':tasks}
     files['DevopsEndpoint.psm1']=(ROOT/'tools/windows_endpoint/DevopsEndpoint.psm1').read_bytes()
-    files['endpoint.psd1']=(literal(config)+'\n').encode('utf-8')
+    files['endpoint.psd1']=(literal(config)+'\n').encode('utf-8-sig')
     role={'GUID':'7d90c8b1-8134-4da4-90ce-2e4152f503b4','VisibleFunctions':['Get-DevopsEndpointBinding','Get-DevopsBoundTaskStatus','Invoke-DevopsBoundTask'],
         'VisibleCmdlets':[],'VisibleAliases':[],'VisibleExternalCommands':[]}
-    files['DevopsBoundRole.psrc']=(literal(role)+'\n').encode('utf-8')
+    files['DevopsBoundRole.psrc']=(literal(role)+'\n').encode('utf-8-sig')
     manifest={key:plan[key] for key in ('schema_version','endpoint_name','connector','run_as_gmsa','module_root','state_root')}
     manifest['files']={name:hashlib.sha256(raw).hexdigest() for name,raw in sorted(files.items())}
     output.mkdir(mode=0o700)

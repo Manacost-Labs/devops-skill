@@ -44,6 +44,6 @@ if($reasons.Count -eq 0){
     }
 }
 $status=if($reasons.Count -eq 0){'identity_preflight_passed'}else{'blocked'}
-@{status=$status;reasons=@($reasons | Select-Object -Unique);sid=$identity.User.Value;deployment_verified=$false;remaining=@('Native Hyper-V/Docker and target/disk denial','Managed policy and all tool surfaces','Broker grant/expiry/epoch refusals','Actual JEA capability and transport','Replay, disconnect and reconciliation')} | ConvertTo-Json -Depth 4
+@{status=$status;reasons=@($reasons | Select-Object -Unique);sid=$identity.User.Value;deployment_verified=$false;remaining=@('Interactive desktop/session isolation; no RunAs on owner desktop','Native Hyper-V/Docker and target/disk denial','Managed policy and all tool surfaces','Broker grant/expiry/epoch refusals','Actual JEA capability and transport','Replay, disconnect and reconciliation')} | ConvertTo-Json -Depth 4
 if($reasons.Count -ne 0){exit 3}
 exit 0

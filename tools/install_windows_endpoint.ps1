@@ -22,7 +22,7 @@ function Get-OwnerHash([byte[]]$Bytes){
 }
 function Read-OwnerData([byte[]]$Bytes){
     $parseErrors=$null;$tokens=$null
-    $ast=[System.Management.Automation.Language.Parser]::ParseInput([Text.Encoding]::UTF8.GetString($Bytes),[ref]$tokens,[ref]$parseErrors)
+    $ast=[System.Management.Automation.Language.Parser]::ParseInput([Text.Encoding]::UTF8.GetString($Bytes).TrimStart([char]0xfeff),[ref]$tokens,[ref]$parseErrors)
     Require-Owner (@($parseErrors).Count -eq 0 -and $ast.EndBlock.Statements.Count -eq 1)
     $pipeline=$ast.EndBlock.Statements[0]
     Require-Owner ($pipeline -is [System.Management.Automation.Language.PipelineAst] -and $pipeline.PipelineElements.Count -eq 1)
@@ -102,6 +102,9 @@ try {
     Protect-Directory $moduleRoot $runAsSid ([Security.AccessControl.FileSystemRights]::ReadAndExecute)
     $null=New-Item -ItemType Directory -Path $stateRoot
     Protect-Directory $stateRoot $runAsSid ([Security.AccessControl.FileSystemRights]::Modify)
+    # Reject unexpected content after protection, before writing any privileged
+    # file. Installation never adopts a pre-populated coordination tree.
+    Require-Owner ([IO.Directory]::GetFileSystemEntries($moduleRoot).Length -eq 0 -and [IO.Directory]::GetFileSystemEntries($stateRoot).Length -eq 0)
     foreach($file in $files){
         $destination=Join-Path $moduleRoot $file.Name
         [IO.File]::WriteAllBytes($destination,$snapshots[$file.Name])
@@ -110,14 +113,15 @@ try {
     $configPath=Join-Path $moduleRoot 'endpoint.psd1'
     $boot=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')
     $configText=[IO.File]::ReadAllText($configPath).Replace('__OWNER_CURRENT_BOOT__',$boot)
-    [IO.File]::WriteAllText($configPath,$configText,[Text.UTF8Encoding]::new($false))
-    [IO.File]::WriteAllBytes((Join-Path $stateRoot 'target.lock'),[byte[]]@())
+    [IO.File]::WriteAllText($configPath,$configText,[Text.UTF8Encoding]::new($true))
+    $newLock=[IO.FileStream]::new((Join-Path $stateRoot 'target.lock'),[IO.FileMode]::CreateNew,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+    try{$newLock.Flush($true)}finally{$newLock.Dispose()}
     # Exact role definitions and absolute module import; no default-admin VA,
     # wildcard capability, provider, external program or general AD cmdlet.
     $modulePath=Join-Path $moduleRoot 'DevopsEndpoint.psm1'
     $sessionPath=Join-Path $moduleRoot 'endpoint.pssc'
-    $roles=@{};$roles[$manifest.connector]=@{RoleCapabilityFiles=@((Join-Path $moduleRoot 'DevopsBoundRole.psrc'))}
-    New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -GroupManagedServiceAccount $manifest.run_as_gmsa -ModulesToImport @($modulePath) -RoleDefinitions $roles
+    $roles=@{};$roles[$manifest.connector]=@{RoleCapabilityFiles=@([string](Join-Path $moduleRoot 'DevopsBoundRole.psrc'))}
+    New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -GroupManagedServiceAccount $manifest.run_as_gmsa -ModulesToImport @([string]$modulePath) -RoleDefinitions $roles
     Require-Owner (Test-PSSessionConfigurationFile -Path $sessionPath)
     Register-PSSessionConfiguration -Name $manifest.endpoint_name -Path $sessionPath -NoServiceRestart -Force | Out-Null
     @{status='installed_not_verified';endpoint=$manifest.endpoint_name;verification='Independent owner must review effective capability, start/restart endpoint in its maintenance window and complete native acceptance; this is not an execution grant'} | ConvertTo-Json -Depth 4

@@ -81,9 +81,9 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
 "@ | Set-Content -LiteralPath (Join-Path $moduleRoot 'endpoint.psd1') -Encoding utf8
     $rolePath=Join-Path $moduleRoot 'DevopsBoundRole.psrc'
     New-PSRoleCapabilityFile -Path $rolePath -VisibleFunctions @('Get-DevopsEndpointBinding','Get-DevopsBoundTaskStatus','Invoke-DevopsBoundTask')
-    $roles=@{};$roles[$env:COMPUTERNAME+'\'+$name]=@{RoleCapabilityFiles=@($rolePath)}
+    $roles=@{};$roles[$env:COMPUTERNAME+'\'+$name]=@{RoleCapabilityFiles=@([string]$rolePath)}
     $sessionPath=Join-Path $moduleRoot 'endpoint.pssc'
-    New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -RunAsVirtualAccount -RunAsVirtualAccountGroups @($groupName) -ModulesToImport @((Join-Path $moduleRoot 'DevopsEndpoint.psm1')) -RoleDefinitions $roles
+    New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -RunAsVirtualAccount -RunAsVirtualAccountGroups @([string]$groupName) -ModulesToImport @([string](Join-Path $moduleRoot 'DevopsEndpoint.psm1')) -RoleDefinitions $roles
     Require-Fixture (Test-PSSessionConfigurationFile -Path $sessionPath)
     Register-PSSessionConfiguration -Name $endpoint -Path $sessionPath -NoServiceRestart -Force | Out-Null;$registered=$true
     Restart-Service WinRM -Force

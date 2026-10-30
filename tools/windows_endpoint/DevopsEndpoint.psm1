@@ -103,7 +103,10 @@ function Assert-EndpointValues($Schema, $Values) {
             Assert-Endpoint ($rule.Contains('Enum') -and @($rule.Enum).Count -ge 1 -and @($rule.Enum).Count -le 128)
             $matched = $false
             foreach ($choice in $rule.Enum) {
-                if ($null -ne $value -and $null -ne $choice -and $value.GetType() -eq $choice.GetType() -and $value -ceq $choice) { $matched = $true }
+                if ($null -ne $value -and $null -ne $choice -and $value.GetType() -eq $choice.GetType()) {
+                    if ($value -is [string]) { if ([string]::Equals($value,$choice,[StringComparison]::Ordinal)) { $matched = $true } }
+                    elseif ($value -ceq $choice) { $matched = $true }
+                }
             }
             Assert-Endpoint $matched
         }
