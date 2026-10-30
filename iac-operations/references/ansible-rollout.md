@@ -8,6 +8,8 @@ Choose an explicit named canary and subsequent host batches across the intended 
 
 Make the canary a distinct promotion phase: observe health and re-run identical desired-state inputs there to prove no unintended changes/restarts **before** any fleet expansion. `serial` alone will not pause for that proof; encode the canary/promotion boundary in the reviewed orchestration, without adding a human confirmation inside an unchanged valid envelope. Stop if the repeated run changes unexplained state.
 
+For each subsequent batch use a separately bounded invocation (or an equivalently tested controller-enforced boundary) with the exact reviewed batch identities. The controller must reconcile expected versus observed hosts, terminal process status, failed/unreachable/rescued/ignored critical outcomes, pending work and independent application health before launching another batch. Missing callback/outcome evidence fails closed. A controller timeout/loss blocks promotion until in-flight jobs and remote effects are reconciled. These are automatic checks within valid authority, not a request for another human confirmation. Do not launch one unrestricted fleet play and assume a failure setting will create this external boundary.
+
 Distinguish controls:
 
 | Control | What it bounds | What it does not prove |
@@ -34,11 +36,11 @@ Use linear execution for reviewed batch barriers unless another strategy is expl
 
 ## Failure thresholds are not health checks
 
-Without stricter controls, one failed host is removed while others continue. Set `any_errors_fatal: true` for a zero-critical-failure rollout and retain an explicit failure after unsuccessful acceptance/recovery. It completes the failing task on the current batch before stopping; it cannot cancel other in-flight side effects.
+Without stricter controls, one failed host is removed while others continue. Use `any_errors_fatal: true` as an additional failed-task control and retain an explicit failure after unsuccessful acceptance/recovery. It cannot cancel in-flight effects or replace the controller promotion barrier. Native CI on the pinned core demonstrates an unreachable host inside a block followed by mutation of the next serial batch despite this setting; the final nonzero exit arrives too late. Do not assume unreachable behavior from failed-task documentation or transfer that observation to every version without a test.
 
 `max_fail_percentage` is evaluated against each serial batch; the percentage must be **exceeded**, not merely reached. With a batch of two, one failure is 50%: a threshold of 50 permits that level, while 49 crosses it. Do not round a chosen error budget into accidental permission. Critical failures normally need zero tolerance, not a percentage tuned to keep CI green.
 
-A successful `rescue` removes the failure from fatal/percentage control even though the recap records a rescued task. `ignore_errors`, `ignore_unreachable` and some `meta` termination paths can also leave a misleading successful run. Re-raise a failure after bounded safe recovery when a rollout must halt; verify actual next-batch exclusion in a real test. Reconcile the expected host set and critical outcome ledger outside recap/exit-code assumptions. Do not use an always-run later play to mutate after a fatal stop.
+A successful `rescue` removes the failure from fatal/percentage control even though the recap records a rescued task. `ignore_errors`, `ignore_unreachable` and some `meta` termination paths can also leave a misleading successful run. Re-raise a failure after bounded safe recovery when a rollout must halt, and make the external promotion gate reject critical rescued/ignored/unknown outcomes even with exit zero. Verify next-batch exclusion in a real test. Reconcile the expected host set and critical outcome ledger outside recap/exit-code assumptions. Do not use an always-run later play to mutate after a fatal stop.
 
 ## Stop criteria and evidence
 

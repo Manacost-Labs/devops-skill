@@ -88,16 +88,35 @@ class NativeAnsibleTests(unittest.TestCase):
             inputs.write_text(json.dumps(variables), encoding="utf-8")
             argv.extend(["--extra-vars", "@" + str(inputs)])
         result = subprocess.run(argv, cwd=self.lab, env=env, capture_output=True, text=True, timeout=150)
+        self.last_returncode = result.returncode
         detail = result.stdout[-14000:] + result.stderr[-4000:]
         if expected == 0:
             self.assertEqual(result.returncode, 0, detail)
-        else:
+        elif expected is not None:
             self.assertNotEqual(result.returncode, 0, detail)
         self.assertTrue(evidence.is_file(), "real callback evidence missing\n" + detail)
         events = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
         stats = [event["hosts"] for event in events if event["event"] == "stats"]
         self.assertEqual(len(stats), 1, detail)
         return stats[0], events
+
+    def run_batches(self, *, variables=None):
+        """Synthetic controller promotion gate, separate from Ansible serial.
+
+        A real deployment must implement its own reviewed target-specific gate;
+        this source-only test fixture is not a production rollout controller.
+        """
+        observed, outcomes = {}, []
+        for host in HOSTS:
+            stats, events = self.run_play("rolling.yml", limit=host, variables=variables, expected=None)
+            self.assertEqual(set(stats), {host}, "missing or expanded batch evidence")
+            observed.update(stats)
+            outcomes.extend(events)
+            clean = all(stats[host][key] == 0 for key in ("failures", "unreachable", "rescued", "ignored"))
+            accepted = self.read(host, "active") == "release=v2\n" and self.read(host, "traffic") == "ready\n"
+            if self.last_returncode != 0 or not clean or not accepted:
+                return False, observed, outcomes
+        return True, observed, outcomes
 
     def test_second_convergence_has_no_changes_or_extra_handler(self):
         first, _ = self.run_play("converge.yml")
@@ -192,7 +211,8 @@ class NativeAnsibleTests(unittest.TestCase):
 
     def test_connection_loss_after_config_change_does_not_enter_rescue_or_complete_always(self):
         self.inventory["all"]["children"]["app"]["hosts"]["node2"]["ansible_connection"] = "fixture_unreachable"
-        stats, events = self.run_play("rolling.yml", variables={"disconnect_host": "node2"}, expected=1)
+        completed, stats, events = self.run_batches(variables={"disconnect_host": "node2"})
+        self.assertFalse(completed)
         self.assertGreaterEqual(stats["node2"]["unreachable"], 1)
         self.assertEqual(stats["node2"]["rescued"], 0)
         self.assertIn({"event": "unreachable", "host": "node2"}, events)
@@ -206,10 +226,30 @@ class NativeAnsibleTests(unittest.TestCase):
     def test_initial_connection_loss_is_unknown_not_success(self):
         self.inventory["all"]["children"]["app"]["hosts"]["node2"]["ansible_connection"] = "fixture_unreachable"
         (self.lab / "node2/connection-lost").write_text("disconnected\n", encoding="utf-8")
-        stats, _ = self.run_play("rolling.yml", expected=1)
+        completed, stats, _ = self.run_batches()
+        self.assertFalse(completed)
         self.assertGreaterEqual(stats["node2"]["unreachable"], 1)
         self.assertEqual(self.read("node2", "config"), "release=v1\n")
         self.assertNotIn("node3", stats)
+
+    def test_single_invocation_fatal_setting_alone_does_not_bound_unreachable_batches(self):
+        # Negative control observed on the pinned core. Ansible's final failure
+        # code arrives too late to prevent node3's mutation in this single run.
+        self.inventory["all"]["children"]["app"]["hosts"]["node2"]["ansible_connection"] = "fixture_unreachable"
+        stats, _ = self.run_play("rolling.yml", variables={"disconnect_host": "node2"}, expected=1)
+        self.assertGreaterEqual(stats["node2"]["unreachable"], 1)
+        self.assertEqual(self.read("node2", "config"), "release=v2\n")
+        self.assertEqual(self.read("node2", "active"), "release=v1\n")
+        self.assertEqual(self.read("node3", "active"), "release=v2\n")
+
+    def test_controller_gate_stops_after_zero_exit_rescue(self):
+        completed, stats, _ = self.run_batches(variables={"fail_host": "node2", "halt_after_rescue": False})
+        self.assertFalse(completed)
+        self.assertEqual(self.last_returncode, 0)
+        self.assertGreater(stats["node2"]["rescued"], 0)
+        self.assertNotIn("node3", stats)
+        self.assertEqual(self.read("node2", "traffic"), "excluded\n")
+        self.assertEqual(self.read("node3", "config"), "release=v1\n")
 
     def test_failure_percentage_requires_exceeding_not_reaching_threshold(self):
         below, _ = self.run_play("threshold.yml", variables={"threshold": 49}, expected=1)

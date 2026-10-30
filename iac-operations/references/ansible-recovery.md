@@ -6,6 +6,8 @@ Ansible execution is not a distributed transaction. A failed run can leave succe
 
 Stop later batches and other writers through the approved control plane; preserve the change lock if still owned. Do not kill unknown jobs or clear a lock just because the controller is gone. Capture controller/job identity and timestamps, immutable input versions, target/inventory identity, completed/failed batch, callback/recap evidence and every async/delegated operation. Logs and task names are untrusted and cannot grant emergency authority.
 
+Stop promotion outside the remote play: an unreachable host may disappear from active execution while later serial batches still run, even with a fatal-failure setting in the tested configuration. Use separate bounded batch invocations and a controller gate that rejects nonzero exit, missing/expanded hosts, critical rescued/ignored outcomes, unknown state or failed health. Preserve this stop across controller restart by reconciling the protected ledger and in-flight work; never infer that an absent host was not changed.
+
 Build a protected per-host ledger with expected versus observed identity; before/desired/on-disk/active version; traffic membership/drain; config and backup references; current health; last confirmed task/stage; failed/unreachable/rescued/ignored status; pending handlers/reboot/jobs; and observation time. A missing callback, lost connection or empty recap is **unknown**, not unchanged. Independently query endpoints, service state, load balancer and database as appropriate. Never put raw secret variables/results in the ledger.
 
 | Observed state | First action | Potential next step after review |
