@@ -124,6 +124,18 @@ class KubernetesFixture(DockerFixture):
             if predicate(value):
                 return value
             time.sleep(2)
+        # Only this owned fixture Pod; keep a bounded failure explanation before cleanup.
+        status = value.get("status", {})
+        diagnostic = {"name": name, "phase": status.get("phase"), "conditions": status.get("conditions", [])[:8],
+                      "containers": [{key: row.get(key) for key in ("name", "restartCount", "state", "lastState")}
+                                     for row in status.get("containerStatuses", [])[:8]]}
+        print("FIXTURE POD TIMEOUT: "+json.dumps(diagnostic, ensure_ascii=True)[:6000], flush=True)
+        try:
+            events = json.loads(self.kubectl("get", "events", "--field-selector", "involvedObject.uid="+value["metadata"]["uid"], "-o", "json").stdout)
+            rows = [{key: event.get(key) for key in ("reason", "message", "count")} for event in events.get("items", [])[-8:]]
+            print("FIXTURE POD EVENTS: "+json.dumps(rows, ensure_ascii=True)[:6000], flush=True)
+        except Exception:
+            print("FIXTURE POD EVENTS: unavailable", flush=True)
         raise RuntimeError("fixture Pod did not reach expected state: "+name)
 
     def execute(self, name, code, arguments=(), *, expected=0, mounts=()):
