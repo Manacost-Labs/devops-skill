@@ -343,11 +343,11 @@ def render(body, token):
             f"Для выбора границ ответьте: Подтверждаю границы {token}\nДля отмены: Safe")
 
 
-def safe(sid=None):
+def safe(sid=None, *, contact_broker=True):
     sid = session_id(sid)
     remote = False
     profile = ROOT/"broker-client.json"
-    if profile.exists() or profile.is_symlink():
+    if contact_broker and (profile.exists() or profile.is_symlink()):
         client = module("chat_broker_restriction_client", ROOT/"tools/devops_exec.py")
         result = client.call_broker(read(profile), {"mode": "safe", "grant": None}, "restrict")
         if result.get("status") != "restricted" or result.get("mode") != "safe":

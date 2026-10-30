@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -98,6 +99,25 @@ class ChatModeTests(unittest.TestCase):
 
     def execute(self, path, argv, env=None, cwd=None):
         return self.cli("tools/devops_exec.py", "--operation", path, "--ledger", self.workspace/"ledger.jsonl", "--", *argv, env=env, cwd=cwd)
+
+    def test_remote_safe_also_restricts_local_planning_without_second_remote_call(self):
+        self.prepare(); self.confirm()
+        (self.runtime/'broker-client.json').write_text('{}',encoding='utf-8')
+        spec=importlib.util.spec_from_file_location('chat_safe_remote_fixture',self.runtime/'tools/hooks/chat_mode_hook.py')
+        hook=importlib.util.module_from_spec(spec); spec.loader.exec_module(hook)
+        client=mock.Mock(); client.call_broker.return_value={'status':'restricted','mode':'safe'}
+        original=hook.chat.module
+        def module(name,path):
+            return client if name=='host_broker_restriction_client' else original(name,path)
+        event={'hook_event_name':'UserPromptSubmit','prompt':'Safe','session_id':self.sid,'cwd':str(self.workspace)}
+        from types import SimpleNamespace
+        with mock.patch.dict(os.environ,self.env),mock.patch.object(hook.chat,'module',side_effect=module),mock.patch('sys.stdin',SimpleNamespace(buffer=io.BytesIO(json.dumps(event).encode()))),mock.patch('sys.stdout',new_callable=io.StringIO) as output:
+            self.assertEqual(hook.main(),0)
+        client.call_broker.assert_called_once()
+        self.assertIn('BROKER_SAFE',output.getvalue())
+        status=self.cli('tools/devops_mode.py','status')
+        self.assertEqual(status.returncode,0,status.stdout)
+        self.assertIn('"mode": "safe"',status.stdout)
 
     def test_setup_is_dry_run_preserves_hooks_and_is_idempotent(self):
         self.codex_home.mkdir()

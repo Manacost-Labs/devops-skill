@@ -28,8 +28,13 @@ def main():
             if profile.exists() or profile.is_symlink():
                 client = chat.module("host_broker_restriction_client", chat.ROOT/"tools/devops_exec.py")
                 result = client.call_broker(chat.read(profile), {"mode": "safe", "grant": None}, "restrict")
-                if result.get("status") != "restricted": raise ValueError("broker restriction unconfirmed")
-                print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "BROKER_SAFE: prior higher-mode grants for this protected client are restricted. Existing admitted work may require containment."}}))
+                if result.get("status") != "restricted" or result.get("mode") != "safe": raise ValueError("broker restriction unconfirmed")
+                local = " Local planning restricted to Safe."
+                try:
+                    chat.safe(event.get("session_id"), contact_broker=False)
+                except Exception:
+                    local = " Local planning state could not be updated; do not inherit an older mode."
+                print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "BROKER_SAFE: prior higher-mode grants for this protected principal are restricted. Existing admitted work may require containment." + local}}))
                 return 0
         result = chat.host_event(event)
         if result:
