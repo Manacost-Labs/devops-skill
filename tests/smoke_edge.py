@@ -117,8 +117,7 @@ class EdgeFixture(DockerFixture):
                    "--env", "XDG_DATA_HOME=/tmp/data", "--mount", f"type=bind,src={self.material},dst=/fixture,readonly"]
         if alias:
             options += ["--network-alias", alias]
-        if name == "nginx":
-            options += ["--entrypoint", "nginx"]
+        options += ["--entrypoint", "/coredns" if name == "dns" else name]
         identity = self.docker("create", *options, image, *arguments).stdout.strip()
         if not re.fullmatch(r"[0-9a-f]{64}", identity):
             raise RuntimeError("full owned edge container ID required")
@@ -143,6 +142,8 @@ class EdgeFixture(DockerFixture):
             builder = (x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(public)
                        .serial_number(x509.random_serial_number()).not_valid_before(start).not_valid_after(end)
                        .add_extension(x509.BasicConstraints(ca=ca, path_length=None), critical=True)
+                       .add_extension(x509.SubjectKeyIdentifier.from_public_key(public), critical=False)
+                       .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(signing.public_key()), critical=False)
                        .add_extension(x509.KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False,
                            data_encipherment=False, key_agreement=False, key_cert_sign=ca, crl_sign=ca,
                            encipher_only=None, decipher_only=None), critical=True))
@@ -185,6 +186,7 @@ class EdgeFixture(DockerFixture):
 error_log /dev/stderr warn;
 events {{ worker_connections 128; }}
 http {{ access_log off; client_body_temp_path /tmp/client; proxy_temp_path /tmp/proxy;
+ fastcgi_temp_path /tmp/fastcgi; uwsgi_temp_path /tmp/uwsgi; scgi_temp_path /tmp/scgi;
  ssl_certificate {cert}; ssl_certificate_key {key};
  server {{ listen 8443 ssl default_server; server_name _; return 421; }}
  server {{ listen 8443 ssl; server_name {HOST}; location / {{
@@ -229,16 +231,18 @@ http {{ access_log off; client_body_temp_path /tmp/client; proxy_temp_path /tmp/
 
     def wait_healthy(self, version):
         deadline = time.monotonic() + 25
+        observation = "not observed"
         while True:
             try:
                 status, body, fingerprint = self.probe()
                 if status == 200 and json.loads(body)["version"] == "fixture-v1" and fingerprint == self.fingerprints[version]:
                     return
-            except (OSError, ValueError, http.client.HTTPException):
-                pass
+                observation = f"status={status} fingerprint={fingerprint}"
+            except (OSError, ValueError, http.client.HTTPException) as error:
+                observation = type(error).__name__ + ": " + str(error)[:400]
             if time.monotonic() > deadline:
                 logs = self.docker("logs", "--tail", "15", self.proxy)
-                raise AssertionError("native proxy failed health/fingerprint: " + (logs.stdout + logs.stderr)[-2000:])
+                raise AssertionError("native proxy failed health/fingerprint: " + observation + " " + (logs.stdout + logs.stderr)[-2000:])
             time.sleep(.25)
 
     def wait_status(self, status):

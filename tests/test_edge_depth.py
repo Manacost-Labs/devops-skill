@@ -20,7 +20,7 @@ SPEC.loader.exec_module(EDGE)
 
 class EdgeDepthTests(unittest.TestCase):
     def test_special_destinations_never_gain_private_override(self):
-        for address in ("169.254.169.254", "fe80::1", "fd00:ec2::254", "0.0.0.0", "::", "224.0.0.1", "::ffff:169.254.169.254", "240.0.0.1"):
+        for address in ("169.254.169.254", "fe80::1", "fd00:ec2::254", "100.100.100.200", "::ffff:100.100.100.200", "0.0.0.0", "::", "224.0.0.1", "::ffff:169.254.169.254", "240.0.0.1"):
             with self.subTest(address=address), self.assertRaises(ValueError):
                 EDGE.destination(address, True)
         self.assertEqual(EDGE.destination("10.2.3.4", True), ipaddress.ip_address("10.2.3.4"))
@@ -46,6 +46,22 @@ class EdgeDepthTests(unittest.TestCase):
             _, host, _, addresses = EDGE.resolve_target("https://edge.fixture.test/", True, "127.0.0.1")
             self.assertEqual(host, "edge.fixture.test")
             self.assertEqual(str(addresses[0]), "127.0.0.1")
+
+    def test_lost_response_never_replays_get_on_second_address(self):
+        answers = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (value, 80)) for value in ("8.8.8.8", "8.8.4.4")]
+        with patch.object(EDGE.socket, "getaddrinfo", return_value=answers), patch.object(EDGE.socket, "socket") as numeric, patch.object(EDGE.http.client, "HTTPConnection") as connection:
+            connection.return_value.getresponse.side_effect = ConnectionResetError("response lost after GET")
+            with self.assertRaises(ConnectionResetError):
+                EDGE.request_once("http://edge.fixture.test/")
+            connection.return_value.request.assert_called_once()
+            numeric.return_value.connect.assert_called_once_with(("8.8.8.8", 80))
+
+    def test_invalid_port_and_destination_errors_disclose_no_input(self):
+        for arguments in (["check", "http://example.com:0/"], ["check", "http://example.com:secret-synthetic/"], ["check", "http://example.com/", "--connect-ip", "secret-synthetic"]):
+            stream = io.StringIO()
+            with patch("sys.argv", arguments), contextlib.redirect_stdout(stream):
+                self.assertEqual(EDGE.main(), 1)
+            self.assertNotIn("synthetic", stream.getvalue())
 
     def test_connection_pins_first_resolution_ignores_proxy_and_stops_redirect(self):
         observed = []

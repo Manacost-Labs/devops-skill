@@ -11,35 +11,46 @@ import time
 from urllib.parse import quote, urljoin, urlsplit
 
 
+class TargetError(ValueError):
+    """Fixed, disclosure-safe target validation message."""
+
+
 def destination(value, allow_private):
-    address = ipaddress.ip_address(value)
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        raise TargetError("numeric destination required") from None
     effective = address.ipv4_mapped if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped else address
     if (effective.is_link_local or effective.is_multicast or effective.is_unspecified
-            or effective.is_reserved or str(effective) == "fd00:ec2::254"):
-        raise ValueError("metadata/link-local or unroutable destination forbidden")
+            or effective.is_reserved or str(effective) in {"fd00:ec2::254", "100.100.100.200"}):
+        raise TargetError("metadata/link-local or unroutable destination forbidden")
     if not effective.is_global and not allow_private:
-        raise ValueError("private/special destination blocked; explicit approved target requires --allow-private")
+        raise TargetError("private/special destination blocked; explicit approved target requires --allow-private")
     return address
 
 
 def resolve_target(url, allow_private=False, connect_ip=None):
     if len(url) > 8192 or any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in url) or "\\" in url:
-        raise ValueError("invalid URL characters or length")
-    parsed = urlsplit(url)
+        raise TargetError("invalid URL characters or length")
+    try:
+        parsed = urlsplit(url)
+        explicit_port = parsed.port
+    except ValueError:
+        raise TargetError("invalid URL or port") from None
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("URL must use http or https and include a hostname")
+        raise TargetError("URL must use http or https and include a hostname")
     if parsed.username is not None or parsed.password is not None:
-        raise ValueError("credential-bearing URLs are forbidden")
+        raise TargetError("credential-bearing URLs are forbidden")
     host = parsed.hostname.encode("idna").decode("ascii").lower()
     if "%" in host or host.rstrip(".") in {"metadata", "instance-data", "metadata.google.internal"}:
-        raise ValueError("metadata or scoped-address hostname forbidden")
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        raise TargetError("metadata or scoped-address hostname forbidden")
+    port = explicit_port if explicit_port is not None else (443 if parsed.scheme == "https" else 80)
     if not 1 <= port <= 65535:
-        raise ValueError("invalid port")
+        raise TargetError("invalid port")
     values = [connect_ip] if connect_ip else [item[4][0] for item in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)]
     addresses = list(dict.fromkeys(destination(value, allow_private) for value in values))
     if not addresses or len(addresses) > 32:
-        raise ValueError("empty or excessive destination set")
+        raise TargetError("empty or excessive destination set")
     return parsed, host, port, addresses
 
 
@@ -74,6 +85,7 @@ def request_once(url, *, allow_private=False, connect_ip=None, ca_file=None):
     for address in addresses:
         connection = http.client.HTTPConnection(host, port, timeout=10)
         transport = None
+        request_attempted = False
         try:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -89,6 +101,7 @@ def request_once(url, *, allow_private=False, connect_ip=None, ca_file=None):
                 raise TimeoutError("observation deadline")
             transport.settimeout(remaining)
             connection.sock = transport
+            request_attempted = True
             connection.request("GET", path, headers={"User-Agent": "devops-edge-check/0.3", "Connection": "close"})
             response = connection.getresponse()
             return {"status": response.status, "address": str(address), "latency_ms": round((time.monotonic() - started) * 1000),
@@ -97,6 +110,8 @@ def request_once(url, *, allow_private=False, connect_ip=None, ca_file=None):
         except ssl.SSLError:
             raise  # Never try a different endpoint to bypass a TLS failure.
         except OSError as error:
+            if request_attempted:
+                raise  # A lost response has unknown effects; never replay a GET.
             last_error = error
         finally:
             connection.close()
@@ -120,8 +135,11 @@ def main():
     except ssl.SSLError:
         print("ERROR: TLS handshake failed")
         return 1
-    except (ValueError, UnicodeError) as error:
-        print("ERROR: " + safe_header(str(error)))
+    except TargetError as error:
+        print("ERROR: " + str(error))
+        return 1
+    except (ValueError, UnicodeError):
+        print("ERROR: invalid URL or destination")
         return 1
     except (OSError, http.client.HTTPException):
         print("ERROR: connection or HTTP response failed")
