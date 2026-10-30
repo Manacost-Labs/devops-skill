@@ -10,6 +10,8 @@ Make the canary a distinct promotion phase: observe health and re-run identical 
 
 For each subsequent batch use a separately bounded invocation (or an equivalently tested controller-enforced boundary) with the exact reviewed batch identities. The controller must reconcile expected versus observed hosts, terminal process status, failed/unreachable/rescued/ignored critical outcomes, pending work and independent application health before launching another batch. Missing callback/outcome evidence fails closed. A controller timeout/loss blocks promotion until in-flight jobs and remote effects are reconciled. These are automatic checks within valid authority, not a request for another human confirmation. Do not launch one unrestricted fleet play and assume a failure setting will create this external boundary.
 
+Bind each invocation's actual argv and batch scope to its exact operation plan, run the existing operation gate immediately before launch, and retain launch/outcome journal evidence. Reuse the unchanged valid scoped authority; do not bypass the wrapper or renew human consent merely because the next bounded batch has a new exact plan.
+
 Distinguish controls:
 
 | Control | What it bounds | What it does not prove |
