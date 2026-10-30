@@ -72,11 +72,13 @@ class NativeBroker(unittest.TestCase):
         (self.folder/'agent/ca.pem').write_bytes(ca.public_bytes(serialization.Encoding.PEM))
         self.subject=C.digest(cert.public_bytes(serialization.Encoding.DER))
         self.registry,self.keys=registry(subject=self.subject)
-        self.registry['targets']['fixture-target']['resource']={'path':str(self.folder/'target/value'),'private_state':str(self.state/'service.json')}
+        self.registry['targets']['fixture-target']['resource']={'path':str(self.folder/'target/value'),'private_state':str(self.state/'service.json'),
+            'worker_started':str(self.folder/'target/worker-started')}
         for name,mode in (('probe-task','probe'),('failure-task','fail'),('slow-task','slow'),('ignore-task','ignore'),('invalid-task','invalid'),('snapshot-task','snapshot')):
             task=copy.deepcopy(self.registry['tasks']['configure-task' if mode in ('fail','slow','ignore','invalid') else 'inspect-task'])
             task.update(argv=['-I','@bundle/handler.py@',mode],parameters={})
-            if mode in ('ignore','slow'): task['timeout_seconds']=1
+            if mode=='ignore': task['timeout_seconds']=1
+            if mode=='slow': task['timeout_seconds']=3
             self.registry['tasks'][name]=task
         self.registry['targets']['fixture-target']['resource']['padding']='x'*12000
         self.registry_path=self.protected/'registry.json'; self.registry_path.write_bytes(C.canonical(self.registry))
@@ -161,14 +163,30 @@ class NativeBroker(unittest.TestCase):
         self.assertEqual((self.folder/'target/value').read_text(),'before')
 
     def test_safe_during_real_running_worker_invalidates_every_old_grant(self):
-        outcome=[]
-        thread=threading.Thread(target=lambda:outcome.append(self.request(self.packet('slow-task')))); thread.start()
-        deadline=time.monotonic()+5
-        while not list((self.state/'journal').glob('*.json')) and time.monotonic()<deadline: time.sleep(.01)
-        start=time.monotonic(); restricted=self.request({'mode':'safe','grant':None},'restrict')
-        self.assertLess(time.monotonic()-start,.8)
-        thread.join(5); self.assertFalse(thread.is_alive()); self.assertEqual(outcome[0]['status'],'outcome_unknown')
+        outcome,errors=[],[]
+        def execute():
+            try: outcome.append(self.request(self.packet('slow-task')))
+            except Exception as error: errors.append(type(error).__name__)
+        thread=threading.Thread(target=execute); thread.start()
+        started=self.folder/'target/worker-started'
+        try:
+            # Durable intent precedes final admission. Only a signal published
+            # by the real worker establishes the running-process precondition.
+            deadline=time.monotonic()+5
+            while not started.is_file() and thread.is_alive() and time.monotonic()<deadline: time.sleep(.01)
+            self.assertTrue(started.is_file(),'actual worker startup was not observed')
+            os.kill(int(started.read_text(encoding='ascii')),0)
+            self.assertTrue(thread.is_alive(),'worker observation missed the in-flight request')
+            start=time.monotonic(); restricted=self.request({'mode':'safe','grant':None},'restrict')
+            self.assertLess(time.monotonic()-start,.8)
+        finally:
+            thread.join(5)
+        self.assertFalse(thread.is_alive()); self.assertFalse(errors)
+        self.assertEqual(len(outcome),1); self.assertEqual(outcome[0]['status'],'outcome_unknown')
         for authority in (self.grant,grant(self.registry,self.keys,identifier='grant-native-second')):
+            prepared=self.request(self.packet(authority=authority,operation='ops-native-old-grant'),'prepare')
+            self.assertEqual(prepared['mode'],'safe')
+            self.assertTrue(prepared['grant_refresh_required'])
             with self.assertRaises(CLIENT.C.Denied): self.request(self.packet(authority=authority,operation='ops-native-old-grant'))
         self.assertEqual(restricted['mode'],'safe')
 

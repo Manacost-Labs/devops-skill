@@ -16,7 +16,7 @@ spec.loader.exec_module(C)
 
 SUBJECT = "sha256:" + "a" * 64
 EPOCH = "b" * 64
-HANDLER = b'''import json, pathlib, sys, time
+HANDLER = b'''import json, os, pathlib, sys, time
 mode = sys.argv[1]
 if mode == 'ignore': time.sleep(30)
 value = json.load(sys.stdin)
@@ -25,7 +25,12 @@ if mode == 'apply': path.write_text(value['parameters']['value'], encoding='utf-
 if mode == 'fail':
     path.write_text('after', encoding='utf-8')
     raise SystemExit(23)
-if mode == 'slow': time.sleep(30)
+if mode == 'slow':
+    started = pathlib.Path(value['target']['worker_started'])
+    pending = started.with_name(started.name + '.pending')
+    with pending.open('x', encoding='ascii') as marker: marker.write(str(os.getpid()))
+    pending.replace(started)
+    time.sleep(30)
 if mode == 'invalid':
     path.write_text('after', encoding='utf-8')
     print('not-json')
