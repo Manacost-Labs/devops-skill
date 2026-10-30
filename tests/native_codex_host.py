@@ -140,14 +140,15 @@ def run(executable,folder,guarded,helper=False,managed_probe=None):
         provider.shutdown(); provider.server_close(); thread.join(2)
 
 
-def resolved_permissions(executable,home,environment):
+def resolved_permissions(executable,home,environment,managed_policy=True):
     """Observe actual native thread admission without starting any model turn.
 
 The runtime may correctly fall back to a required profile instead of throwing.
 The typed app-server response establishes the effective permissions independently
 of a tool hook's canary denial. No shell/sandbox worker or model is invoked here.
 """
-    (home/'config.toml').write_text('model_provider="fixture"\nmodel="gpt-5.3-codex"\n'
+    (home/'config.toml').write_text('model_provider="fixture"\nmodel="gpt-5.3-codex"\n'+
+        ('' if managed_policy else 'default_permissions=":danger-full-access"\n')+
         '[model_providers.fixture]\nname="owned no-turn fixture"\nbase_url="http://127.0.0.1:9/v1"\n'
         'wire_api="responses"\nrequires_openai_auth=false\nsupports_websockets=false\n',encoding='utf-8')
     messages=queue.Queue()
@@ -174,18 +175,23 @@ of a tool hook's canary denial. No shell/sandbox worker or model is invoked here
             if 'result' not in initialized: raise RuntimeError('native initialization refused')
             process.stdin.write(json.dumps({'method':'initialized'})+'\n'); process.stdin.flush()
             for identifier,overrides in enumerate(({'sandbox':'danger-full-access'},{'permissions':':danger-full-access'},{'config':{'default_permissions':':danger-full-access'}}),2):
-                response=rpc(identifier,'thread/start',{'cwd':str(home),'ephemeral':True,**overrides})
+                response=rpc(identifier,'thread/start',{'cwd':str(home),'ephemeral':True,'environments':[],**overrides})
                 if 'error' in response:
                     refusal=json.dumps(response['error']).lower()
-                    if 'danger-full-access' in refusal and any(word in refusal for word in ('not allowed','not permitted','requirement')):
+                    if managed_policy and 'danger-full-access' in refusal and any(word in refusal for word in ('not allowed','not permitted','requirement')):
                         continue
                     raise RuntimeError('unrelated native admission error: '+refusal[-1500:])
                 value=response.get('result',{})
                 sandbox=value.get('sandbox',{})
                 active=value.get('activePermissionProfile') or {}
-                if sandbox.get('type')!='readOnly' or active.get('id')!=':read-only':
-                    raise RuntimeError('managed native thread widened permissions: '+json.dumps({'sandbox':sandbox,'active':active}))
-            print('managed runtime: all three Full Access selections resolve to read-only or explicit policy refusal, without model/tools')
+                expected_type='readOnly' if managed_policy else 'dangerFullAccess'
+                expected_profile=':read-only' if managed_policy else ':danger-full-access'
+                # Legacy sandbox selectors can omit profile provenance. The
+                # typed effective sandbox remains authoritative in that case.
+                profile_matches=active.get('id')==expected_profile or overrides.get('sandbox') and not active
+                if sandbox.get('type')!=expected_type or not profile_matches or managed_policy and sandbox.get('networkAccess') is not False:
+                    raise RuntimeError('unexpected native permissions: '+json.dumps({'sandbox':sandbox,'active':active,'keys':list(value),'overrides':overrides,'thread_keys':list(value.get('thread',{}))}))
+            print('managed runtime: all three Full Access selections resolve to read-only or explicit policy refusal, without model/tools' if managed_policy else 'permission control: all three selectors resolve to Full Access without managed constraints')
         finally:
             process.stdin.close()
             if process.poll() is None: process.terminate()
@@ -237,6 +243,10 @@ def main():
         version=subprocess.run([str(executable),'--version'],capture_output=True,text=True,check=True).stdout.strip()
         if version!='codex-cli '+VERSION: raise RuntimeError('unexpected Codex version: '+version)
         run(executable,folder,False); run(executable,folder,True); run(executable,folder,True,helper=True)
+        control=folder/'permission-control'; control.mkdir()
+        environment={key:value for key,value in os.environ.items() if key.upper() in {'PATH','SYSTEMROOT','WINDIR','COMSPEC','PATHEXT','TEMP','TMP','HOME','USERPROFILE'}}
+        environment['CODEX_HOME']=str(control)
+        resolved_permissions(executable,control,environment,managed_policy=False)
         if not args.development_cli: managed(executable,folder)
     return 0
 
