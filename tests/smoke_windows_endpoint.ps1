@@ -83,7 +83,11 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
         Require-Fixture ($chainBuilt -and $chain.ChainElements[$chain.ChainElements.Count-1].Certificate.Thumbprint -ieq $client.Thumbprint) 'client_chain'
     }finally{$chain.Dispose()}
     Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\Enabled')).Value -ieq 'true') 'mapping_enabled'
-    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\UserName')).Value -ieq ($env:COMPUTERNAME+'\'+$name)) 'mapping_user'
+    $mappingUser=[string](Get-Item -LiteralPath ($mappingPath+'\UserName')).Value
+    Require-Fixture ($mappingUser -ieq $name -or $mappingUser -ieq ($env:COMPUTERNAME+'\'+$name)) 'mapping_user_name'
+    if($mappingUser -notmatch '\\'){$mappingUser=$env:COMPUTERNAME+'\'+$mappingUser}
+    $mappedSid=([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier])
+    Require-Fixture ($mappedSid.Value -ceq $createdUser.SID.Value) 'mapping_user_sid'
     # Match the exact IPv4 listener; localhost can select ::1 while HTTP.sys
     # has a port binding but WinRM has no matching IPv6 listener. The server
     # certificate explicitly includes the verified 127.0.0.1 IP SAN.
