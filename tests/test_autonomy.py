@@ -287,6 +287,20 @@ class AutonomyTests(unittest.TestCase):
         req["change"]["scope"] = ["service:other"]
         self.assertNotEqual(G.operation_digest(req), before)
 
+    def test_manual_issuer_roles_and_executor_casing_cannot_evade_separation(self):
+        policy, binding = G.load_registered_policy("enterprise-policy.json")
+        req = operation(risk="R4", approvals=2, policy_name="enterprise-policy.json")
+        req["execution"]["change_lock_ref"] = "lock:synthetic-target"
+        bind_approvals(req)
+        self.assertEqual(self.validate(req, policy, binding), [])
+        req["approvals"][1]["approver"] = req["approvals"][0]["approver"].upper()
+        self.assertTrue(any("distinct valid" in reason for reason in self.validate(req, policy, binding)))
+        req["approvals"][1]["approver"] = "user:another-owner"
+        req["approvals"][1]["role"] = req["approvals"][0]["role"].upper()
+        self.assertTrue(any("distinct approval roles" in reason for reason in self.validate(req, policy, binding)))
+        req["approvals"][1].update(approver=req["execution"]["executor"].upper(), role="security-owner")
+        self.assertTrue(any("executor cannot approve" in reason for reason in self.validate(req, policy, binding)))
+
     def test_revocation_during_durable_intent_blocks_child_launch(self):
         wrapper_spec = importlib.util.spec_from_file_location("final_admission_executor", ROOT/"tools/devops_exec.py")
         wrapper = importlib.util.module_from_spec(wrapper_spec); wrapper_spec.loader.exec_module(wrapper)

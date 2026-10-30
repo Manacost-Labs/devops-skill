@@ -400,11 +400,11 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
         if not valid_text(approver, 3):
             reasons.append(f"approvals[{index}].approver must contain at least 3 characters")
         else:
-            valid_approvers.add(approver)
+            valid_approvers.add(approver.casefold())
         if not valid_text(role, 2):
             reasons.append(f"approvals[{index}].role must contain at least 2 characters")
         else:
-            valid_roles.add(role)
+            valid_roles.add(role.casefold())
         if not valid_text(approval.get("target")) or approval.get("target") != target.get("name"):
             reasons.append(f"approvals[{index}] target does not match")
         if not isinstance(approval.get("plan_digest"), str) or approval.get("plan_digest") != plan_digest:
@@ -429,7 +429,7 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
         reasons.append(f"{minimum} distinct valid approval(s) required")
     if minimum > 1 and len(valid_roles) < 2:
         reasons.append("multi-party approval requires distinct approval roles")
-    if policy["require_separation_of_duties"].get(str(risk)) and executor in valid_approvers:
+    if policy["require_separation_of_duties"].get(str(risk)) and isinstance(executor, str) and executor.casefold() in valid_approvers:
         reasons.append("executor cannot approve this operation")
 
     required_flag = recovery.get("required")
