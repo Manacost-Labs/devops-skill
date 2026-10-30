@@ -93,13 +93,16 @@ def exercise(folder):
     # No access to the default unrestricted PS endpoint or Windows shell.
     from pypsrp.powershell import RunspacePool
     from pypsrp.shell import WinRS
+    from pypsrp.exceptions import AuthenticationError,WSManFaultError,WinRMTransportError
     for shell in ('default','winrs'):
         client=B.PSRP(resource)
         denied=False
         try:
             pool=RunspacePool(client.connection) if shell=='default' else WinRS(client.connection)
             pool.open()
-        except Exception:denied=True
+        except AuthenticationError:denied=True
+        except WSManFaultError as error:denied=error.code in (5,0x80070005)
+        except WinRMTransportError as error:denied=error.code in (401,403)
         finally:client.connection.close()
         assert denied,'unrestricted remote entry point accepted'
     bad=packet(resource,operation='ops-native-bad-value');bad['parameters']['value']='unregistered';bad['context']['parameters_digest']=B.digest(bad['parameters'])
