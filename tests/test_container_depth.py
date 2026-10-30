@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 import io
 import json
 import subprocess
@@ -26,6 +27,7 @@ def load(name, path):
 
 D = load("docker_snapshot", "docker-operations/scripts/inspect-container-state.py")
 K = load("pod_snapshot", "kubernetes-operations/scripts/inspect-pod-state.py")
+NATIVE_K = load("native_pod_evidence", "tests/smoke_kubernetes.py")
 
 
 def docker():
@@ -49,6 +51,55 @@ def pod():
                        "containerStatuses": [{"name": "api", "ready": False, "restartCount": 4,
                          "state": {"waiting": {"reason": "CrashLoopBackOff", "message": "sensitive-marker"}},
                          "lastState": {"terminated": {"reason": "OOMKilled", "exitCode": 137, "signal": 9, "message": "sensitive-marker"}}}]}}
+
+
+class NativeBackoffEvidenceTests(unittest.TestCase):
+    def failure(self):
+        value = pod(); row = value["status"]["containerStatuses"][0]
+        row["state"] = {"terminated": {"reason": "Error", "exitCode": 42}}
+        row["lastState"] = {"terminated": {"reason": "Error", "exitCode": 42}}
+        event = {"involvedObject": {"kind": "Pod", "namespace": "fixture", "name": "api", "uid": UID, "fieldPath": "spec.containers{api}"},
+                 "source": {"component": "kubelet"}, "type": "Warning", "reason": "BackOff", "message": "Back-off restarting failed container api in pod api_fixture("+UID+")"}
+        return value, event
+
+    def observed(self, value, events):
+        return NATIVE_K.crash_backoff_evidence(value, events, "fixture", "api", UID, "api")
+
+    def test_live_terminated_state_keeps_truth_while_event_proves_restart_backoff(self):
+        value, event = self.failure(); original = copy.deepcopy(value)
+        self.assertEqual(self.observed(value, [event]), "uid-bound-kubelet-event")
+        row = K.summarize(value, "fixture", "api", UID)["containers"]["containers"][0]
+        self.assertEqual(row["current"], {"kind": "terminated", "reason": "Error", "exit_code": 42, "signal": None})
+        self.assertEqual(row["previous"]["exit_code"], 42)
+        self.assertEqual(value, original)
+
+    def test_real_waiting_backoff_still_has_native_status_proof(self):
+        value, _ = self.failure(); value["status"]["containerStatuses"][0]["state"] = {"waiting": {"reason": "CrashLoopBackOff"}}
+        self.assertEqual(self.observed(value, []), "container-status")
+
+    def test_wrong_event_identity_image_pull_or_reporter_cannot_substitute(self):
+        value, event = self.failure()
+        self.assertIsNone(self.observed(value, []))
+        for section, field, wrong in (("involvedObject", "uid", "other-uid"), ("involvedObject", "namespace", "other"),
+                                      ("involvedObject", "name", "other"), ("involvedObject", "fieldPath", "spec.containers{other}"),
+                                      ("involvedObject", "kind", "Node"), ("source", "component", "other-reporter")):
+            changed = copy.deepcopy(event); changed[section][field] = wrong
+            self.assertIsNone(self.observed(value, [changed]), (section, field))
+        for field, wrong in (("type", "Normal"), ("reason", "Pulled"), ("message", "Back-off pulling image synthetic")):
+            changed = dict(event, **{field: wrong})
+            self.assertIsNone(self.observed(value, [changed]), field)
+
+    def test_actual_repeated_exit_42_and_pod_identity_are_required(self):
+        value, event = self.failure()
+        for field, wrong in (("uid", "other"), ("name", "other"), ("namespace", "other")):
+            changed = copy.deepcopy(value); changed["metadata"][field] = wrong
+            self.assertIsNone(self.observed(changed, [event]))
+        for count in (None, True, 0):
+            changed = copy.deepcopy(value); changed["status"]["containerStatuses"][0]["restartCount"] = count
+            self.assertIsNone(self.observed(changed, [event]))
+        for section in ("state", "lastState"):
+            changed = copy.deepcopy(value); changed["status"]["containerStatuses"][0][section]["terminated"]["exitCode"] = 137
+            self.assertIsNone(self.observed(changed, [event]))
 
 
 class SnapshotInputTests(unittest.TestCase):
