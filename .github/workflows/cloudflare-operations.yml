@@ -1,0 +1,38 @@
+name: cloudflare operations
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONUTF8: '1'
+
+concurrency:
+  group: cloudflare-offline-${{ github.ref }}
+  cancel-in-progress: true # Only synthetic snapshots and owned loopback HTTP servers.
+
+jobs:
+  recovery:
+    name: Cloudflare / offline recovery and API transport / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13.5'
+      - name: Exercise credential-free drift partial recovery and real loopback HTTP
+        run: python -m unittest discover -s tests -p test_cloudflare_depth.py -v

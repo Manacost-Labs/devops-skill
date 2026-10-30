@@ -12,6 +12,8 @@ DNS, TLS and reverse proxies now cover authoritative/cache-aware diagnosis, cert
 
 Enterprise networking covers a bounded Linux stack: WireGuard, FRRouting IPv4 BGP, iproute2 and nftables. See [supported implementations, route/ACL analysis and native failure drills](docs/enterprise-networking-depth.md) for tunnel loss, prefix filtering, asymmetric paths, MTU and scoped recovery evidence.
 
+Cloudflare operations now covers detailed Access/WAF/Tunnel/Workers changes, version conflicts, partial effects and compatible recovery. The [scope and test-account rehearsal](docs/cloudflare-operations-depth.md) separates credential-free CI evidence from a live account run that has not been performed.
+
 CI/CD now covers GitHub Actions trust, effective secrets/OIDC rights, artifact and signed-provenance admission, staged deployments and recovery after partial effects. See [CI/CD scope and actual workflow/artifact checks](docs/cicd-operations-depth.md).
 
 Secrets and access now include concrete HashiCorp Vault grants, consumer rotation and partial recovery, session/issuer revocation, emergency closeout and observed expiry. See [Vault procedure scope and actual-engine CI](docs/secrets-access-depth.md).
