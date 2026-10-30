@@ -26,8 +26,8 @@ function Grant-Fixture([string]$Path,$Sid,[Security.AccessControl.FileSystemRigh
 try{
     $null=New-Item -ItemType Directory -Path $root
     $password=ConvertTo-SecureString ([guid]::NewGuid().ToString('N')+'aA!7') -AsPlainText -Force
-    $createdUser=New-LocalUser -Name $name -Password $password -Description ('Owned JEA fixture '+$tag)
-    $createdGroup=New-LocalGroup -Name $groupName -Description ('Owned JEA fixture '+$tag)
+    $createdUser=New-LocalUser -Name $name -Password $password -Description ('DevopsJEA '+$tag)
+    $createdGroup=New-LocalGroup -Name $groupName -Description ('DevopsJEA '+$tag)
     Grant-Fixture $root $createdGroup.SID ([Security.AccessControl.FileSystemRights]::ReadAndExecute)
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') certificates --folder $root --username $name
     Require-Fixture ($LASTEXITCODE -eq 0)
