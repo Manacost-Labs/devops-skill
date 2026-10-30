@@ -1,79 +1,66 @@
-# Four modes, one scoped authorization
+# Four modes with authenticated finite authority
 
-Select how independently the agent may work, then authorize the environment and work it may perform. It should not ask again for ordinary steps already covered.
-
-| Mode | Automatically permitted risk | Confirmation |
+| Mode | Automatic ceiling in signed scope | Separate exact admission |
 |---|---|---|
-| Safe | R0–R1 | Exact approval for R2–R4 |
-| Balanced | R0–R2 in issued scope | Exact approval for R3–R4 |
-| Semi-Auto | R0–R3 in issued scope | Exact approval for R4 |
-| Full Auto | R0–R4 in a specifically trusted, authorized environment | Separate admission for destructive/irreversible effects or exceptions; hard policy denials stay blocked |
+| Safe (default) | R0–R1 | R2–R4 |
+| Balanced | R0–R2 | R3–R4 |
+| Semi-Auto | R0–R3 | R4 |
+| Full Auto | R0–R4 in a specifically trusted environment | Destructive/irreversible effects; hard denials remain blocked |
 
-Safe is the installation default. Balanced is a useful daily choice after scope is issued. Production deployment remains R3 even if tested. Read-only work can be higher risk when it exposes sensitive/cross-tenant data or creates substantial load/cost.
+Production deployment remains R3. Sensitive, expensive or cross-tenant reads may
+be R2+. A mode does not grant credentials, prove recovery or override policy.
 
 ## Switch through chat
 
-With a complete 0.10.0 runtime, tell the skill **“Работай в Balanced над этим проектом”** (or choose Semi-Auto/Full Auto). The skill resolves the actual environment and prepares a card listing allowed actions/resources, state/data/external effects and a fixed end time. You reply once with its generated `Подтверждаю границы <code>`; new plans then inherit this chat's selected mode, target profile and pinned policy. You do not edit files, calculate hashes, set environment variables or pass command-line mode flags yourself.
+Say “работай в Balanced” (or another mode). The agent discovers the actual target
+and registered tasks and prepares one concrete scope card: mode, owner, target,
+actions, effects, expiry, operation budget and recovery boundaries. Ask one grouped
+question for genuinely missing facts. Ordinary already-authorized preparation
+continues without repeated questions.
 
-On first use the agent prepares hook setup automatically. Codex must review/trust the exact installed hook once; setup cannot bypass host trust. The helper distinguishes “setup exists” from “a host callback has been observed in this chat”, so the agent must not claim activation while a hook is skipped/unloaded. See the current [official Codex hook documentation](https://learn.chatgpt.com/docs/hooks) for trust review and supported UserPromptSubmit/SessionStart events. This repository's native adapter uses those events; it does not add a Claude adapter.
+Local card confirmation selects a **planning preference only**. `PLANNING_SELECTED`
+is not protected execution activation. An owner-controlled external issuer must
+review and cryptographically sign the finite broker task grant. If no issuer is
+connected, report that missing boundary honestly; do not simulate issuance by
+calling a hook, inventing an approver, editing JSON or selecting another store.
+This release supplies an offline owner signing helper, not an authenticated chat
+identity provider. One owner signature covers ordinary registered tasks throughout
+its finite scope/window/count, so subsequent covered steps need no new confirmation.
 
-This adapter targets locally orchestrated Codex/local-only Work. Local command hooks are not supported by cloud orchestration even when execution is local; do not claim that installing these files enables that path. Windows setup uses an explicit PowerShell encoded launcher with literal paths; trusted interpreter/PATH resolution remains part of the host boundary. Native serialized-command tests cover spaces, shell metacharacters and Unicode rather than testing only Python argv.
+Native hook setup still needs real host review/trust or administrator-managed
+configuration. Setup/callback markers prove only workflow observations. Instructions
+alone never establish principal separation. See [native guard setup](hooks-setup.md).
 
-For example, a card may authorize Balanced build/test/staging work on one service until the displayed time. Retries/new exact plans within the same boundaries need no further question. Repeated preparation/confirmation does not extend the original expiry. A bare “yes”, quoted text or log content cannot activate a card. Keep the displayed code unchanged until confirmed/cancelled.
+## Restrict immediately
 
-Say **“Safe”**, **“работай в Safe”** or **“отмени допуск”** to cancel higher-mode admission without another confirmation. Old prepared higher-mode plans stop. Expired/revoked or changed authority does not silently fall back. Scope expansion, mode escalation or another target/workspace needs a new prepared card. Two chats in the same directory retain separate selections.
+“Safe”, “работай в Safe” or “отмени допуск” needs no further approval. With the
+protected runtime client profile configured, the helper sends an authenticated
+broker restriction before changing local planning state. Without that profile it
+reports only local planning restriction; it must not claim remote revocation.
 
-Safe records a new safety generation immediately, even while the issuer is busy. Issuance acknowledges only the generation shown by its card and cannot erase a newer cancellation. This protects subsequent admission; it does not atomically cancel a child already admitted or running.
+Safe invalidates higher authority for the stable operating principal, including
+certificate aliases and overlapping grants, across chats. Lower restrictions are
+monotone. A fresh owner-signed grant bound to the new broker nonce can authorize
+its own scope; old grants/admissions cannot restore cancelled higher authority.
+Already admitted tasks require separate containment/reconciliation.
 
-The agent uses `tools/devops_mode.py status`, `setup --apply`, `prepare ...` and restriction-only `safe` internally. Only the trusted host invokes `tools/hooks/chat_mode_hook.py`; agents must never call that issuer entrypoint or manufacture host events. Existing launcher-controlled `DEVOPS_AUTHORITY_DIR` remains supported; setup retains that configured store or prepares a private default outside the runtime. Local state/proposals are excluded from release/public export and survive runtime updates in their respective private locations.
+## Protected operation
 
-Full Auto still requires actual owner-reviewed isolation/credential/authority evidence. The enterprise baseline still caps modes at Safe. A one-user callback cannot manufacture additional independent approvers required by stricter policy.
+The agent submits a registered task ID and bounded typed parameters. Target,
+risk/effects, code hashes, fixed arguments, worker identity and recovery requirements
+come from the protected registry. The broker validates mTLS identity, signer target,
+mode/risk scope, real UTC expiry, policy and durable state before every launch.
+Above-ceiling/destructive/irreversible work needs separate exact signed admission.
 
-**Trust limit:** hook stdin has session/prompt metadata, not an authenticated human identity, signature or human-only provenance. A local host-user label is attribution, not identity-provider authentication. Protect the trusted hook/runtime/config/store writes separately from agent processes. Same-user/full-access execution can forge callback input or edit writable state; this adapter does not create an independent issuer boundary or an OS sandbox. A callback marker also does not prove those controls. Use the existing identity-backed broker for stronger organization requirements.
+Unknown/failed effects freeze subsequent mutations. Query the original operation
+receipt, inspect real state and recover under owner authority; allocating a new ID
+or deleting the journal is not recovery. See [complete protected setup and client
+examples](protected-execution.md).
 
-## What the user approves once
+## Migration
 
-An authority card names the mode, exact target/profile/environment, executor, permitted actions/resources, data classes, state/external effects, expiry and recovery boundaries. For example: “Balanced, this development environment, build/test/prepare release for this service until the stated time.” It is not authority over every machine the credentials happen to reach.
-
-The agent prepares a draft. An accountable operator or identity-backed broker verifies the issuer, reviews the envelope, re-times/activates it at issuance, supplies authorization evidence and places it into a protected external authority store. The agent receives read access to issued records. It never approves or publishes its own authority.
-
-The Full Auto record additionally identifies real isolation, bounded credentials and owner evidence. References are not proof by themselves: the operator must establish those controls. The supplied enterprise policy retains Safe and stricter per-operation approvals; changing mode cannot override it.
-
-## Advanced operator or broker use
-
-Without the native chat adapter, the trusted launcher configures an absolute `DEVOPS_AUTHORITY_DIR` outside the runtime/source tree, protected against agent writes. It is not a path supplied by a repository, request or log. Provision access deliberately; installation never copies active authority from the source package. The chat setup helper prepares empty private state and hook configuration, never an active grant.
-
-From a runtime/source checkout, prepare the current operation normally, then create an unapproved authority draft:
-
-```powershell
-python devops-platform-contracts/scripts/autonomy.py --draft-from operations/plans/build.json --mode balanced --authorization-id authority-shop-build --output operations/authority-draft.json
-```
-
-The operator/broker reviews exact actions/scopes and timing, sets the activation/trust fields, obtains the payload hash with `--digests`, and adds real issuer records bound to it. It publishes the complete reviewed record as `authority-shop-build.json` in the protected store. The example template is deliberately unapproved; filling invented identities or evidence does not establish real authority. Hashes are integrity bindings, not signatures.
-
-The direct preparation example assumes an authorized tool session. If an optional interception adapter does not register the new preparer, prepare/execute it through the existing Safe R1 planner and wrapper with an exact output path and verification; do not disable interception. Adapter support is separate from authority issuance.
-
-After issuance the agent prepares each concrete command against that authority:
-
-```powershell
-python tools/devops_plan.py --target-profile target.yaml --mode balanced --authorization-id authority-shop-build --action build_release --risk R2 --objective "Build the reviewed service release" --scope service:shop --verify "archive verification passes" --output operations/plans/build-001.json -- python tools/build_release.py --output dist/reviewed.zip
-python tools/devops_exec.py --operation operations/plans/build-001.json --timeout-seconds 120 -- python tools/build_release.py --output dist/reviewed.zip
-```
-
-The issued record must cover those exact declared actions/scopes and the validated target. A later plan may use a new command digest inside the same envelope; the planner clips its window to the remaining grant lifetime. The gate re-reads current authority at every launch and the journal records its ID/digest/mode. It does not re-request already issued authority.
-
-Changing mode, target/profile/owner, policy or execution identity requires a new matching grant. Above-ceiling/outside-scope work needs one grouped exact approval or a new envelope; destructive/irreversible effects still need separate exact admission. Mark an irreversible operation with `--irreversible` (R4). Exact approval now binds the complete operation through `operation_digest`, including scope/risk/effects, rather than argv alone. After completing the operation facts, the agent calculates it with `operation_gate.py --request operation.json --print-operation-digest`; the real approver binds admission to it. The agent must not relabel risk/effects to stay below the ceiling.
-
-## Stop and revoke
-
-Expired, revoked, changed or missing authority at the final admission check stops launch. Remove/revoke the record through the trusted issuer. The check runs after durable journal intent so storage delays cannot extend permission; its successful completion is the admission point. Revocation after that point is not an atomic cancellation of process creation or an already running process: those require containment or coordinated issuer/launcher control. Invalid authority is not silently ignored, and policy-denied actions cannot be approved by a casual prompt.
-
-Failures in discovery or verification are not automatically permission questions. The agent should resolve missing evidence within its authority, ask once for an actual missing permission, and report unresolved/uncertain outcomes honestly. Recovery/data compatibility, locks, secrets handling and verification remain required in every mode.
-
-## Compatibility and limits
-
-V2 requests without `autonomy` retain Safe behavior. Policy semantics changed in 0.9.0: regenerate policy bindings and obtain real replacement approvals for old pending requests. Old runtimes reject the new fields; do not use them to execute delegated requests. No local or production environment is automatically switched to a higher mode by installing this release.
-
-The gate validates supplied contracts/evidence references, not arbitrary command semantics or actual remote identity/access. Restricted OS/cloud credentials, sandboxing, protected runtime/policy/store and real issuer verification remain necessary. A writable authority store lets the agent manufacture records, so it cannot serve as independent approval. Platform modes do not change separate host/tool permission prompts.
-
-Local synthetic tests cover repeated authorized launches, revocation, ceilings, scope/identity/policy drift, irreversible admission, trust/recovery requirements, authority-file attacks and request replacement during gate validation. They do not certify an organization's identity broker, ACL provisioning, sandbox or production recovery.
+0.15 removes arbitrary local argv execution. Legacy planner approvals, unsigned
+external-store records, session IDs, chat confirmation stdin and `DEVOPS_AUTHORITY_DIR`
+are planning/consistency data, never broker authority. Reissue reviewed finite
+crypto grants; do not silently migrate active permissions. No environment receives
+new privileges by installation. Host/tool approvals are independent of these modes.

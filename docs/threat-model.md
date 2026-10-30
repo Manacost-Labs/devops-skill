@@ -1,6 +1,6 @@
 # Threat model
 
-The native chat-mode adapter receives host session/prompt events, not authenticated human identity or a human-only signature. A same-user agent with unrestricted execution can forge stdin or edit writable issuer state; protect host hook/runtime/config/store writes through actual sandbox/principal/broker separation. Setup and callback-observed markers are workflow status, not evidence that this separation exists. Exact card/session/policy/profile bindings and final admission stop accidental/replayed/mismatched requests only within that trusted runtime boundary.
+The native chat-mode adapter cannot authenticate human identity. Local callback/approval records are planning only. Protected execution accepts only finite registered tasks at an independently protected mTLS broker, with external Ed25519 owner signatures and authoritative risk/target/code metadata. The agent, worker, supervisor and signer require separate privileges. Hooks may fail open and are defense in depth; no hook or prose protects a same-UID Full Access agent holding target credentials. See [deployment prerequisites and residual limits](protected-execution.md).
 
 This threat model covers the skill platform, its release/install path, and an agent using it to plan or execute infrastructure work. It does not replace an adopting organization's system-specific threat model.
 
@@ -29,7 +29,7 @@ Target credentials, tenants, accounts, projects, subscriptions, clusters, and en
 | Confused deputy or cross-tenant action | Owner-bound target profile, profile digest, scoped credential reference, explicit scope | Authoritative target registry and workload identity |
 | Credential disclosure or over-privilege | Literal-secret rejection, least privilege, JIT/JEA, separate access module | External credential broker, DLP, rotation and revocation |
 | Approval replay or plan substitution | Plan/target digests, expiry, execution window, idempotency key, SoD | Identity-backed change system and replay-resistant API |
-| Forged or widened autonomy envelope | Protected external store, exact ID/payload/record/policy/target bindings, issuer separation, mode caps, finite window and revocation, frozen request validation | Real issuer verification, agent-read-only ACLs, bounded credentials/sandbox; metadata references do not authenticate actors |
+| Forged or widened autonomy envelope | External scoped Ed25519 signatures, mTLS client binding, protected task registry, finite window/count, principal-wide monotone restriction and verified snapshots | Real issuer verification, agent-read-only ACLs, bounded credentials/sandbox; metadata references do not authenticate actors |
 | Risk downgrade or destructive surprise | Independent classification, deny-by-default actions, state/destructive flags | Organization policy and accountable risk owner |
 | Concurrent writers and stale state | Target lock, state lock, pre-execution revalidation, stop on drift | Authoritative distributed lock/change queue |
 | Failed migration or rollback | Fresh recovery artifact, isolated restore test, measured RPO/RTO, acceptance window | Independent backup store and recurring exercises |

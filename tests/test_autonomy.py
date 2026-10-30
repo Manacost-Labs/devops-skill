@@ -301,31 +301,6 @@ class AutonomyTests(unittest.TestCase):
         req["approvals"][1].update(approver=req["execution"]["executor"].upper(), role="security-owner")
         self.assertTrue(any("executor cannot approve" in reason for reason in self.validate(req, policy, binding)))
 
-    def test_revocation_during_durable_intent_blocks_child_launch(self):
-        wrapper_spec = importlib.util.spec_from_file_location("final_admission_executor", ROOT/"tools/devops_exec.py")
-        wrapper = importlib.util.module_from_spec(wrapper_spec); wrapper_spec.loader.exec_module(wrapper)
-        marker, path, journal = self.store/"must-not-launch", self.store/"plan.json", self.store/"journal.jsonl"
-        argv = [sys.executable, "-c", "from pathlib import Path; Path("+repr(str(marker))+").touch()"]
-        req = request(); req["change"]["plan_digest"] = wrapper.canonical_command_digest(argv)
-        now = datetime.now(timezone.utc)
-        req["execution"].update(window_start=(now-timedelta(minutes=1)).isoformat(), requested_at=now.isoformat(), window_end=(now+timedelta(minutes=10)).isoformat())
-        grant = record(req); self.bind(req, grant)
-        path.write_text(json.dumps(req), encoding="utf-8")
-        append = wrapper.append_ledger
-        def revoke_after_intent(destination, entry):
-            append(destination, entry)
-            if entry["status"] == "launch_intent":
-                grant["status"] = "revoked"
-                (self.store/(IDENTITY+".json")).write_text(json.dumps(grant), encoding="utf-8")
-        with (
-            mock.patch.dict(os.environ, {A.AUTHORITY_ENV: str(self.store)}),
-            mock.patch.object(wrapper, "append_ledger", side_effect=revoke_after_intent),
-            mock.patch.object(sys, "argv", ["devops_exec.py", "--operation", str(path), "--ledger", str(journal), "--", *argv]),
-            redirect_stdout(io.StringIO()),
-        ):
-            self.assertEqual(wrapper.execute(), 3)
-        self.assertFalse(marker.exists())
-        self.assertEqual([json.loads(line)["status"] for line in journal.read_text().splitlines()], ["launch_intent", "blocked_final_gate"])
 
     def test_authority_store_is_explicit_external_and_rejects_malformed_files(self):
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -382,92 +357,24 @@ class AutonomyTests(unittest.TestCase):
         self.bind(req, grant)
         self.assertTrue(self.validate(req))
 
-    def test_two_planned_commands_share_authority_and_revocation_stops_next_launch(self):
-        profile = ROOT/"devops-platform-contracts/templates/target-profile.yaml"
-        planner = ROOT/"tools/devops_plan.py"; wrapper = ROOT/"tools/devops_exec.py"
-        initial = self.store/"initial.json"
-        env = dict(os.environ); env.pop(A.AUTHORITY_ENV, None)
-        common = ["--target-profile", str(profile), "--action", "build_release", "--risk", "R2",
-                  "--objective", "Exercise scoped synthetic release work", "--scope", "service:api",
-                  "--verify", "owned fixture marker exists"]
-        seed = subprocess.run([sys.executable, str(planner), *common, "--output", str(initial), "--", sys.executable, "-c", "print('seed')"],
-                              env=env, capture_output=True, text=True, timeout=20)
-        self.assertEqual(seed.returncode, 0, seed.stdout+seed.stderr)
-        req = json.loads(initial.read_text(encoding="utf-8")); req["change"]["irreversible"] = False
-        grant = record(req)
-        now = datetime.now(timezone.utc)
-        grant["window_start"] = (now-timedelta(minutes=1)).isoformat()
-        grant["window_end"] = (now+timedelta(minutes=30)).isoformat()
-        authorize(grant)
-        authority_path = self.store/(IDENTITY+".json")
-        authority_path.write_text(json.dumps(grant), encoding="utf-8")
-        env[A.AUTHORITY_ENV] = str(self.store)
-        ledger = self.store/"execution.jsonl"
-        for index in (1, 2):
-            marker = self.store/("marker"+str(index))
-            argv = [sys.executable, "-c", "from pathlib import Path; Path("+repr(str(marker))+").write_text('owned')"]
-            output = self.store/("plan"+str(index)+".json")
-            planned = subprocess.run([sys.executable, str(planner), *common, "--mode", "balanced", "--authorization-id", IDENTITY,
-                                      "--output", str(output), "--", *argv], env=env, capture_output=True, text=True, timeout=20)
-            self.assertEqual(planned.returncode, 0, planned.stdout+planned.stderr)
-            candidate = json.loads(output.read_text(encoding="utf-8"))
-            self.assertEqual(candidate["approvals"], [])
-            self.assertEqual(A.timestamp(candidate["execution"]["window_end"], "end"), A.timestamp(grant["window_end"], "end"))
-            self.assertIn("No additional human confirmation", planned.stderr)
-            launched = subprocess.run([sys.executable, str(wrapper), "--operation", str(output), "--ledger", str(ledger),
-                                      "--timeout-seconds", "10", "--", *argv], env=env, capture_output=True, text=True, timeout=20)
-            self.assertEqual(launched.returncode, 0, launched.stdout+launched.stderr)
-            self.assertEqual(marker.read_text(encoding="utf-8"), "owned")
-        entries = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual([item["status"] for item in entries], ["launch_intent", "executed"]*2)
-        self.assertTrue(all(item["autonomy"]["authorization_id"] == IDENTITY for item in entries))
-        blocked_marker = self.store/"must-not-execute"
-        argv = [sys.executable, "-c", "from pathlib import Path; Path("+repr(str(blocked_marker))+").touch()"]
-        candidate["change"]["plan_digest"] = "sha256:"+__import__("hashlib").sha256(json.dumps(argv, separators=(",", ":")).encode()).hexdigest()
-        output.write_text(json.dumps(candidate), encoding="utf-8")
-        grant["status"] = "revoked"; authority_path.write_text(json.dumps(grant), encoding="utf-8")
-        blocked = subprocess.run([sys.executable, str(wrapper), "--operation", str(output), "--ledger", str(ledger), "--", *argv],
-                                 env=env, capture_output=True, text=True, timeout=20)
-        self.assertEqual(blocked.returncode, 3, blocked.stdout+blocked.stderr)
-        self.assertFalse(blocked_marker.exists())
-
-    def test_executor_gate_receives_frozen_request_despite_path_replacement(self):
-        wrapper_spec = importlib.util.spec_from_file_location("frozen_authority_executor", ROOT/"tools/devops_exec.py")
-        wrapper = importlib.util.module_from_spec(wrapper_spec); wrapper_spec.loader.exec_module(wrapper)
-        marker, path, ledger = self.store/"must-not-execute", self.store/"operation.json", self.store/"journal.jsonl"
-        argv = [sys.executable, "-c", "from pathlib import Path; Path("+repr(str(marker))+").touch()"]
-        unapproved = operation(approvals=0)
-        unapproved["objective"] = "Verify frozen request with Unicode 🎛"
-        unapproved["change"]["plan_digest"] = wrapper.canonical_command_digest(argv)
-        replacement = operation(approvals=1)
-        path.write_text(json.dumps(unapproved), encoding="utf-8")
-        original_run = subprocess.run
-        calls = []
-        def replace_before_gate(command, **kwargs):
-            path.write_text(json.dumps(replacement), encoding="utf-8")
-            calls.append((command, kwargs))
-            return original_run(command, **kwargs)
-        with (
-            mock.patch.dict(os.environ, {A.AUTHORITY_ENV: ""}),
-            mock.patch.object(sys, "argv", ["devops_exec.py", "--operation", str(path), "--ledger", str(ledger), "--at", NOW.isoformat(), "--", *argv]),
-            mock.patch.object(wrapper.subprocess, "run", side_effect=replace_before_gate),
-            redirect_stdout(io.StringIO()),
-        ):
-            self.assertEqual(wrapper.execute(), 3)
+    def test_unsigned_local_scope_cannot_launch_generic_commands(self):
+        marker = self.store/"must-not-launch"
+        argv = [sys.executable, "-c", "from pathlib import Path;Path("+repr(str(marker))+").touch()"]
+        req = request(); req["change"]["plan_digest"] = "sha256:"+"a"*64
+        self.bind(req, record(req))
+        path = self.store/"plan.json"; path.write_text(json.dumps(req), encoding="utf-8")
+        result = subprocess.run([sys.executable, str(ROOT/"tools/devops_exec.py"), "--operation", str(path), "--", *argv], capture_output=True, text=True, env={**os.environ, A.AUTHORITY_ENV:str(self.store)})
+        self.assertEqual(result.returncode, 3, result.stdout)
         self.assertFalse(marker.exists())
-        self.assertEqual(len(calls), 1)
-        self.assertIn("--request-stdin", calls[0][0])
-        self.assertEqual(json.loads(calls[0][1]["input"]), unapproved)
-        self.assertTrue(all(ord(character) < 128 for character in calls[0][1]["input"]))
 
-    def test_executor_rejects_ambiguous_oversized_and_nonregular_requests(self):
-        wrapper_spec = importlib.util.spec_from_file_location("strict_operation_executor", ROOT/"tools/devops_exec.py")
-        wrapper = importlib.util.module_from_spec(wrapper_spec); wrapper_spec.loader.exec_module(wrapper)
+
+    def test_broker_input_reader_rejects_ambiguous_oversized_and_nonregular_records(self):
+        from broker_fixture import C
         path = self.store/"request.json"
         for raw in (b'{"x":1,"x":2}', b'{"x":NaN}', b"x"*1048577):
             path.write_bytes(raw)
-            with self.assertRaises(ValueError): wrapper.read_operation(path)
-        with self.assertRaises(ValueError): wrapper.read_operation(self.store)
+            with self.assertRaises(ValueError): C.read_record(path)
+        with self.assertRaises(ValueError): C.read_record(self.store)
 
     def test_packagers_reject_issued_private_authority_records(self):
         for name, source in (("release", "tools/build_release.py"), ("public", "tools/build_public_source.py")):

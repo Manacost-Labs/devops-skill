@@ -266,9 +266,10 @@ def operation_digest(request):
     return AUTONOMY.digest({key: value for key, value in request.items() if key != "approvals"})
 
 
-def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str, now: datetime, authority_dir=None) -> list[str]:
+def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str, now: datetime, authority_dir=None, *, include_chat_context=True) -> list[str]:
     reasons: list[str] = []
-    reasons.extend(AUTONOMY.chat_module().enforce(request, policy, policy_digest, now))
+    if include_chat_context:
+        reasons.extend(AUTONOMY.chat_module().enforce(request, policy, policy_digest, now))
     unknown = sorted(set(request) - TOP_LEVEL)
     missing = sorted((TOP_LEVEL - {"exception", "autonomy"}) - set(request))
     if unknown:

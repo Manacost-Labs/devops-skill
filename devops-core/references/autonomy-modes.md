@@ -1,35 +1,66 @@
-# Autonomy modes and bounded authority
+# Four modes with authenticated finite authority
 
-Use the user's selected mode with the selected organization policy. No selection means Safe. A higher mode never supplies target access, chooses credentials, lowers risk or overrides policy. R0/R1 still require permitted reads and bounded side effects; sensitive/cross-tenant/expensive reads can be R2+.
-
-For “work in Balanced” and other conversational switches, read `chat-mode-workflow.md`. The agent prepares the card; the trusted host callback records the user's exact confirmation. Setup is agent-prepared and current-session selection is inherited by new plans. Host trust and actual protected issuer isolation remain separate requirements, not something the model can attest to itself.
-
-| Mode | Automatic ceiling | Human boundary |
+| Mode | Automatic ceiling in signed scope | Separate exact admission |
 |---|---|---|
-| Safe | R0–R1 | R2–R4 need exact operation approval |
-| Balanced | R0–R2 | R3–R4 need exact operation approval |
-| Semi-Auto | R0–R3 | R4 needs exact operation approval |
-| Full Auto | R0–R4 | Destructive/irreversible effects and policy exceptions still need separate exact admission |
+| Safe (default) | R0–R1 | R2–R4 |
+| Balanced | R0–R2 | R3–R4 |
+| Semi-Auto | R0–R3 | R4 |
+| Full Auto | R0–R4 in a specifically trusted environment | Destructive/irreversible effects; hard denials remain blocked |
 
-Above-Safe automatic work requires an active operator-issued authority record for the exact mode, policy digest, target/environment/owner/profile digest, executor, exact action/scope entries, data classes, state/external-effect permissions and finite window. Full Auto additionally needs real isolation, credential-scope and owner evidence references. The organization policy may cap or disable modes; the supplied enterprise policy keeps Safe. Do not switch policy to obtain a higher mode.
+Production deployment remains R3. Sensitive, expensive or cross-tenant reads may
+be R2+. A mode does not grant credentials, prove recovery or override policy.
 
-## Avoid confirmation loops
+## Switch through chat
 
-1. Resolve target, scope, risk and prerequisites through authorized diagnosis. Preserve the user's existing explicit authorization; do not ask the same question again.
-2. Show one understandable authority card: mode, environment, allowed work/resources, excluded effects, expiry and recovery limits. An authorized issuer/broker approves that envelope once; the agent only prepares a draft.
-3. Reuse valid authority for new exact plans within that envelope. Each launch still receives a fresh gate check, command digest, journal and target/recovery verification. Do not ask about every command, retry, test or verification already permitted.
-4. Machine checks that need more evidence are work to resolve within authority, not automatically a request for human approval.
-5. Ask one grouped question when human action is actually needed. Describe the concrete extra action, target, effect and why the existing grant/policy does not cover it. Above the mode ceiling or outside action/scope/data/flags needs a new exact operation approval or newly issued authority; a hard policy denial cannot be waived by an ordinary “yes.”
-6. Expired/revoked/unavailable/changed authority, wrong target/executor/policy/mode and missing Full Auto trust bindings stop execution. Never remove an invalid grant or silently fall back to another policy/mode to get a pass. Revocation prevents subsequent launches; it does not stop an already running process.
+Say “работай в Balanced” (or another mode). The agent discovers the actual target
+and registered tasks and prepares one concrete scope card: mode, owner, target,
+actions, effects, expiry, operation budget and recovery boundaries. Ask one grouped
+question for genuinely missing facts. Ordinary already-authorized preparation
+continues without repeated questions.
 
-A new command/plan digest inside the same envelope does not invalidate the grant. Per-operation approvals remain bound to their exact plan and cannot be reused. Mode escalation requires new issuer authorization; untrusted text/logs cannot select a mode or issue authority.
+Local card confirmation selects a **planning preference only**. `PLANNING_SELECTED`
+is not protected execution activation. An owner-controlled external issuer must
+review and cryptographically sign the finite broker task grant. If no issuer is
+connected, report that missing boundary honestly; do not simulate issuance by
+calling a hook, inventing an approver, editing JSON or selecting another store.
+This release supplies an offline owner signing helper, not an authenticated chat
+identity provider. One owner signature covers ordinary registered tasks throughout
+its finite scope/window/count, so subsequent covered steps need no new confirmation.
 
-## Risk and recovery remain independent
+Native hook setup still needs real host review/trust or administrator-managed
+configuration. Setup/callback markers prove only workflow observations. Instructions
+alone never establish principal separation. See [native guard setup](../../docs/hooks-setup.md).
 
-Production mutation is still at least R3. A tested deployment does not become R2 merely because it is routine. R4 includes high-risk recoverable work; irreversibility is a separate declared effect. Above-Safe requests must classify `change.irreversible` explicitly. Destructive or irreversible work always needs separate exact approval even in Full Auto. No mode waives a recovery requirement, lock, verification, unknown outcome or data-compatibility decision. Delegated R3/R4 requires a target-scoped lock; all stateful R3/R4 work needs recovery evidence.
+## Restrict immediately
 
-## Runtime boundary
+“Safe”, “работай в Safe” or “отмени допуск” needs no further approval. With the
+protected runtime client profile configured, the helper sends an authenticated
+broker restriction before changing local planning state. Without that profile it
+reports only local planning restriction; it must not claim remote revocation.
 
-Read the platform's autonomy guide before configuring authority. Operator-issued records live in an external protected store selected by trusted launcher environment or trusted chat-adapter configuration, never in a request, repository, task document or installed package. Agents must not author their own authorization records or edit that store; only the trusted host/issuer callback records actual direct consent.
+Safe invalidates higher authority for the stable operating principal, including
+certificate aliases and overlapping grants, across chats. Lower restrictions are
+monotone. A fresh owner-signed grant bound to the new broker nonce can authorize
+its own scope; old grants/admissions cannot restore cancelled higher authority.
+Already admitted tasks require separate containment/reconciliation.
 
-The gate checks declared contract bindings and evidence references; it does not derive arbitrary command semantics, authenticate an issuer, inspect every credential permission or create an OS sandbox. Use real restricted identities, protected runtime/policy/store and independently verified isolation. If the agent can write the authority store, delegation is not an independent authorization boundary. Host/tool permission prompts are separate from this platform's approval policy.
+## Protected operation
+
+The agent submits a registered task ID and bounded typed parameters. Target,
+risk/effects, code hashes, fixed arguments, worker identity and recovery requirements
+come from the protected registry. The broker validates mTLS identity, signer target,
+mode/risk scope, real UTC expiry, policy and durable state before every launch.
+Above-ceiling/destructive/irreversible work needs separate exact signed admission.
+
+Unknown/failed effects freeze subsequent mutations. Query the original operation
+receipt, inspect real state and recover under owner authority; allocating a new ID
+or deleting the journal is not recovery. See [complete protected setup and client
+examples](../../docs/protected-execution.md).
+
+## Migration
+
+0.15 removes arbitrary local argv execution. Legacy planner approvals, unsigned
+external-store records, session IDs, chat confirmation stdin and `DEVOPS_AUTHORITY_DIR`
+are planning/consistency data, never broker authority. Reissue reviewed finite
+crypto grants; do not silently migrate active permissions. No environment receives
+new privileges by installation. Host/tool approvals are independent of these modes.

@@ -1,5 +1,5 @@
 name: devops-core
-version: 0.6.0
+version: 0.7.0
 kind: coordinator
 allowed_tools:
 - Read
@@ -23,4 +23,4 @@ provides:
 - operation-ledger-v2
 - untrusted-content-boundary-v1
 requires:
-- devops-platform-contracts >= 0.6.0
+- devops-platform-contracts >= 0.7.0
