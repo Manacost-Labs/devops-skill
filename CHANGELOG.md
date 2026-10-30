@@ -19,6 +19,9 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+- Deepen secrets-access-operations 0.4.0 with concrete Vault grants, wrapped delivery, consumer rotation and partial recovery, session/issuer containment, emergency closeout and observed expiry. Preserve protected provider handoff and existing authority, gate, risk and evidence boundaries.
+- Add checksum-pinned native Vault CI on owned in-memory loopback state, negative transport/disclosure checks and forward-evaluation scenarios. Distinguish Vault token/KV proof from downstream sessions, production transport/HA/audit and root quorum recovery.
+
 ## 0.14.0 — 2026-10-30
 
 - Deepen DNS authority/views/caches and cutover, TLS issuance/renewal and safe pair activation, Nginx/Caddy/Traefik routing/trust and actual-state recovery in network-edge-operations 0.3.0. Preserve mode authority, risk floors, gate/journal and provider/application ownership.

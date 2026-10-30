@@ -101,6 +101,7 @@ class PlatformTests(unittest.TestCase):
             self.assertIn("allowed-tools", error)
     def test_fast_moving_modules_declare_current_official_sources(self):
         expected = {
+            "secrets-access-operations": {"developer.hashicorp.com"},
             "windows-server-operations": {"learn.microsoft.com"},
             "cloudflare-operations": {"developers.cloudflare.com"},
             "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
