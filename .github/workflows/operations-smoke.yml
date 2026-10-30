@@ -27,7 +27,9 @@ jobs:
         with:
           python-version: '3.13.5'
       - name: Install hash-pinned native Ansible and dependencies
-        run: python -m pip install --isolated --disable-pip-version-check --no-input --only-binary=:all: --require-hashes -r tests/requirements-ansible.txt
+        run: >-
+          python -m pip install --isolated --disable-pip-version-check --no-input
+          --only-binary=:all: --require-hashes -r tests/requirements-ansible.txt
       - name: Exercise actual Ansible on disposable synthetic local hosts
         run: python tests/smoke_ansible.py -v
 
