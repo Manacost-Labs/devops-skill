@@ -145,6 +145,8 @@ class NetworkFixture:
             network = "  network 203.0.113.0/24\n" if side == "b" else ""
             text = f"""frr defaults traditional
 hostname fixture-{side}
+log stdout debugging
+debug bgp neighbor-events
 ip prefix-list IMPORT seq 5 permit {imported}
 ip prefix-list EXPORT seq 5 permit {own}
 {extra}router bgp {asn}
@@ -192,6 +194,32 @@ ip prefix-list EXPORT seq 5 permit {own}
                 "rules": json.loads(self.ns(side, "ip", "-j", "-4", "rule", "show").stdout),
                 "nft": json.loads(self.ns(side, "nft", "-j", "list", "ruleset").stdout),
                 "bgp": self.bgp(side)}
+
+    def diagnostics(self):
+        """Bounded evidence from owned synthetic namespaces only; never read WG keys."""
+        for side, peer, local in (("a", "10.99.0.2", "10.99.0.1"), ("b", "10.99.0.1", "10.99.0.2")):
+            for command in ("show bgp ipv4 unicast summary json", "show bgp neighbors json", "show bgp ipv4 unicast json", "show ip prefix-list"):
+                try:
+                    result = self.vty(side, command)
+                    print(f"DIAGNOSTIC {side} {command}:\n{result.stdout[:6000]}\n{result.stderr[:1000]}", flush=True)
+                except Exception as error:
+                    print(f"DIAGNOSTIC {side} {command}: unavailable ({type(error).__name__})", flush=True)
+            for command in (("ip", "-j", "addr", "show", "dev", "wg0"),
+                            ("ip", "-j", "-4", "route", "get", peer, "from", local),
+                            ("ss", "-tnp")):
+                try:
+                    result = self.ns(side, *command, check=False, timeout=4)
+                    print(f"DIAGNOSTIC {side} {command[0]}: exit={result.returncode}\n{result.stdout[:4000]}\n{result.stderr[:1000]}", flush=True)
+                except Exception as error:
+                    print(f"DIAGNOSTIC {side} {command[0]}: unavailable ({type(error).__name__})", flush=True)
+            path = self.folder / side / "bgpd.log"
+            try:
+                with path.open("rb") as stream:
+                    stream.seek(max(0, path.stat().st_size - 8000))
+                    tail = stream.read(8000).decode("utf-8", errors="replace")
+                print(f"DIAGNOSTIC {side} bgpd log tail:\n{tail}", flush=True)
+            except OSError:
+                print(f"DIAGNOSTIC {side} bgpd log unavailable", flush=True)
 
     def close(self):
         for process in getattr(self, "processes", []):
@@ -263,6 +291,9 @@ class NativeNetworkingTests(unittest.TestCase):
             wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.20.0.0/24",)), "BGP reconvergence")
             self.assertNotIn("203.0.113.0/24", fixture.bgp("a")["routes"])
             print("PASS: actual tunnel loss, BGP withdrawal and encrypted data/control recovery", flush=True)
+        except Exception:
+            fixture.diagnostics()
+            raise
         finally:
             fixture.close()
 
