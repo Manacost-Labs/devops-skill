@@ -29,7 +29,10 @@ TOOLS = {
     "terraform": ("1.17.1", "https://releases.hashicorp.com/terraform/1.17.1/terraform_1.17.1_linux_amd64.zip", "4638628058e71a55212b1c563712eac03b902128f40740f3dc8174df12135061"),
     "tofu": ("1.13.2", "https://github.com/opentofu/opentofu/releases/download/v1.13.2/tofu_1.13.2_linux_amd64.zip", "723bebb0df8411daff1e5fc3862e28ff5581fe5634087f4c29a9aa41d78208b5"),
 }
-PROVIDER_SHA = "40d9dfc9c549e406b5aab73c023aa485633c1b6b730c933d7bcc2fa67fd1ae6e"
+PROVIDERS = {
+    "terraform": ("registry.terraform.io/hashicorp/local", "https://releases.hashicorp.com/terraform-provider-local/2.5.3/terraform-provider-local_2.5.3_linux_amd64.zip", "40d9dfc9c549e406b5aab73c023aa485633c1b6b730c933d7bcc2fa67fd1ae6e"),
+    "tofu": ("registry.opentofu.org/hashicorp/local", "https://github.com/opentofu/terraform-provider-local/releases/download/v2.5.3/terraform-provider-local_2.5.3_linux_amd64.zip", "7d60de08fac427fb045e4590d1b921b6778498eee9eb16f78c64d4c577bde096"),
+}
 SELECTED_TOOL = None
 
 
@@ -55,17 +58,28 @@ class NativeIaCTests(unittest.TestCase):
         cls.cli = cls.tools_root / SELECTED_TOOL
         cls.cli.write_bytes(cli_data)
         cls.cli.chmod(0o700)
-        mirror = cls.tools_root / "mirror/registry.terraform.io/hashicorp/local"
+        cls.provider_source, provider_url, provider_sha = PROVIDERS[SELECTED_TOOL]
+        mirror = cls.tools_root / "mirror" / cls.provider_source
         mirror.mkdir(parents=True)
         provider = "terraform-provider-local_2.5.3_linux_amd64.zip"
-        (mirror / provider).write_bytes(download("https://releases.hashicorp.com/terraform-provider-local/2.5.3/" + provider, PROVIDER_SHA))
+        (mirror / provider).write_bytes(download(provider_url, provider_sha))
         cls.config = cls.tools_root / "isolated.tfrc"
-        cls.config.write_text('provider_installation {\n filesystem_mirror {\n path = ' + json.dumps(str(cls.tools_root / "mirror")) + '\n include = ["registry.terraform.io/hashicorp/local"]\n }\n}\ndisable_checkpoint = true\n', encoding="utf-8")
+        cls.config.write_text('provider_installation {\n filesystem_mirror {\n path = ' + json.dumps(str(cls.tools_root / "mirror")) + '\n include = [' + json.dumps(cls.provider_source) + ']\n }\n}\ndisable_checkpoint = true\n', encoding="utf-8")
         cls.base_env = {key: value for key, value in os.environ.items() if not key.startswith(("TF_", "TOFU_"))}
         cls.base_env.update({"TF_CLI_CONFIG_FILE": str(cls.config), "TOFU_CLI_CONFIG_FILE": str(cls.config), "TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1"})
         result = subprocess.run([str(cls.cli), "version", "-json"], env=cls.base_env, capture_output=True, text=True, timeout=20, check=True)
         if json.loads(result.stdout)["terraform_version"] != version:
             raise RuntimeError("native executable version mismatch")
+        # Derive the platform's unpacked-package h1 lock only from the already
+        # SHA-256-verified official ZIP. No registry/fallback at this step.
+        bootstrap = {"terraform": {"required_providers": {"local": {"source": cls.provider_source, "version": "2.5.3"}}}}
+        (cls.tools_root / "main.tf.json").write_text(json.dumps(bootstrap), encoding="utf-8")
+        locked = subprocess.run([str(cls.cli), "providers", "lock", "-fs-mirror=" + str(cls.tools_root / "mirror"), "-platform=linux_amd64"], cwd=cls.tools_root, env=cls.base_env, capture_output=True, text=True, timeout=45)
+        if locked.returncode:
+            raise RuntimeError("verified-mirror lock bootstrap failed: " + locked.stdout + locked.stderr)
+        cls.verified_lock = (cls.tools_root / ".terraform.lock.hcl").read_bytes()
+        if b"h1:" not in cls.verified_lock or cls.provider_source.encode() not in cls.verified_lock:
+            raise RuntimeError("provider lock did not bind exact source and unpacked hash")
         print(f"Verified {SELECTED_TOOL} {version}; local provider 2.5.3; synthetic HTTP backend", flush=True)
 
     def setUp(self):
@@ -78,13 +92,13 @@ class NativeIaCTests(unittest.TestCase):
         self.env = dict(self.base_env)
         self.env.update({"TF_HTTP_RETRY_MAX": "0", "TF_HTTP_RETRY_WAIT_MIN": "1"})
         self.lockfile = self.lab / ".terraform.lock.hcl"
-        self.lockfile.write_text('provider "registry.terraform.io/hashicorp/local" {\n version = "2.5.3"\n constraints = "2.5.3"\n hashes = ["zh:' + PROVIDER_SHA + '"]\n}\n', encoding="utf-8")
+        self.lockfile.write_bytes(self.verified_lock)
         self.write_config()
         self.init(self.backend)
 
     def write_config(self, *, resource="managed", moved=False, provisioner=None):
         data = {
-            "terraform": {"backend": {"http": {}}, "required_providers": {"local": {"source": "registry.terraform.io/hashicorp/local", "version": "2.5.3"}}},
+            "terraform": {"backend": {"http": {}}, "required_providers": {"local": {"source": self.provider_source, "version": "2.5.3"}}},
             "variable": {"release": {"type": "string", "default": "v1"}},
             "resource": {"local_file": {resource: {"filename": str(self.lab / "object.txt"), "content": "${var.release}", "file_permission": "0600"}}},
         }
@@ -112,6 +126,7 @@ class NativeIaCTests(unittest.TestCase):
         elif mode == "reconfigure":
             args.append("-reconfigure")
         self.run_cli(*args)
+        self.assertEqual(self.lockfile.read_bytes(), self.verified_lock, "initialization changed reviewed provider selection")
 
     def plan(self, filename="review.plan", *, release="v1", options=(), expected=(2,)):
         return self.run_cli("plan", "-input=false", "-no-color", "-detailed-exitcode", "-out=" + filename, "-var=release=" + release, *options, expected=expected)
@@ -298,15 +313,18 @@ class NativeIaCTests(unittest.TestCase):
     def test_backend_migration_preserves_lineage_and_object(self):
         self.provision()
         original = self.state()
+        before_file = (self.lab / "object.txt").stat().st_mtime_ns
         destination = StateBackend()
         self.addCleanup(destination.close)
         self.init(destination, mode="migrate")
         migrated = self.state()
         self.assertEqual(migrated["lineage"], original["lineage"])
         self.assertEqual(self.addresses(migrated), self.addresses(original))
+        self.assertEqual(migrated["resources"], original["resources"])
         self.assertIsNotNone(self.backend.snapshot(), "source copy still needs operational retirement")
         self.assertIsNotNone(destination.snapshot())
         self.assertEqual((self.lab / "object.txt").read_text(), "v1")
+        self.assertEqual((self.lab / "object.txt").stat().st_mtime_ns, before_file)
         self.plan("migrated.plan", expected=(0,))
 
     def test_reconfigure_empty_backend_is_not_a_migration(self):

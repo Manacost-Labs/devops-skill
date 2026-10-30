@@ -63,6 +63,8 @@ source_freshness:
     - https://opentofu.org/docs/language/settings/backends/http/
     - https://opentofu.org/docs/language/settings/backends/s3/
     - https://opentofu.org/docs/language/state/encryption/
+    - https://developer.hashicorp.com/terraform/cli/commands/providers/lock
+    - https://opentofu.org/docs/cli/commands/providers/lock/
     - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
     - https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_patterns.html
     - https://docs.ansible.com/projects/ansible/latest/reference_appendices/general_precedence.html
@@ -75,6 +77,8 @@ source_freshness:
     terraform-opentofu-audit:
       - https://developer.hashicorp.com/terraform/cli/commands/plan
       - https://opentofu.org/docs/cli/commands/plan/
+      - https://developer.hashicorp.com/terraform/cli/commands/providers/lock
+      - https://opentofu.org/docs/cli/commands/providers/lock/
     terraform-opentofu-plan-apply:
       - https://developer.hashicorp.com/terraform/cli/commands/plan
       - https://opentofu.org/docs/cli/commands/plan/

@@ -6,6 +6,8 @@ Record engine/version, repository/root revision, backend type, exact endpoint/ac
 
 Backend credentials control stored state; provider credentials control real infrastructure. Confirm both identities independently. Inventory cross-state consumers and shared objects: remote-state access can reveal the underlying snapshot, beyond intended outputs. Avoid two states owning the same real object; their separate backend locks cannot coordinate those writers.
 
+Treat engine/provider-registry transitions as a separate reviewed change: selected versions alone do not establish identical packages or addresses. OpenTofu can rewrite Terraform registry lock entries; verify intended source, release bytes/signers and platform hashes before using a new lock. Mirrors need usable unpacked-package hashes as well as verified archive provenance; never remove readonly/checksum safeguards to silence a cache mismatch. Generate needed platform entries only from a reviewed origin or already verified mirror and review the lock diff.
+
 The `.terraform/terraform.tfstate` initialization cache is not necessarily the managed-resource state and can hold backend settings/credentials. Saved plans can embed backend configuration too. Use protected credential references/environment, not literal secrets in backend arguments/files. Never publish raw state/pulls, plan/show JSON, backend caches, crash logs or recovery state. Sensitive flags only affect selected displays.
 
 ## Protect recovery and compatibility

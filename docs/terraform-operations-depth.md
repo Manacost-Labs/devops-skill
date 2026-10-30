@@ -19,7 +19,7 @@ python tests/smoke_terraform.py terraform -v
 python tests/smoke_terraform.py tofu -v
 ```
 
-The fixture is Linux x86_64 / CPython 3.13 and pins Terraform 1.17.1, OpenTofu 1.13.2 and registry.terraform.io/hashicorp/local 2.5.3. The explicit common provider address is a test choice; it is not a registry-migration recommendation. CLI/provider bytes are downloaded from official release endpoints and checked against pinned SHA-256 values before use.
+The fixture is Linux x86_64 / CPython 3.13 and pins Terraform 1.17.1, OpenTofu 1.13.2 and engine-specific local 2.5.3 packages: registry.terraform.io/hashicorp/local for Terraform, registry.opentofu.org/hashicorp/local for OpenTofu. The provider release bytes/hashes differ; no interchangeable-registry/package claim is made. CLI/provider bytes are downloaded from official release endpoints and checked against pinned SHA-256 values before use. The CLI derives its unpacked-package platform hash only from this verified offline mirror; each scenario then initializes with an unchanged readonly dependency lock.
 
 Each engine covers saved-plan convergence, real deleted-file drift versus disabled-refresh blindness, refresh-only state persistence without resource repair, stale saved-plan rejection, foreign-lineage/older-serial push refusal, competing-process contention, exact synthetic stale-lock release, partial successful apply/taint followed by a fresh forward repair, rejected state uploads with error-snapshot recovery, an upload committed despite an error response, moved-address identity preservation, forget-versus-delete, explicit backend migration and the empty-state hazard of reconfiguration.
 
