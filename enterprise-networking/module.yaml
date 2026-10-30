@@ -1,5 +1,5 @@
 name: enterprise-networking
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -9,8 +9,8 @@ allowed_tools:
   - Edit
   - Bash
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+  - devops-platform-contracts >= 0.7.0
+  - devops-core >= 0.7.0
 capabilities:
   - vpn-operations
   - bgp-operations
@@ -26,6 +26,44 @@ risk_domains:
   - traffic-exposure
   - management-plane
 platforms:
-  - Enterprise networks
-  - Hybrid networks
-  - VPN and BGP
+  - Debian/Ubuntu Linux
+  - WireGuard
+  - FRRouting BGP IPv4 unicast
+  - iproute2
+  - nftables
+source_freshness:
+  last_verified: '2026-10-30'
+  refresh_before_change: true
+  official_sources:
+    - https://www.wireguard.com/quickstart/
+    - https://docs.frrouting.org/en/stable-8.4/bgp.html
+    - https://docs.frrouting.org/en/stable-8.4/basic.html
+    - https://manpages.debian.org/bookworm/iproute2/ip-route.8.en.html
+    - https://manpages.debian.org/bookworm/iproute2/ip-rule.8.en.html
+    - https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains
+    - https://wiki.nftables.org/wiki-nftables/index.php/Atomic_rule_replacement
+    - https://docs.kernel.org/networking/ip-sysctl.html
+  capability_sources:
+    vpn-operations:
+      - https://www.wireguard.com/quickstart/
+    bgp-operations:
+      - https://docs.frrouting.org/en/stable-8.4/bgp.html
+    route-management:
+      - https://manpages.debian.org/bookworm/iproute2/ip-route.8.en.html
+      - https://manpages.debian.org/bookworm/iproute2/ip-rule.8.en.html
+    network-segmentation:
+      - https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains
+    hybrid-connectivity:
+      - https://www.wireguard.com/quickstart/
+      - https://docs.frrouting.org/en/stable-8.4/bgp.html
+    route-acl-diff:
+      - https://manpages.debian.org/bookworm/iproute2/ip-route.8.en.html
+      - https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains
+    mtu-path-analysis:
+      - https://docs.kernel.org/networking/ip-sysctl.html
+      - https://manpages.debian.org/bookworm/iproute2/ip-route.8.en.html
+    staged-network-change:
+      - https://docs.frrouting.org/en/stable-8.4/bgp.html
+      - https://docs.frrouting.org/en/stable-8.4/basic.html
+      - https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains
+      - https://wiki.nftables.org/wiki-nftables/index.php/Atomic_rule_replacement

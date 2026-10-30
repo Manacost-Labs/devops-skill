@@ -84,7 +84,7 @@
       "role": "executor"
     },
     "enterprise-networking": {
-      "version": "0.3.0",
+      "version": "0.4.0",
       "role": "executor"
     },
     "security-compliance-operations": {

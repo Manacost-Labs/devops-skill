@@ -1,0 +1,36 @@
+name: enterprise networking
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: enterprise-networking-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Networking / WireGuard FRR nftables recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13.5'
+      - name: Install native distro implementations and record exact versions
+        run: |
+          sudo apt-get update -q
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends iproute2 wireguard-tools nftables frr iputils-ping
+          dpkg-query -W iproute2 wireguard-tools nftables frr iputils-ping
+          uname -r
+      - name: Exercise owned namespaces and actual failure recovery without skips
+        run: sudo -- "$(command -v python)" tests/smoke_enterprise_networking.py -v
