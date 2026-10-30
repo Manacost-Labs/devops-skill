@@ -113,6 +113,22 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture $server.HasPrivateKey
     Require-Fixture ((Get-Item WSMan:\localhost\Service\Auth\Certificate).Value -ieq 'true')
     $requestStart=Get-Date
+    # Deliberate owner-side CI comparison, before any task dispatch. The
+    # connector remains the same nonadmin SID, certificate and JEA role.
+    & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') probe-binding --folder $root
+    $exactMappingCode=$LASTEXITCODE
+    Require-Fixture ($exactMappingCode -in @(0,3)) 'exact_mapping_probe'
+    Require-Fixture ([IO.File]::ReadAllText((Join-Path $state 'value.txt')) -ceq 'before') 'mapping_probe_no_write'
+    Remove-Item -LiteralPath $mappingPath -Recurse -Force;$mappingPath=$null
+    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI '*' -Issuer $client.Thumbprint -Credential $credential -Force
+    $mappingPath=$mapping.PSPath
+    $mappingUser=[string](Get-Item -LiteralPath ($mappingPath+'\UserName')).Value
+    Require-Fixture ($mappingUser -ieq $name -or $mappingUser -ieq ($env:COMPUTERNAME+'\'+$name)) 'wildcard_mapping_user'
+    if($mappingUser -notmatch '\\'){$mappingUser=$env:COMPUTERNAME+'\'+$mappingUser}
+    Require-Fixture (([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier]).Value -ceq $createdUser.SID.Value) 'wildcard_mapping_sid'
+    & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') probe-binding --folder $root
+    Require-Fixture ($LASTEXITCODE -eq 0) 'wildcard_mapping_positive_binding'
+    Write-Output ('MAPPING_URI_COMPARISON exact_code='+$exactMappingCode+' wildcard_authenticated; named JEA role unchanged')
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') diagnose-tls --folder $root
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') exercise --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0)

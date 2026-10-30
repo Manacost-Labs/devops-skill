@@ -192,16 +192,29 @@ def diagnose_tls(folder):
         except Exception as error:print('TLS_DIAGNOSTIC',version.name,'failed_stage',stage,'error',type(error).__name__,str(error)[:300])
 
 
+def probe_binding(folder):
+    resource=B.decode((folder/'target.json').read_bytes())
+    try:
+        with B.PSRP(resource) as client:binding=client.invoke('Get-DevopsEndpointBinding',{})
+        assert binding=={'target_id':'fixture-target','binding_digest':resource['binding_digest']}
+        print('MAPPING_BINDING_PROBE authenticated_named_endpoint')
+        return 0
+    except Exception as error:
+        print('MAPPING_BINDING_PROBE refused',type(error).__name__,str(error)[:500])
+        return 3
+
+
 def main():
     parser=argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument('action',choices=('certificates','digest','diagnose-tls','exercise'))
+    parser.add_argument('action',choices=('certificates','digest','diagnose-tls','probe-binding','exercise'))
     parser.add_argument('--folder',type=Path,required=True)
     parser.add_argument('--username')
     args=parser.parse_args()
     if args.action=='certificates':certificates(args.folder,args.username)
     elif args.action=='digest':print(B.digest(B.decode((args.folder/'target.json').read_bytes())))
     elif args.action=='diagnose-tls':diagnose_tls(args.folder)
+    elif args.action=='probe-binding':return probe_binding(args.folder)
     else:exercise(args.folder)
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':raise SystemExit(main())
