@@ -20,6 +20,8 @@ The active selection is specific to the actual host session, runtime and workspa
 
 Cancellation publishes a new safety generation before waiting for issuer coordination. Newer cancellation wins over in-flight issuance and is never erased by publication; an old confirmation cannot acknowledge a later Safe request. Successful final admission remains the launch decision point, not an atomic cancellation of already admitted/running children.
 
+Safety generations live in runtime-private external state, outside the replaced runtime and its operation-plan snapshots. A runtime install/update cannot roll a newly successful cancellation back. Protect cancellation records from deletion/rollback along with issuer selection/configuration; unrestricted same-user file access is not an independent revocation barrier.
+
 Above-ceiling/outside-envelope work still needs exact operation admission or a new envelope. Destructive/irreversible effects and exceptions remain separate. Hard denials, enterprise Safe cap, recovery, target locks, final admission, command bindings, verification and audit are unchanged. Never turn a missing diagnostic fact into a reflexive permission question; resolve it within current authority first.
 
 ## Trust and host limits

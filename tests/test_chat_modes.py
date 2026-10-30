@@ -388,6 +388,33 @@ class ChatModeTests(unittest.TestCase):
         self.assertEqual(json.loads(path.read_text())["autonomy"]["mode"], "safe")
         self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
 
+    def test_runtime_replacement_cannot_roll_back_a_new_safe_restriction(self):
+        self.prepare(); self.confirm()
+        result, path, marker, argv = self.plan()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        spec = importlib.util.spec_from_file_location("synthetic_upgrade_installer", self.snapshot/"tools/install.py")
+        installer = importlib.util.module_from_spec(spec); spec.loader.exec_module(installer)
+        original = installer.tree_digest
+        destination_reads = []
+        def safe_after_final_destination_snapshot(folder):
+            value = original(folder)
+            if Path(folder) == self.runtime:
+                destination_reads.append(1)
+                if len(destination_reads) == 2:
+                    cancelled = self.cli("tools/devops_mode.py", "safe")
+                    self.assertEqual(cancelled.returncode, 0, cancelled.stdout)
+            return value
+        import argparse
+        args = argparse.Namespace(destination=self.runtime, profile=None, force=True, apply=True)
+        with mock.patch.object(installer, "tree_digest", side_effect=safe_after_final_destination_snapshot):
+            self.assertEqual(installer.install_runtime(args), 0)
+        self.assertGreaterEqual(len(destination_reads), 2)
+        self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
+        self.prepare(setup=False); self.assertIn("ACTIVE:", self.confirm().stdout)
+        result, path, marker, argv = self.plan(2)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(self.execute(path, argv).returncode, 0)
+
     def test_new_safe_after_selection_publication_wins_without_deleting_epoch(self):
         self.prepare()
         spec = importlib.util.spec_from_file_location("synthetic_safe_race_chat", self.runtime/"devops-platform-contracts/scripts/chat_modes.py")

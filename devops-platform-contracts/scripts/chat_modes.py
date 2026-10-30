@@ -80,7 +80,8 @@ def pending_path(sid):
 
 
 def latch_path(sid):
-    return pending_path(sid).with_name("safe.json")
+    # Runtime replacement must never restore an older cancellation snapshot.
+    return state_root()/"restrictions"/(session_key(sid)+".json")
 
 
 def selection_path(sid):
