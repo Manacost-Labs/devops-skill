@@ -54,8 +54,10 @@ source_freshness:
   - https://caddyserver.com/docs/automatic-https
   - https://doc.traefik.io/traefik/reference/routing-configuration/http/tls/tls-certificates/
   - https://coredns.io/plugins/file/
+  - https://www.alibabacloud.com/help/en/ecs/user-guide/view-instance-metadata/
   capability_sources:
     dns-tls-http-diagnosis:
+    - https://www.alibabacloud.com/help/en/ecs/user-guide/view-instance-metadata/
     - https://www.rfc-editor.org/info/rfc1035/
     - https://www.rfc-editor.org/rfc/rfc9525.html
     - https://nginx.org/en/docs/http/ngx_http_proxy_module.html

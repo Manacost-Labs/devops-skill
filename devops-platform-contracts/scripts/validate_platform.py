@@ -36,7 +36,7 @@ FRESHNESS_HOSTS = {
     "cloudflare-operations": {"developers.cloudflare.com"},
     "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
     "cicd-operations": {"docs.github.com", "slsa.dev"},
-            "network-edge-operations": {"www.rfc-editor.org", "letsencrypt.org", "nginx.org", "caddyserver.com", "doc.traefik.io", "coredns.io"},
+    "network-edge-operations": {"www.rfc-editor.org", "letsencrypt.org", "nginx.org", "caddyserver.com", "doc.traefik.io", "coredns.io", "www.alibabacloud.com"},
     "github-operations": {"docs.github.com"},
     "data-resilience-operations": {"www.postgresql.org", "redis.io", "csrc.nist.gov", "dev.mysql.com", "mariadb.com"},
     "cloud-aws": {"docs.aws.amazon.com"},

@@ -10,6 +10,7 @@ import os
 import re
 import socket
 import ssl
+import stat
 import sys
 import time
 import unittest
@@ -71,7 +72,7 @@ class EdgeFixture(DockerFixture):
         self.engine = engine
         try:
             self.material = self.folder / "material"
-            for name in ("config", "dynamic", "candidate", "certs", "dns"):
+            for name in ("config", "dynamic", "candidate", "certs", "dns", "bin"):
                 (self.material / name).mkdir(parents=True, mode=0o700)
             self.make_pki()
             for name in (engine, "dns"):
@@ -117,7 +118,8 @@ class EdgeFixture(DockerFixture):
                    "--env", "XDG_DATA_HOME=/tmp/data", "--mount", f"type=bind,src={self.material},dst=/fixture,readonly"]
         if alias:
             options += ["--network-alias", alias]
-        options += ["--entrypoint", "/coredns" if name == "dns" else name]
+        source_binary = {"caddy": "/usr/bin/caddy", "dns": "/coredns"}.get(name)
+        options += ["--entrypoint", "/fixture/bin/" + name if source_binary else name]
         identity = self.docker("create", *options, image, *arguments).stdout.strip()
         if not re.fullmatch(r"[0-9a-f]{64}", identity):
             raise RuntimeError("full owned edge container ID required")
@@ -125,14 +127,30 @@ class EdgeFixture(DockerFixture):
         value = self.owned_container(identity)
         if value["Image"] != image_id:
             raise RuntimeError("edge image identity changed")
+        if source_binary:
+            # File-capability executables cannot exec with an empty bounding set.
+            # Copy only the pinned image's owned, never-started binary; no setcap,
+            # build or capability grant. docker cp does not preserve file xattrs.
+            binary = self.material / "bin" / name
+            if not binary.exists():
+                self.docker("cp", identity + ":" + source_binary, str(binary))
+                if binary.is_symlink() or not stat.S_ISREG(binary.stat().st_mode) or "security.capability" in os.listxattr(binary):
+                    raise RuntimeError("regular capability-free fixture binary required")
+                binary.chmod(0o755)
         return identity
 
     def address(self, identity):
         value = self.owned_container(identity)
+        if not value["State"]["Running"]:
+            logs = self.docker("logs", "--tail", "15", identity)
+            raise RuntimeError("owned native service exited: " + (logs.stdout + logs.stderr)[-2000:])
         networks = list(value["NetworkSettings"]["Networks"].values())
         if len(networks) != 1 or networks[0]["NetworkID"] != self.net:
             raise RuntimeError("owned fixture network required")
-        return networks[0]["IPAddress"]
+        address = networks[0]["IPAddress"]
+        if not address:
+            raise RuntimeError("owned native service lacks an address")
+        return address
 
     def make_pki(self):
         now = datetime.now(timezone.utc)
