@@ -10,12 +10,14 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import queue
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 import threading
+import time
 import urllib.request
 import zipfile
 
@@ -126,8 +128,6 @@ def run(executable,folder,guarded,helper=False,managed_probe=None):
             refusal=(result.stderr+result.stdout).lower()
             if not provider.requests and 'danger-full-access' in refusal and any(word in refusal for word in ('not allowed','not permitted','allowed_permission_profiles','allowed_sandbox_modes','requirement')):
                 print('managed Full Access: actual profile refusal before model/tool execution'); return
-        if managed_probe:
-            raise RuntimeError('explicit managed '+managed_probe+' refusal before model execution not established: '+result.stderr[-3000:]+result.stdout[-3000:])
         if result.returncode or not provider.outputs: raise RuntimeError('native tool loop failed: '+result.stderr[-3000:]+' '+result.stdout[-3000:])
         observation=json.dumps(provider.outputs)
         if helper:
@@ -138,6 +138,60 @@ def run(executable,folder,guarded,helper=False,managed_probe=None):
         print(('managed override refusal' if managed_probe else 'registered helper' if helper else 'guard denial' if guarded else 'positive control')+': actual Codex tool loop passed')
     finally:
         provider.shutdown(); provider.server_close(); thread.join(2)
+
+
+def resolved_permissions(executable,home,environment):
+    """Observe actual native thread admission without starting any model turn.
+
+The runtime may correctly fall back to a required profile instead of throwing.
+The typed app-server response establishes the effective permissions independently
+of a tool hook's canary denial. No shell/sandbox worker or model is invoked here.
+"""
+    (home/'config.toml').write_text('model_provider="fixture"\nmodel="gpt-5.3-codex"\n'
+        '[model_providers.fixture]\nname="owned no-turn fixture"\nbase_url="http://127.0.0.1:9/v1"\n'
+        'wire_api="responses"\nrequires_openai_auth=false\nsupports_websockets=false\n',encoding='utf-8')
+    messages=queue.Queue()
+    with (home/'app-server.stderr').open('w',encoding='utf-8') as errors:
+        process=subprocess.Popen([str(executable),'app-server','--stdio','--strict-config'],env=environment,cwd=home,
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=errors,text=True,encoding='utf-8',bufsize=1)
+        def read():
+            try:
+                for line in process.stdout:
+                    if len(line)>1024*1024: raise ValueError('bounded native response required')
+                    messages.put(json.loads(line))
+            except Exception as exc: messages.put(exc)
+        reader=threading.Thread(target=read,daemon=True); reader.start()
+        def rpc(identifier,method,params):
+            process.stdin.write(json.dumps({'id':identifier,'method':method,'params':params})+'\n'); process.stdin.flush()
+            deadline=time.monotonic()+20
+            while True:
+                message=messages.get(timeout=max(.01,deadline-time.monotonic()))
+                if isinstance(message,Exception): raise message
+                if message.get('id')==identifier: return message
+                if time.monotonic()>deadline: raise TimeoutError('native permission response unavailable')
+        try:
+            initialized=rpc(1,'initialize',{'clientInfo':{'name':'devops-native-fixture','version':'1.0'},'capabilities':{'experimentalApi':True}})
+            if 'result' not in initialized: raise RuntimeError('native initialization refused')
+            process.stdin.write(json.dumps({'method':'initialized'})+'\n'); process.stdin.flush()
+            for identifier,overrides in enumerate(({'sandbox':'danger-full-access'},{'permissions':':danger-full-access'},{'config':{'default_permissions':':danger-full-access'}}),2):
+                response=rpc(identifier,'thread/start',{'cwd':str(home),'ephemeral':True,**overrides})
+                if 'error' in response:
+                    refusal=json.dumps(response['error']).lower()
+                    if 'danger-full-access' in refusal and any(word in refusal for word in ('not allowed','not permitted','requirement')):
+                        continue
+                    raise RuntimeError('unrelated native admission error: '+refusal[-1500:])
+                value=response.get('result',{})
+                sandbox=value.get('sandbox',{})
+                active=value.get('activePermissionProfile') or {}
+                if sandbox.get('type')!='readOnly' or active.get('id')!=':read-only':
+                    raise RuntimeError('managed native thread widened permissions: '+json.dumps({'sandbox':sandbox,'active':active}))
+            print('managed runtime: all three Full Access selections resolve to read-only or explicit policy refusal, without model/tools')
+        finally:
+            process.stdin.close()
+            if process.poll() is None: process.terminate()
+            try: process.wait(timeout=8)
+            except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=5)
+            reader.join(2); process.stdout.close()
 
 
 def managed(executable,folder):
@@ -164,9 +218,8 @@ def managed(executable,folder):
         rows={line.split()[0]:line.split()[-1] for line in result.stdout.splitlines() if line.split()}
         for name,expected in {'hooks':'true','unified_exec':'false','apps':'false','plugins':'false'}.items():
             if rows.get(name)!=expected: raise RuntimeError('managed feature override accepted: '+name+' '+result.stdout)
-        # Use actual production exec selectors. The standalone sandbox debugging
-        # command does not establish runtime profile admission. No hook/model/OS
-        # refusal may masquerade as managed configuration enforcement.
+        # Read the runtime's constrained thread policy independently of hooks.
+        resolved_permissions(executable,home,environment)
         run(executable,folder,False,managed_probe='legacy')
         run(executable,folder,False,managed_probe='named')
         print('managed policy: hostile feature overrides and Full Access refused by actual Codex')
