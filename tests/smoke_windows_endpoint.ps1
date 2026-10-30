@@ -61,8 +61,10 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $existing=@(Get-ChildItem WSMan:\localhost\Listener | Where-Object {$_.Keys -contains 'Transport=HTTPS' -and $_.Keys -contains 'Address=IP:127.0.0.1'})
     Require-Fixture ($existing.Count -eq 0)
     $portProbe=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$portProbe.Start();$port=$portProbe.LocalEndpoint.Port;$portProbe.Stop()
-    $listener=New-Item WSMan:\localhost\Listener -Address 'IP:127.0.0.1' -Transport HTTPS -Port $port -CertificateThumbprint $server.Thumbprint
-    $listenerPath=$listener.PSPath
+    $null=New-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address='IP:127.0.0.1';Transport='HTTPS'} -ValueSet @{Hostname='localhost';Port=[string]$port;CertificateThumbprint=$server.Thumbprint;Enabled='true'}
+    $listener=@(Get-ChildItem WSMan:\localhost\Listener | Where-Object {$_.Keys -contains 'Transport=HTTPS' -and $_.Keys -contains 'Address=IP:127.0.0.1'})
+    Require-Fixture ($listener.Count -eq 1)
+    $listenerPath=$listener[0].PSPath
     $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$name),$password)
     $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject ($name+'@localhost') -URI ('http://schemas.microsoft.com/powershell/'+$endpoint) -Issuer $ca.Thumbprint -Credential $credential
     $mappingPath=$mapping.PSPath
