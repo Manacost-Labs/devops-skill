@@ -74,11 +74,12 @@ class NativeBroker(unittest.TestCase):
         self.registry,self.keys=registry(subject=self.subject)
         self.registry['targets']['fixture-target']['resource']={'path':str(self.folder/'target/value'),'private_state':str(self.state/'service.json'),
             'worker_started':str(self.folder/'target/worker-started')}
-        for name,mode in (('probe-task','probe'),('failure-task','fail'),('slow-task','slow'),('ignore-task','ignore'),('invalid-task','invalid'),('snapshot-task','snapshot')):
+        for name,mode in (('probe-task','probe'),('failure-task','fail'),('slow-task','slow'),('ignore-task','ignore'),('invalid-task','invalid'),('snapshot-task','snapshot'),('context-task','context')):
             task=copy.deepcopy(self.registry['tasks']['configure-task' if mode in ('fail','slow','ignore','invalid') else 'inspect-task'])
             task.update(argv=['-I','@bundle/handler.py@',mode],parameters={})
             if mode=='ignore': task['timeout_seconds']=1
             if mode=='slow': task['timeout_seconds']=3
+            if mode=='context': task['worker_input']='context-v2'
             self.registry['tasks'][name]=task
         self.registry['targets']['fixture-target']['resource']['padding']='x'*12000
         self.registry_path=self.protected/'registry.json'; self.registry_path.write_bytes(C.canonical(self.registry))
@@ -134,6 +135,11 @@ class NativeBroker(unittest.TestCase):
             result=self.request(packet); self.assertEqual(result['status'],'executed'); self.assertTrue(result['result_valid'])
             self.assertTrue(self.request(packet)['replayed'])
         self.assertEqual((self.folder/'target/value').read_text(),'after')
+
+    def test_real_worker_receives_only_broker_derived_operation_context(self):
+        result=self.request(self.packet('context-task',operation='ops-native-context'))
+        self.assertEqual(result['status'],'executed')
+        self.assertEqual(result['result'],{'state':'after'})
 
     def test_real_unprivileged_client_has_only_typed_broker_authority(self):
         profile=self.folder/'agent/profile.json'; profile.write_bytes(C.canonical(self.profile)); profile.chmod(0o444)

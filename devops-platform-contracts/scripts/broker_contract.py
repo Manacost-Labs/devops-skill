@@ -148,7 +148,10 @@ def validate_registry(registry):
     worker_targets = {"worker_uid": {}, "worker_gid": {}}
     for task_id, task in registry["tasks"].items():
         identifier(task_id)
-        exact(task, {"target_id", "action", "risk", "scope", "stateful", "destructive", "irreversible", "external_side_effects", "data_classification", "executable", "argv", "bundle", "parameters", "result_schema", "timeout_seconds", "recovery", "verification", "worker_uid", "worker_gid"})
+        fields = {"target_id", "action", "risk", "scope", "stateful", "destructive", "irreversible", "external_side_effects", "data_classification", "executable", "argv", "bundle", "parameters", "result_schema", "timeout_seconds", "recovery", "verification", "worker_uid", "worker_gid"}
+        exact(task, fields | ({"worker_input"} if "worker_input" in task else set()))
+        if not isinstance(task.get("worker_input", "legacy-v1"), str) or task.get("worker_input", "legacy-v1") not in {"legacy-v1", "context-v2"}:
+            raise Denied("unsupported worker input protocol")
         if any(type(task[field]) is not int or not 1 <= task[field] <= 2147483647 for field in ("worker_uid", "worker_gid")):
             raise Denied("unprivileged worker identity required")
         for field in worker_targets:
@@ -213,6 +216,28 @@ def validate_parameters(schema, values):
             raise Denied("invalid parameter choice")
         if values is not None and not any(type(values[name]) is type(choice) and values[name] == choice for choice in choices):
             raise Denied("parameter outside registered choices")
+
+
+def worker_input(registry, call, assessed):
+    """Authoritative task input after admission; never copied from parameters.
+
+    Legacy task bytes are preserved. Opt-in changes the signed registry digest,
+    so an existing grant cannot silently acquire the new input contract.
+    """
+    if assessed["preparation_only"]:
+        raise Denied("a planning result cannot become worker admission")
+    task = assessed["task"]
+    value = {"parameters": call["parameters"], "target": registry["targets"][task["target_id"]]["resource"]}
+    if task.get("worker_input", "legacy-v1") == "context-v2":
+        execution = assessed["request"]["execution"]
+        value.update(schema_version="2.0", context={
+            "operation_id": call["operation_id"], "task_id": call["task_id"], "target_id": task["target_id"],
+            "call_digest": assessed["call_digest"], "grant_digest": assessed["grant_digest"],
+            "registry_digest": assessed["registry_digest"], "epoch": assessed["current_epoch"],
+            "not_before": execution["window_start"], "expires": execution["window_end"],
+            "parameters_digest": digest(call["parameters"]), "target_digest": digest(value["target"]),
+        })
+    return canonical(value)
 
 
 def verified(envelope, registry, now, *, kind, fields):

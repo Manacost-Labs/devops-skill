@@ -1,0 +1,130 @@
+"""Owned Windows CI endpoint interoperability. No domain or real credentials."""
+import argparse
+from datetime import datetime, timedelta, timezone
+import importlib.util
+import json
+from pathlib import Path
+import sys
+
+ROOT=Path(__file__).resolve().parents[1]
+spec=importlib.util.spec_from_file_location('native_windows_bridge',ROOT/'tools/windows_bridge.py')
+B=importlib.util.module_from_spec(spec);spec.loader.exec_module(B)
+
+
+def certificates(folder, username):
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID, ObjectIdentifier
+    ca_key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
+    ca_name=x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'DevopsJEA-fixture-'+username)])
+    now=datetime.now(timezone.utc)
+    ca=(x509.CertificateBuilder().subject_name(ca_name).issuer_name(ca_name).public_key(ca_key.public_key())
+        .serial_number(x509.random_serial_number()).not_valid_before(now-timedelta(minutes=5)).not_valid_after(now+timedelta(hours=1))
+        .add_extension(x509.BasicConstraints(ca=True,path_length=0),critical=True)
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(ca_key.public_key()),critical=False)
+        .add_extension(x509.KeyUsage(True,False,False,False,False,True,True,False,False),critical=True)
+        .sign(ca_key,hashes.SHA256()))
+    (folder/'ca.pem').write_bytes(ca.public_bytes(serialization.Encoding.PEM))
+    for name,server in (('server',True),('client',False)):
+        key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
+        subject='localhost' if server else username
+        builder=(x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,subject)]))
+            .issuer_name(ca.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
+            .not_valid_before(now-timedelta(minutes=5)).not_valid_after(now+timedelta(hours=1))
+            .add_extension(x509.BasicConstraints(ca=False,path_length=None),critical=True)
+            .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()),critical=False)
+            .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),critical=False)
+            .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH if server else ExtendedKeyUsageOID.CLIENT_AUTH]),critical=False))
+        if server:builder=builder.add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost')]),critical=False)
+        else:
+            upn=(username+'@localhost').encode()
+            builder=builder.add_extension(x509.SubjectAlternativeName([x509.OtherName(ObjectIdentifier('1.3.6.1.4.1.311.20.2.3'),bytes((12,len(upn)))+upn)]),critical=False)
+        cert=builder.sign(ca_key,hashes.SHA256())
+        (folder/(name+'.pem')).write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        (folder/(name+'.key')).write_bytes(key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))
+        (folder/(name+'.key')).chmod(0o600)
+        if server:(folder/(name+'.pfx')).write_bytes(pkcs12.serialize_key_and_certificates(name.encode(),key,cert,None,serialization.NoEncryption()))
+
+
+def packet(resource, task='canary-write', value='after', operation='ops-native-windows'):
+    now=datetime.now(timezone.utc);parameters={'value':value}
+    return {'schema_version':'2.0','target':resource,'parameters':parameters,'context':{'operation_id':operation,'task_id':task,'target_id':'fixture-target',
+        'call_digest':'sha256:'+__import__('hashlib').sha256(operation.encode()).hexdigest(),'grant_digest':'sha256:'+'d'*64,'registry_digest':'sha256:'+'e'*64,
+        'epoch':'f'*64,'not_before':(now-timedelta(minutes=1)).isoformat(),'expires':(now+timedelta(minutes=10)).isoformat(),
+        'parameters_digest':B.digest(parameters),'target_digest':B.digest(resource)}}
+
+
+def exercise(folder):
+    resource=B.decode((folder/'target.json').read_bytes())
+    target=folder/'state/value.txt'
+    original=packet(resource)
+    result,code=B.run(original)
+    if code!=0:
+        try:
+            with B.PSRP(resource) as client:client.invoke('Get-DevopsEndpointBinding',{})
+        except Exception as error:print('Synthetic fixture diagnostic:',type(error).__name__,str(error)[:1500])
+    assert code==0 and result=={'state':'after'},('positive controlled task failed',code)
+    assert target.read_text()=='after'
+    target.write_text('external-change')
+    assert B.run(original)==({'state':'after'},0)
+    assert target.read_text()=='external-change','replay dispatched a second write'
+    for field,bad_value in (('ca_file',str(folder/'client.pem')),('server','127.0.0.1')):
+        altered=dict(resource);altered[field]=bad_value
+        refused=packet(altered,operation='ops-native-tls-'+field.replace('_','-'))
+        assert B.run(refused)[1]==3,'TLS failure was not rejected before task dispatch'
+        assert target.read_text()=='external-change'
+    # The same certificate-mapped nonadmin connector must not receive a raw
+    # filesystem cmdlet or a code evaluation primitive in this actual endpoint.
+    for command in ('Get-Item','Invoke-Expression','New-PSSession'):
+        with B.PSRP(resource) as client:
+            pipeline=client.PowerShell(client.pool);pipeline.add_cmdlet(command)
+            denied=False
+            try:pipeline.invoke();denied=pipeline.had_errors
+            except Exception:denied=True
+            assert denied,'unregistered command accepted'
+    # No access to the default unrestricted PS endpoint or Windows shell.
+    from pypsrp.powershell import RunspacePool
+    from pypsrp.shell import WinRS
+    for shell in ('default','winrs'):
+        client=B.PSRP(resource)
+        denied=False
+        try:
+            pool=RunspacePool(client.connection) if shell=='default' else WinRS(client.connection)
+            pool.open()
+        except Exception:denied=True
+        finally:client.connection.close()
+        assert denied,'unrestricted remote entry point accepted'
+    bad=packet(resource,operation='ops-native-bad-value');bad['parameters']['value']='unregistered';bad['context']['parameters_digest']=B.digest(bad['parameters'])
+    assert B.run(bad)[1]!=0 and target.read_text()=='external-change'
+    # Lose the reply after an actual remote task, then reconcile/read the
+    # original receipt; no automatic mutation retry is attempted by the bridge.
+    class LostReply(B.PSRP):
+        def invoke(self,command,parameters):
+            result=super().invoke(command,parameters)
+            if command=='Invoke-DevopsBoundTask':raise OSError('synthetic dropped reply')
+            return result
+    lost=packet(resource,value='before',operation='ops-native-lost-reply')
+    assert B.run(lost,transport=LostReply)==(None,4)
+    assert target.read_text()=='before'
+    status=packet(resource,operation='ops-native-read-receipt');status['parameters']={'original_call_digest':lost['context']['call_digest']};status['context']['parameters_digest']=B.digest(status['parameters'])
+    assert B.run(status,'status')==({'state':'executed'},0)
+    failure=packet(resource,value='fail',operation='ops-native-task-failure')
+    assert B.run(failure)[1]==4 and target.read_text()=='fail'
+    assert B.run(packet(resource,operation='ops-native-new-retry'))[1]==4
+    assert target.read_text()=='fail','new operation bypassed remote quarantine'
+    print('NATIVE_WINDOWS_JEA_PASS: actual HTTPS certificate connector, JEA allow/deny, replay, lost reply, quarantine; AD not_run')
+
+
+def main():
+    parser=argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument('action',choices=('certificates','exercise'))
+    parser.add_argument('--folder',type=Path,required=True)
+    parser.add_argument('--username')
+    args=parser.parse_args()
+    if args.action=='certificates':certificates(args.folder,args.username)
+    else:exercise(args.folder)
+
+
+if __name__=='__main__':main()

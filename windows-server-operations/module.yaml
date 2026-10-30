@@ -1,5 +1,5 @@
 name: windows-server-operations
-version: 0.4.0
+version: 0.5.0
 kind: executor
 allowed_tools:
 - Read
@@ -9,8 +9,8 @@ allowed_tools:
 - Edit
 - Bash
 requires:
-- devops-platform-contracts >= 0.2.0
-- devops-core >= 0.2.0
+- devops-platform-contracts >= 0.8.0
+- devops-core >= 0.8.0
 capabilities:
 - windows-server-host-audit
 - winrm-rdp-access-operations
@@ -40,9 +40,11 @@ platforms:
 - windows-server-2022
 - windows-server-2025
 source_freshness:
-  last_verified: '2026-10-29'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
+  - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/session-configurations
+  - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/security-considerations
   - https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
   - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-5.1
   - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/winrm-security?view=powershell-7.5
@@ -77,6 +79,8 @@ source_freshness:
     - https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
     - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-5.1
     winrm-rdp-access-operations:
+    - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/session-configurations
+    - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/security-considerations
     - https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/winrm-security?view=powershell-7.5
     windows-service-operations:
     - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-service?view=powershell-5.1
