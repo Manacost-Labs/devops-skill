@@ -1,5 +1,5 @@
 name: cloud-aws
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -7,8 +7,8 @@ allowed_tools:
   - Glob
   - Bash(aws:*)
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+  - devops-platform-contracts >= 0.7.0
+  - devops-core >= 0.7.0
 capabilities:
   - aws-account-discovery
   - aws-iam-control-plane
@@ -28,7 +28,7 @@ provides:
   - aws-cloud-control-plane-v1
   - contract-v2-executor
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
     - https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html
@@ -39,16 +39,54 @@ source_freshness:
     - https://docs.aws.amazon.com/ecs/
     - https://docs.aws.amazon.com/eks/
     - https://docs.aws.amazon.com/rds/
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreatePolicyVersion.html
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetPolicyVersion.html
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_ListPolicyVersions.html
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_SetDefaultPolicyVersion.html
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachRolePolicy.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html
+    - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifySecurityGroupRules.html
+    - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RevokeSecurityGroupIngress.html
+    - https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
+    - https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html
+    - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RunInstances.html
+    - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstances.html
+    - https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-idempotency.html
+    - https://docs.aws.amazon.com/ec2/latest/devguide/eventual-consistency.html
+    - https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-quotas.html
+    - https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-running.html
+    - https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-status-ok.html
+    - https://docs.aws.amazon.com/ec2/latest/devguide/query-api-troubleshooting.html
   capability_sources:
     aws-account-discovery:
       - https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
       - https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html
     aws-iam-control-plane:
       - https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html
+      - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreatePolicyVersion.html
+      - https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetPolicyVersion.html
+      - https://docs.aws.amazon.com/IAM/latest/APIReference/API_ListPolicyVersions.html
+      - https://docs.aws.amazon.com/IAM/latest/APIReference/API_SetDefaultPolicyVersion.html
+      - https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachRolePolicy.html
+      - https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot.html
+      - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html
     aws-network-control-plane:
       - https://docs.aws.amazon.com/vpc/latest/userguide/
+      - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifySecurityGroupRules.html
+      - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RevokeSecurityGroupIngress.html
+      - https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
+      - https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html
     aws-compute-control-plane:
       - https://docs.aws.amazon.com/ec2/
+      - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RunInstances.html
+      - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstances.html
+      - https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-idempotency.html
+      - https://docs.aws.amazon.com/ec2/latest/devguide/eventual-consistency.html
+      - https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-quotas.html
+      - https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-running.html
+      - https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-status-ok.html
+      - https://docs.aws.amazon.com/ec2/latest/devguide/query-api-troubleshooting.html
     aws-managed-service-routing:
       - https://docs.aws.amazon.com/ecs/
       - https://docs.aws.amazon.com/eks/
