@@ -37,13 +37,16 @@ Create a ruleset or branch protection rule targeting main:
   - Python 3.13 / ubuntu-24.04
   - Python 3.13 / windows-2025
   - Dependency review
+  - Edge / nginx DNS TLS recovery
+  - Edge / caddy DNS TLS recovery
+  - Edge / traefik DNS TLS recovery
   - CI/CD / workflow and signed provenance
   - CI/CD / synthetic artifact producer
   - CI/CD / artifact admission and partial recovery
   - Ansible / repeatability and partial recovery
   - IaC / terraform state and recovery
   - IaC / tofu state and recovery
-- [ ] Do not require the manual Verify 0.13.0 RC candidate job for ordinary pull requests.
+- [ ] Do not require the manual Verify 0.14.0 RC candidate job for ordinary pull requests.
 
 CODEOWNERS currently names one account. That is enough to route portfolio maintenance review, but it does not implement separation of duties. Production or enterprise use requires adding a second qualified identity and configuring the ruleset so the author cannot satisfy their own required approval.
 
