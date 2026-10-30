@@ -4,6 +4,12 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.11.0 — 2026-10-30
+
+- Deepen Ansible inventory/identity and controller trust, repeatability/handlers/check-mode validation, capacity-aware rolling updates and state-aware partial-failure recovery in iac-operations 0.4.0.
+- Preserve existing autonomy admission, locks, production risk floors and host/data ownership; distinguish rescued/ignored/unknown outcomes from fleet acceptance.
+- Add pinned native Ansible CI on three isolated synthetic local hosts, including drift, invalid configuration, mixed-state resume, failed recovery, injected connection loss, threshold boundaries and per-batch run_once semantics. Document transport/service/data-recovery coverage limits.
+
 ## 0.10.0 — 2026-10-30
 
 - Add conversational Safe/Balanced/Semi-Auto/Full Auto selection: agent-prepared boundaries, one exact host-observed confirmation, session/workspace-specific selection and automatic planner inheritance of mode/profile/policy.

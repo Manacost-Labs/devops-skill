@@ -1,0 +1,16 @@
+---
+- name: Exercise actual failure percentage boundaries
+  hosts: app
+  gather_facts: false
+  serial: 2
+  order: sorted
+  max_fail_percentage: "{{ threshold }}"
+  tasks:
+    - name: Inject one of two failures in the first batch
+      ansible.builtin.assert:
+        that: inventory_hostname != 'node2'
+    - name: Record a reached node
+      ansible.builtin.copy:
+        content: "reached\n"
+        dest: "{{ host_root }}/reached"
+        mode: '0600'

@@ -1,5 +1,5 @@
 name: iac-operations
-version: 0.3.1
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -17,6 +17,10 @@ capabilities:
   - iac-drift-import-review
   - iac-state-backend-recovery
   - bounded-ansible-execution
+  - ansible-inventory-scope-review
+  - ansible-repeatability-validation
+  - ansible-fleet-rolling-update
+  - ansible-partial-failure-recovery
   - cloud-init-validation
 risk_domains:
   - infrastructure-state
@@ -24,6 +28,8 @@ risk_domains:
   - secrets-in-plans-and-state
   - provider-supply-chain
   - configuration-fanout
+  - mixed-fleet-and-partial-execution
+  - controller-and-delegated-effects
   - bootstrap-and-replacement
 platforms:
   - terraform
@@ -31,7 +37,7 @@ platforms:
   - ansible
   - cloud-init
 source_freshness:
-  last_verified: '2026-08-17'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
     - https://developer.hashicorp.com/terraform/cli/commands/plan
@@ -40,6 +46,12 @@ source_freshness:
     - https://developer.hashicorp.com/terraform/language/state/sensitive-data
     - https://opentofu.org/docs/cli/commands/plan/
     - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
+    - https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_patterns.html
+    - https://docs.ansible.com/projects/ansible/latest/reference_appendices/general_precedence.html
+    - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_strategies.html
+    - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_delegation.html
+    - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_error_handling.html
+    - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_blocks.html
     - https://cloudinit.readthedocs.io/en/latest/howto/debugging.html
   capability_sources:
     terraform-opentofu-audit:
@@ -55,5 +67,19 @@ source_freshness:
       - https://developer.hashicorp.com/terraform/language/state/sensitive-data
     bounded-ansible-execution:
       - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
+    ansible-inventory-scope-review:
+      - https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_patterns.html
+      - https://docs.ansible.com/projects/ansible/latest/reference_appendices/general_precedence.html
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_delegation.html
+    ansible-repeatability-validation:
+      - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_error_handling.html
+    ansible-fleet-rolling-update:
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_strategies.html
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_error_handling.html
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_delegation.html
+    ansible-partial-failure-recovery:
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_blocks.html
+      - https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_error_handling.html
     cloud-init-validation:
       - https://cloudinit.readthedocs.io/en/latest/howto/debugging.html
