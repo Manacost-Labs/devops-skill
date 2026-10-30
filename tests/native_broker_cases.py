@@ -171,6 +171,40 @@ class NativeBroker(unittest.TestCase):
         self.assertEqual(result['status'],'outcome_unknown'); self.assertFalse(result['result_valid'])
         with self.assertRaises(CLIENT.C.Denied): self.request(self.packet(operation='ops-native-after-invalid'))
 
+    def test_expiry_after_snapshot_is_rechecked_before_actual_worker_launch(self):
+        now=datetime.now(timezone.utc)
+        authority=grant(self.registry,self.keys,start=now-timedelta(seconds=1),end=now+timedelta(seconds=1))
+        original=self.broker.snapshot
+        def delayed(*args):
+            result=original(*args); time.sleep(1.1); return result
+        self.broker.snapshot=delayed
+        self.assertEqual(self.request(self.packet(authority=authority))['status'],'blocked_before_launch')
+        self.assertEqual((self.folder/'target/value').read_text(),'before')
+
+    def test_real_mutation_with_lost_completion_retains_intent_and_refuses_restart(self):
+        original=S.atomic
+        def failed_completion(path,value):
+            if value.get('status')=='executed': raise OSError('synthetic completion fsync failure')
+            return original(path,value)
+        S.atomic=failed_completion
+        try: result=self.request(self.packet())
+        finally: S.atomic=original
+        self.assertEqual(result['status'],'outcome_unknown')
+        self.assertEqual((self.folder/'target/value').read_text(),'after')
+        receipt=C.read_record(self.state/'journal/ops-native-fixture.json')
+        self.assertEqual(receipt['status'],'launch_intent')
+        with self.assertRaises(CLIENT.C.Denied): self.request(self.packet(operation='ops-native-unknown-new-id'))
+        self.broker.close()
+        with self.assertRaises(ValueError): S.Broker(self.registry_path,self.folder/'bundle',self.state,self.folder/'workers')
+
+    def test_intent_audit_failure_prevents_actual_worker_creation(self):
+        original=self.broker.audit_append
+        self.broker.audit_append=lambda *args: (_ for _ in ()).throw(OSError('synthetic intent audit fsync failure'))
+        try:
+            with self.assertRaises(CLIENT.C.Denied): self.request(self.packet())
+        finally: self.broker.audit_append=original
+        self.assertEqual((self.folder/'target/value').read_text(),'before')
+
     def test_tls_without_client_identity_is_refused(self):
         import http.client
         context=ssl.create_default_context(cafile=self.profile['ca_file'])

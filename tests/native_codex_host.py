@@ -159,6 +159,14 @@ def managed(executable,folder):
         rows={line.split()[0]:line.split()[-1] for line in result.stdout.splitlines() if line.split()}
         for name,expected in {'hooks':'true','unified_exec':'false','apps':'false','plugins':'false'}.items():
             if rows.get(name)!=expected: raise RuntimeError('managed feature override accepted: '+name+' '+result.stdout)
+        # Bypass the model and hooks entirely: hook denial must never mask an
+        # unenforced profile allowlist. Only an explicit profile policy error is
+        # accepted, not an OS/auth/network/sandbox-launch failure.
+        profile=subprocess.run([str(executable),'sandbox','--include-managed-config','--permission-profile',':danger-full-access','--',
+            sys.executable,'-I','-c',"print('profile-was-accepted')"],env=environment,cwd=home,capture_output=True,text=True,timeout=20)
+        refusal=(profile.stderr+profile.stdout).lower()
+        if profile.returncode==0 or 'danger-full-access' not in refusal or not any(word in refusal for word in ('not allowed','not permitted','allowed_permission_profiles')):
+            raise RuntimeError('independent managed profile refusal not established: '+refusal[-3000:])
         run(executable,folder,False,managed_probe=True)
         print('managed policy: hostile feature overrides and Full Access refused by actual Codex')
     finally:
