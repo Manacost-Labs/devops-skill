@@ -96,9 +96,13 @@ def main():
         sql(fixture, source, "UPDATE accounts SET balance=-999 WHERE id=1; SELECT pg_switch_wal();")
         check_data(fixture, source, -999)
         deadline = time.monotonic()+30
-        while fixture.execute(source, "test", "-f", "/fixture/archive/"+needed_wal, expected=None).returncode:
+        while True:
+            published = sql(fixture, source, "SELECT coalesce(last_archived_wal >= '"+needed_wal+"', false) FROM pg_stat_archiver;") == "t"
+            present = fixture.execute(source, "test", "-f", "/fixture/archive/"+needed_wal, expected=None).returncode == 0
+            if published and present:
+                break
             if time.monotonic() >= deadline:
-                raise RuntimeError("required WAL did not reach archive")
+                raise RuntimeError("required WAL archive publication did not complete")
             time.sleep(.2)
         archive = fixture.export(source, "/fixture/archive", "archive")
         recovered = restore(fixture, base, archive)
