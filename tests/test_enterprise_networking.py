@@ -7,11 +7,15 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("network_snapshot", ROOT / "enterprise-networking/scripts/snapshot-audit.py")
 HELPER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(HELPER)
+NATIVE_SPEC = importlib.util.spec_from_file_location("network_native_fixture", ROOT / "tests/smoke_enterprise_networking.py")
+NATIVE = importlib.util.module_from_spec(NATIVE_SPEC)
+NATIVE_SPEC.loader.exec_module(NATIVE)
 
 
 def snapshot():
@@ -27,6 +31,16 @@ def snapshot():
 class EnterpriseNetworkingTests(unittest.TestCase):
     def check(self, before, intended, observed, allowed=("10.20.0.0/24",)):
         return HELPER.audit(before, intended, observed, allowed)
+
+    def test_withdrawal_uses_one_complete_rib_and_never_combines_observations(self):
+        allowed = {"routes": {"10.20.0.0/24": [{}]}}
+        leaking = {"routes": {"10.20.0.0/24": [{}], "203.0.113.0/24": [{}]}}
+        collect = Mock(side_effect=[None, leaking, allowed])
+        for expected in (False, False, True):
+            self.assertEqual(NATIVE.rib_matches(collect, present=("10.20.0.0/24",), absent=("203.0.113.0/24",)), expected)
+        self.assertEqual(collect.call_count, 3)
+        for unknown in (None, {}, {"routes": None}, {"routes": []}):
+            self.assertFalse(NATIVE.rib_matches(lambda: unknown, absent=("203.0.113.0/24",)))
 
     def test_exact_intended_state_with_volatile_counters_matches(self):
         before = snapshot()

@@ -40,6 +40,14 @@ def wait_for(check, label, timeout=35):
     raise AssertionError("convergence timeout: " + label)
 
 
+def rib_matches(collect, *, present=(), absent=()):
+    """One complete collection per observation; unknown is never withdrawal proof."""
+    data = collect()
+    routes = data.get("routes") if isinstance(data, dict) else None
+    return (isinstance(routes, dict) and set(present) <= routes.keys()
+            and not set(absent).intersection(routes))
+
+
 class NetworkFixture:
     def __init__(self):
         if sys.platform != "linux" or os.geteuid() != 0:
@@ -159,7 +167,7 @@ ip prefix-list EXPORT seq 5 permit {own}
             self.logs.append(log)
             process = subprocess.Popen(["ip", "netns", "exec", self.names[side], "/usr/lib/frr/bgpd", "-S", "-Z", "-f", str(config), "-i", str(directory / "bgpd.pid"), "--vty_socket", str(directory)], stdout=log, stderr=log)
             self.processes.append(process)
-        wait_for(lambda: "10.20.0.0/24" in self.bgp("a").get("routes", {}), "BGP permitted prefix")
+        wait_for(lambda: rib_matches(lambda: self.bgp("a"), present=("10.20.0.0/24",)), "BGP permitted prefix")
 
     def vty(self, side, *commands):
         argv = ["vtysh", "--vty_socket", str(self.folder / side), "-d", "bgpd"]
@@ -177,13 +185,13 @@ ip prefix-list EXPORT seq 5 permit {own}
             if any(process.poll() is not None for process in self.processes):
                 diagnostics = "\n".join(path.read_text(encoding="utf-8") for path in self.folder.glob("*/bgpd.log"))
                 raise RuntimeError("bgpd exited: " + diagnostics[-3000:])
-            return {}
+            return None
 
-    def snapshot(self):
-        return {"routes": json.loads(self.ns("b", "ip", "-j", "route", "show", "table", "all").stdout),
-                "rules": json.loads(self.ns("b", "ip", "-j", "rule", "show").stdout),
-                "nft": json.loads(self.ns("b", "nft", "-j", "list", "ruleset").stdout),
-                "bgp": self.bgp("b")}
+    def snapshot(self, side="b"):
+        return {"routes": json.loads(self.ns(side, "ip", "-j", "-4", "route", "show", "table", "all").stdout),
+                "rules": json.loads(self.ns(side, "ip", "-j", "-4", "rule", "show").stdout),
+                "nft": json.loads(self.ns(side, "nft", "-j", "list", "ruleset").stdout),
+                "bgp": self.bgp(side)}
 
     def close(self):
         for process in getattr(self, "processes", []):
@@ -239,23 +247,20 @@ class NativeNetworkingTests(unittest.TestCase):
 
             # Deliberately admit a forbidden prefix only inside this isolated lab.
             fixture.vty("a", "configure terminal", "ip prefix-list IMPORT seq 10 permit 203.0.113.0/24", "end", "clear bgp 10.99.0.2 soft in")
-            wait_for(lambda: "203.0.113.0/24" in fixture.bgp("a").get("routes", {}), "injected prefix leak")
-            leaked = {**fixture.snapshot(), "bgp": fixture.bgp("a")}
+            wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("203.0.113.0/24",)), "injected prefix leak")
+            leaked = fixture.snapshot("a")
             result = HELPER.audit(leaked, leaked, leaked, ["10.10.0.0/24", "10.20.0.0/24"])
             self.assertEqual(result["unexpected_bgp_prefixes"], ["203.0.113.0/24"])
             fixture.vty("a", "configure terminal", "no ip prefix-list IMPORT seq 10", "end", "clear bgp 10.99.0.2 soft in")
-            wait_for(lambda: "203.0.113.0/24" not in fixture.bgp("a").get("routes", {}) and "10.20.0.0/24" in fixture.bgp("a").get("routes", {}), "leak withdrawn, permitted prefix retained")
+            wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.20.0.0/24",), absent=("203.0.113.0/24",)), "leak withdrawn, permitted prefix retained")
             print("PASS: actual FRR leak admission, exact-prefix detector and filter rollback withdrawal", flush=True)
 
             fixture.ns("a", "ip", "link", "set", "wg0", "down")
             self.assertFalse(fixture.ping())
-            def withdrawn():
-                routes = fixture.bgp("a").get("routes")
-                return routes is not None and "10.20.0.0/24" not in routes
-            wait_for(withdrawn, "tunnel loss BGP withdrawal")
+            wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.10.0.0/24",), absent=("10.20.0.0/24",)), "tunnel loss BGP withdrawal")
             fixture.ns("a", "ip", "link", "set", "wg0", "up")
             wait_for(lambda: fixture.ping() and fixture.ping("b"), "tunnel data recovery")
-            wait_for(lambda: "10.20.0.0/24" in fixture.bgp("a").get("routes", {}), "BGP reconvergence")
+            wait_for(lambda: rib_matches(lambda: fixture.bgp("a"), present=("10.20.0.0/24",)), "BGP reconvergence")
             self.assertNotIn("203.0.113.0/24", fixture.bgp("a")["routes"])
             print("PASS: actual tunnel loss, BGP withdrawal and encrypted data/control recovery", flush=True)
         finally:
