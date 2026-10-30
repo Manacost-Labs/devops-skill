@@ -32,6 +32,7 @@ FRESHNESS_HOSTS = {
     "enterprise-networking": {"www.wireguard.com", "docs.frrouting.org", "manpages.debian.org", "wiki.nftables.org", "docs.kernel.org"},
     "docker-operations": {"docs.docker.com", "docs.kernel.org"},
     "windows-server-operations": {"learn.microsoft.com"},
+    "identity-directory-operations": {"learn.microsoft.com"},
     "linux-operations": {"manpages.debian.org", "www.openssh.org", "www.freedesktop.org", "docs.kernel.org", "docs.redhat.com", "dnf.readthedocs.io", "firewalld.org", "wiki.nftables.org", "networkmanager.dev", "documentation.ubuntu.com"},
     "reliability-operations": {"prometheus.io", "sre.google", "opentelemetry.io", "grafana.com"},
     "database-operations": {"www.postgresql.org", "dev.mysql.com", "mariadb.com", "www.pgbouncer.org"},

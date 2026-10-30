@@ -104,6 +104,7 @@ class PlatformTests(unittest.TestCase):
             "secrets-access-operations": {"developer.hashicorp.com"},
             "enterprise-networking": {"www.wireguard.com", "docs.frrouting.org", "manpages.debian.org", "wiki.nftables.org", "docs.kernel.org"},
             "windows-server-operations": {"learn.microsoft.com"},
+            "identity-directory-operations": {"learn.microsoft.com"},
             "cloudflare-operations": {"developers.cloudflare.com"},
             "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
             "cicd-operations": {"docs.github.com", "slsa.dev"},
@@ -500,6 +501,9 @@ class PlatformTests(unittest.TestCase):
             "active-directory-readonly-discovery": "identity-directory-operations",
             "active-directory-principal-and-group-provisioning": "identity-directory-operations",
             "group-policy-staged-change-management": "identity-directory-operations",
+            "active-directory-replication-and-sysvol-diagnosis": "identity-directory-operations",
+            "group-policy-applicability-and-delegation-diagnosis": "identity-directory-operations",
+            "active-directory-single-object-recovery-planning": "identity-directory-operations",
         }
         resolver = ROOT / "devops-platform-contracts/scripts/resolve_capabilities.py"
         for capability, owner in expected.items():
