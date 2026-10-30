@@ -35,6 +35,25 @@ class EnterpriseNetworkingTests(unittest.TestCase):
         observed["nft"]["nftables"][2]["rule"]["expr"][0]["counter"]["packets"] = 500
         self.assertEqual(self.check(before, before, observed)["status"], "MATCHED")
 
+    def test_negative_nft_hook_priority_is_valid_and_retained(self):
+        value = snapshot()
+        value["nft"]["nftables"][1]["chain"]["prio"] = -100
+        self.assertEqual(self.check(value, value, value)["status"], "MATCHED")
+        self.assertIn("nft", self.check(value, value, snapshot())["drift_sections"])
+
+    def test_ipv6_route_bgp_allowlist_and_policy_need_separate_support(self):
+        mutations = (
+            lambda value: value["routes"][0].update(dst="2001:db8::/64"),
+            lambda value: value["routes"][0].update(gateway="2001:db8::1"),
+            lambda value: value["rules"][0].update(src="2001:db8::/64"),
+            lambda value: value["bgp"]["routes"].update({"2001:db8::/64": [{"valid": True}]}),
+        )
+        for mutation in mutations:
+            value = snapshot()
+            mutation(value)
+            with self.assertRaises(ValueError): self.check(value, value, value)
+        with self.assertRaises(ValueError): self.check(snapshot(), snapshot(), snapshot(), ["2001:db8::/64"])
+
     def test_changed_next_hop_metric_and_default_are_visible(self):
         for key, value in (("gateway", "192.0.2.9"), ("metric", 1), ("dst", "default")):
             before = snapshot()
@@ -94,6 +113,33 @@ class EnterpriseNetworkingTests(unittest.TestCase):
             for content in ('{"routes":[],"routes":[]}', '{"value":NaN}', ' ' * (HELPER.MAX_BYTES + 1)):
                 path.write_text(content, encoding="utf-8")
                 with self.assertRaises(ValueError): HELPER.load(path)
+
+    def test_malformed_nft_identity_counter_and_duplicate_routes_fail_closed(self):
+        for mutation in ("identity", "counter", "duplicate", "orphan"):
+            value = snapshot()
+            if mutation == "identity": del value["nft"]["nftables"][1]["chain"]["name"]
+            if mutation == "counter": value["nft"]["nftables"][2]["rule"]["expr"][0]["counter"]["packets"] = "ignore-me"
+            if mutation == "duplicate": value["routes"].append(copy.deepcopy(value["routes"][0]))
+            if mutation == "orphan": value["nft"]["nftables"].pop(0)
+            with self.assertRaises(ValueError): self.check(value, value, value)
+
+    def test_malformed_native_field_types_and_empty_rules_never_match(self):
+        mutations = (
+            lambda value: value["routes"][0].update(dev=[]),
+            lambda value: value["routes"][0].update(metric=True),
+            lambda value: value["routes"][0].update(gateway={"execute": "untrusted"}),
+            lambda value: value["routes"][0].update(nexthops=[{"dev": []}]),
+            lambda value: value["rules"][0].update(table=[]),
+            lambda value: value["nft"]["nftables"][2]["rule"].update(expr=[]),
+            lambda value: value["nft"]["nftables"][2]["rule"].update(comment=[]),
+            lambda value: value["nft"]["nftables"][2]["rule"].update(expr=[{"accept": False}]),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                value = snapshot()
+                mutation(value)
+                # All three agreeing malformed snapshots still must be rejected.
+                with self.assertRaises(ValueError): self.check(value, value, value)
 
     def test_input_is_data_and_cli_errors_do_not_echo_it(self):
         value = snapshot()

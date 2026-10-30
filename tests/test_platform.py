@@ -102,6 +102,7 @@ class PlatformTests(unittest.TestCase):
     def test_fast_moving_modules_declare_current_official_sources(self):
         expected = {
             "secrets-access-operations": {"developer.hashicorp.com"},
+            "enterprise-networking": {"www.wireguard.com", "docs.frrouting.org", "manpages.debian.org", "wiki.nftables.org", "docs.kernel.org"},
             "windows-server-operations": {"learn.microsoft.com"},
             "cloudflare-operations": {"developers.cloudflare.com"},
             "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
@@ -145,6 +146,18 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("non-official", module.validate_freshness("cloud-aws", bad_scheme))
         missing_mapping = json.loads(json.dumps(source)); missing_mapping["source_freshness"]["capability_sources"].pop("aws-account-discovery")
         self.assertIn("map every capability", module.validate_freshness("cloud-aws", missing_mapping))
+    def test_network_freshness_is_required_and_rejects_substituted_sources(self):
+        validator_path = ROOT / "devops-platform-contracts/scripts/validate_platform.py"
+        spec = importlib.util.spec_from_file_location("network_freshness_validator", validator_path)
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        manifest = yaml.safe_load((ROOT / "enterprise-networking/module.yaml").read_text(encoding="utf-8"))
+        self.assertIsNone(module.validate_freshness("enterprise-networking", manifest))
+        missing = json.loads(json.dumps(manifest)); missing.pop("source_freshness")
+        self.assertIn("must declare", module.validate_freshness("enterprise-networking", missing))
+        substituted = json.loads(json.dumps(manifest))
+        substituted["source_freshness"]["official_sources"][0] = "https://www.wireguard.com.attacker.example/"
+        self.assertIn("non-official", module.validate_freshness("enterprise-networking", substituted))
+
     def test_runtime_dependency_is_hash_locked(self):
         root_lock = (ROOT / "requirements.txt").read_text(encoding="utf-8").strip()
         embedded_lock = (ROOT / "devops-platform-contracts/requirements.txt").read_text(encoding="utf-8").strip()

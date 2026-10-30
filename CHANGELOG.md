@@ -24,6 +24,8 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 - Deepen secrets-access-operations 0.4.0 with concrete Vault grants, wrapped delivery, consumer rotation and partial recovery, session/issuer containment, emergency closeout and observed expiry. Preserve protected provider handoff and existing authority, gate, risk and evidence boundaries.
 - Add checksum-pinned native Vault CI on owned in-memory loopback state, negative transport/disclosure checks and forward-evaluation scenarios. Distinguish Vault token/KV proof from downstream sessions, production transport/HA/audit and root quorum recovery.
+- Deepen enterprise-networking 0.4.0 for Linux WireGuard, FRRouting IPv4 BGP, iproute2 and nftables, including bounded offline route/ACL evidence analysis and implementation-specific recovery procedures.
+- Add isolated native Linux drills for tunnel loss/recovery, prefix filtering, asymmetric return paths, MTU and scoped ACL rollback. Record explicit limits for vendor, managed VPN, IPv6 and target-specific acceptance.
 
 ## 0.14.0 — 2026-10-30
 

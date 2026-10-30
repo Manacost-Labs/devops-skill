@@ -92,7 +92,12 @@ class NetworkFixture:
             for side, peer, number, remote in (("a", "b", 2, "10.20.0.0/24"), ("b", "a", 1, "10.10.0.0/24")):
                 self.ns(side, "wg", "set", "wg0", "peer", keys[peer], "endpoint", f"192.0.2.{number}:51820", "allowed-ips", f"10.99.0.{number}/32,{remote}")
                 self.ns(side, "ip", "route", "add", remote, "dev", "wg0")
-            self.ns("b", "nft", "-f", "-", input="table inet sentinel { chain keep { comment \"unrelated-owned-sentinel\"; } }\n")
+            self.ns("b", "nft", "-f", "-", input='''table inet sentinel {
+ chain keep {
+  comment "unrelated-owned-sentinel";
+ }
+}
+''')
             self.set_acl("accept")
         except BaseException:
             self.close()
@@ -111,7 +116,14 @@ class NetworkFixture:
         # Restore only the owned table, in a single atomic nft transaction.
         exists = self.ns("b", "nft", "list", "table", "inet", "fixture", check=False).returncode == 0
         opposite = "drop" if verdict == "accept" else "accept"
-        text = ("delete table inet fixture\n" if exists else "") + "table inet fixture { chain input { type filter hook input priority 0; policy accept; iifname \"wg0\" ip daddr 10.20.0.1 counter " + verdict + "; iifname \"wg0\" ip daddr 10.20.0.1 counter " + opposite + "; } }\n"
+        text = ("delete table inet fixture\n" if exists else "") + f'''table inet fixture {{
+ chain input {{
+  type filter hook input priority 0; policy accept;
+  iifname "wg0" ip daddr 10.20.0.1 counter {verdict}
+  iifname "wg0" ip daddr 10.20.0.1 counter {opposite}
+ }}
+}}
+'''
         self.ns("b", "nft", "--check", "-f", "-", input=text)
         self.ns("b", "nft", "-f", "-", input=text)
 
@@ -157,7 +169,10 @@ ip prefix-list EXPORT seq 5 permit {own}
 
     def bgp(self, side):
         try:
-            return json.loads(self.vty(side, "show bgp ipv4 unicast json").stdout)
+            data = json.loads(self.vty(side, "show bgp ipv4 unicast json").stdout)
+            if not isinstance(data, dict) or not isinstance(data.get("routes"), dict):
+                raise ValueError("incomplete FRR collection")
+            return data
         except (RuntimeError, ValueError):
             if any(process.poll() is not None for process in self.processes):
                 diagnostics = "\n".join(path.read_text(encoding="utf-8") for path in self.folder.glob("*/bgpd.log"))
@@ -234,7 +249,10 @@ class NativeNetworkingTests(unittest.TestCase):
 
             fixture.ns("a", "ip", "link", "set", "wg0", "down")
             self.assertFalse(fixture.ping())
-            wait_for(lambda: "10.20.0.0/24" not in fixture.bgp("a").get("routes", {}), "tunnel loss BGP withdrawal")
+            def withdrawn():
+                routes = fixture.bgp("a").get("routes")
+                return routes is not None and "10.20.0.0/24" not in routes
+            wait_for(withdrawn, "tunnel loss BGP withdrawal")
             fixture.ns("a", "ip", "link", "set", "wg0", "up")
             wait_for(lambda: fixture.ping() and fixture.ping("b"), "tunnel data recovery")
             wait_for(lambda: "10.20.0.0/24" in fixture.bgp("a").get("routes", {}), "BGP reconvergence")

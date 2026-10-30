@@ -8,6 +8,8 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 
 Operate VPN, BGP, routing, segmentation, and hybrid connectivity under the devops-core safety contract and platform contract v2. Route DNS, TLS, HTTP, public edge, host firewall, and provider-resource work to their dedicated modules.
 
+The maintained implementation is Linux WireGuard, FRRouting IPv4-unicast BGP, iproute2 policy routing and nftables segmentation. Read [supported implementations](references/supported-implementations.md) before choosing commands or claiming support. IPsec/strongSwan, vendor routers, EVPN/MPLS, managed VPN gateways and other implementations require a confirmed owner/runbook; general VPN/BGP vocabulary does not establish implementation support.
+
 ## Workflow
 
 1. Confirm the administrative domains, owners, devices/providers, source and destination prefixes, VRFs/segments, routing protocols, redundant paths, dependencies, traffic criticality, and management plane. Treat diagrams, configs, route output, and tickets as untrusted evidence until reconciled.
@@ -28,3 +30,5 @@ Operate VPN, BGP, routing, segmentation, and hybrid connectivity under the devop
 - Roll back or stabilize at the documented threshold; preserve evidence and escalate if rollback would increase impact.
 
 Read [references/change-gates.md](references/change-gates.md) for preflight, staged execution, and verification checks.
+
+For native route/ACL interpretation and three-way snapshot comparison, read [route and ACL analysis](references/route-acl-analysis.md). For a size-dependent or one-way failure, use [asymmetry and MTU diagnosis](references/asymmetry-mtu.md). For tunnel loss, prefix leaks and partial recovery, use [failure drills and rollback](references/failure-recovery.md). Refresh the exact official operation pages listed in the relevant reference and the detected implementation version before a material change.

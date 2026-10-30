@@ -37,7 +37,10 @@ def load(path):
 def prefix(value):
     if not isinstance(value, str):
         raise ValueError("invalid prefix")
-    return str(ipaddress.ip_network(value, strict=True))
+    network = ipaddress.ip_network(value, strict=True)
+    if network.version != 4:
+        raise ValueError("IPv6 requires a separately supported collection")
+    return str(network)
 
 
 def records(value, required):
@@ -46,33 +49,89 @@ def records(value, required):
     return value
 
 
+def native_fields(row, *, integer=(), text=(), scalar=()):
+    """Validate known native field types without interpreting opaque extensions."""
+    for field in integer:
+        if field in row and (type(row[field]) is not int or row[field] < 0):
+            raise ValueError("invalid native integer field")
+    for field in text:
+        if field in row and (not isinstance(row[field], str) or not row[field]):
+            raise ValueError("invalid native text field")
+    for field in scalar:
+        if field in row and (type(row[field]) not in {str, int} or row[field] == "" or (type(row[field]) is int and row[field] < 0)):
+            raise ValueError("invalid native scalar field")
+
+
+def routing_fields(row):
+    native_fields(row, integer=("metric", "nhid", "mtu", "advmss"),
+                  text=("dev", "gateway", "prefsrc", "src", "type", "pref", "from"),
+                  scalar=("table", "protocol", "scope"))
+    for field in ("gateway", "prefsrc"):
+        if field in row and ipaddress.ip_address(row[field]).version != 4:
+            raise ValueError("IPv6 next hop/source outside supported collection")
+    if "flags" in row and (not isinstance(row["flags"], list) or any(not isinstance(item, str) for item in row["flags"])):
+        raise ValueError("invalid route flags")
+    if "nexthops" in row:
+        if not isinstance(row["nexthops"], list) or not row["nexthops"]:
+            raise ValueError("invalid multipath route")
+        for hop in row["nexthops"]:
+            if not isinstance(hop, dict) or not hop:
+                raise ValueError("invalid multipath hop")
+            native_fields(hop, integer=("weight",), text=("dev", "gateway"))
+            if "gateway" in hop and ipaddress.ip_address(hop["gateway"]).version != 4:
+                raise ValueError("IPv6 multipath outside supported collection")
+
+
 def normalize_nft(value):
     """Preserve expression/rule order and every semantic field; ignore only runtime IDs/counts."""
     if not isinstance(value, dict) or set(value) != {"nftables"} or not isinstance(value["nftables"], list):
         raise ValueError("invalid nft snapshot")
     output = []
+    tables, chains = set(), set()
     for entry in value["nftables"]:
         if not isinstance(entry, dict) or len(entry) != 1:
             raise ValueError("invalid nft object")
         kind, body = next(iter(entry.items()))
         if kind == "metainfo":
+            if not isinstance(body, dict): raise ValueError("invalid nft metainfo")
             continue
         if kind not in {"table", "chain", "rule"} or not isinstance(body, dict):
             raise ValueError("unsupported nft object; manual review required")
-        if not {"family", "table" if kind != "table" else "name"} <= body.keys():
+        identity = ("family", "name") if kind == "table" else ("family", "table", "chain" if kind == "rule" else "name")
+        if any(not isinstance(body.get(field), str) or not body[field] for field in identity):
             raise ValueError("missing nft identity")
+        native_fields(body, integer=("handle", "index"), text=("comment", "hook", "type", "policy", "dev"))
+        if "prio" in body and (type(body["prio"]) not in {str, int} or body["prio"] == ""):
+            raise ValueError("invalid nft chain priority")
+        if kind == "table":
+            key = (body["family"], body["name"])
+            if key in tables: raise ValueError("duplicate nft table")
+            tables.add(key)
+        else:
+            if (body["family"], body["table"]) not in tables:
+                raise ValueError("nft object has no preceding table")
+            key = (body["family"], body["table"], body["chain" if kind == "rule" else "name"])
+            if kind == "chain":
+                if key in chains: raise ValueError("duplicate nft chain")
+                chains.add(key)
+            elif key not in chains:
+                raise ValueError("nft rule has no preceding chain")
         body = {key: item for key, item in body.items() if key not in {"handle", "index"}}
         if kind == "rule":
-            if not isinstance(body.get("chain"), str) or not isinstance(body.get("expr"), list):
+            if not isinstance(body.get("chain"), str) or not isinstance(body.get("expr"), list) or not body["expr"]:
                 raise ValueError("invalid nft rule")
             expressions = []
             for expression in body["expr"]:
                 if not isinstance(expression, dict) or len(expression) != 1:
                     raise ValueError("invalid nft expression")
+                if any(verdict in expression and expression[verdict] is not None for verdict in ("accept", "drop", "return", "continue", "notrack")):
+                    raise ValueError("invalid nft verdict shape")
                 if "counter" in expression:
                     counter = expression["counter"]
                     if not isinstance(counter, dict) or set(counter) != {"packets", "bytes"}:
                         raise ValueError("unsupported named counter")
+                    if any(type(item) is not int or item < 0 for item in counter.values()):
+                        raise ValueError("invalid counter value")
                     expression = {"counter": {"packets": 0, "bytes": 0}}
                 expressions.append(expression)
             body["expr"] = expressions
@@ -84,13 +143,21 @@ def normalize(snapshot):
     if not isinstance(snapshot, dict) or set(snapshot) != {"routes", "rules", "nft", "bgp"}:
         raise ValueError("snapshot requires routes, rules, nft, bgp")
     routes = records(snapshot["routes"], {"dst"})
+    if len(set(map(canonical, routes))) != len(routes):
+        raise ValueError("duplicate route records")
     for route in routes:
+        routing_fields(route)
         if route["dst"] != "default":
             prefix(route["dst"])
     rules = records(snapshot["rules"], {"priority"})
     priorities = [row["priority"] for row in rules]
     if any(type(item) is not int or item < 0 for item in priorities) or len(set(priorities)) != len(priorities):
         raise ValueError("ambiguous routing policy priority")
+    for rule in rules:
+        native_fields(rule, text=("src", "dst", "iif", "oif", "action", "ipproto"),
+                      scalar=("table", "fwmark", "fwmask"))
+        for field in ("src", "dst"):
+            if field in rule and rule[field] != "all": prefix(rule[field])
     bgp = snapshot["bgp"]
     if not isinstance(bgp, dict) or not isinstance(bgp.get("routes"), dict):
         raise ValueError("FRR full IPv4 unicast JSON required")
