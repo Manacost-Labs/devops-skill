@@ -1,7 +1,7 @@
 # Ephemeral GitHub-hosted Windows fixture only. Never run against an AD host.
 [CmdletBinding()]param([Parameter(Mandatory=$true)][string]$PythonPath,[Parameter(Mandatory=$true)][string]$SourceRoot)
 $ErrorActionPreference='Stop';Set-StrictMode -Version Latest
-function Require-Fixture($Value){if(-not $Value){throw 'Owned Windows JEA fixture prerequisite failed'}}
+function Require-Fixture($Value,[string]$Reason='prerequisite'){if(-not $Value){throw ('Owned Windows JEA fixture failed: '+$Reason)}}
 Require-Fixture ($env:GITHUB_ACTIONS -ceq 'true' -and $env:RUNNER_OS -ceq 'Windows' -and $env:RUNNER_ENVIRONMENT -ceq 'github-hosted' -and $env:DEVOPS_OWNED_JEA_FIXTURE -ceq '1')
 Require-Fixture (-not [string]::IsNullOrWhiteSpace($env:RUNNER_TEMP))
 $owner=[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -60,6 +60,8 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $certs+=@{Path=('Cert:\LocalMachine\My\'+$server.Thumbprint);Private=$true}
     $client=Import-Certificate -FilePath (Join-Path $root 'client.pem') -CertStoreLocation Cert:\LocalMachine\TrustedPeople
     $certs+=@{Path=('Cert:\LocalMachine\TrustedPeople\'+$client.Thumbprint);Private=$false}
+    $clientTrust=Import-Certificate -FilePath (Join-Path $root 'client.pem') -CertStoreLocation Cert:\LocalMachine\Root
+    $certs+=@{Path=('Cert:\LocalMachine\Root\'+$clientTrust.Thumbprint);Private=$false}
     $existing=@(Get-ChildItem WSMan:\localhost\Listener | Where-Object {$_.Keys -contains 'Transport=HTTPS' -and $_.Keys -contains 'Address=IP:127.0.0.1'})
     Require-Fixture ($existing.Count -eq 0)
     $portProbe=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$portProbe.Start();$port=$portProbe.LocalEndpoint.Port;$portProbe.Stop()
@@ -69,17 +71,19 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $listenerPath=$listener[0].PSPath
     $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$name),$password)
     $subject=$name+'@localhost';$resourceUri='http://schemas.microsoft.com/powershell/'+$endpoint
-    $existingMappings=@(Get-ChildItem WSMan:\localhost\ClientCertificate | Where-Object {$_.Keys -contains ('Subject='+$subject) -and $_.Keys -contains ('URI='+$resourceUri) -and $_.Keys -contains ('Issuer='+$ca.Thumbprint)})
+    $existingMappings=@(Get-ChildItem WSMan:\localhost\ClientCertificate | Where-Object {$_.Keys -contains ('Subject='+$subject) -and $_.Keys -contains ('URI='+$resourceUri) -and $_.Keys -contains ('Issuer='+$client.Thumbprint)})
     Require-Fixture ($existingMappings.Count -eq 0)
-    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $ca.Thumbprint -Credential $credential -Force
+    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $client.Thumbprint -Credential $credential -Force
     $mappingPath=$mapping.PSPath
-    Require-Fixture ($client.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::UpnName,$false) -ceq $subject)
+    Require-Fixture ($client.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::UpnName,$false) -ceq $subject) 'client_upn'
     $chain=[Security.Cryptography.X509Certificates.X509Chain]::new()
     try{
-        Require-Fixture ($chain.Build($client) -and $chain.ChainElements[$chain.ChainElements.Count-1].Certificate.Thumbprint -ieq $ca.Thumbprint)
+        $chainBuilt=$chain.Build($client)
+        if(-not $chainBuilt){@{fixture_chain_status=@($chain.ChainStatus|ForEach-Object {$_.Status.ToString()})}|ConvertTo-Json -Compress}
+        Require-Fixture ($chainBuilt -and $chain.ChainElements[$chain.ChainElements.Count-1].Certificate.Thumbprint -ieq $client.Thumbprint) 'client_chain'
     }finally{$chain.Dispose()}
-    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\Enabled')).Value -ieq 'true')
-    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\UserName')).Value -ieq ($env:COMPUTERNAME+'\'+$name))
+    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\Enabled')).Value -ieq 'true') 'mapping_enabled'
+    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\UserName')).Value -ieq ($env:COMPUTERNAME+'\'+$name)) 'mapping_user'
     # Match the exact IPv4 listener; localhost can select ::1 while HTTP.sys
     # has a port binding but WinRM has no matching IPv6 listener. The server
     # certificate explicitly includes the verified 127.0.0.1 IP SAN.

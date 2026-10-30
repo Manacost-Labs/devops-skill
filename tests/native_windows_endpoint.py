@@ -35,17 +35,21 @@ def certificates(folder, username):
         key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
         subject='localhost' if server else username
         builder=(x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,subject)]))
-            .issuer_name(ca.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
+            .issuer_name(ca.subject if server else x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,subject)]))
+            .public_key(key.public_key()).serial_number(x509.random_serial_number())
             .not_valid_before(now-timedelta(minutes=5)).not_valid_after(now+timedelta(hours=1))
             .add_extension(x509.BasicConstraints(ca=False,path_length=None),critical=True)
             .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()),critical=False)
-            .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),critical=False)
+            .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key((ca_key if server else key).public_key()),critical=False)
             .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH if server else ExtendedKeyUsageOID.CLIENT_AUTH]),critical=False))
         if server:builder=builder.add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost'),x509.IPAddress(ipaddress.ip_address('127.0.0.1'))]),critical=False)
         else:
             upn=(username+'@localhost').encode()
             builder=builder.add_extension(x509.SubjectAlternativeName([x509.OtherName(ObjectIdentifier('1.3.6.1.4.1.311.20.2.3'),bytes((12,len(upn)))+upn)]),critical=False)
-        cert=builder.sign(ca_key,hashes.SHA256())
+        # An independently trusted self-signed client matches the maintainer's
+        # documented local-account fixture. A synthetic CA-issued client with
+        # no CRL cannot prove Windows' default revocation/trust acceptance.
+        cert=builder.sign(ca_key if server else key,hashes.SHA256())
         (folder/(name+'.pem')).write_bytes(cert.public_bytes(serialization.Encoding.PEM))
         (folder/(name+'.key')).write_bytes(key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))
         (folder/(name+'.key')).chmod(0o600)

@@ -166,9 +166,11 @@ delegation and target-specific recovery. Missing rows remain not_run.
 CI covers real dropped Linux workers with v2 context; Windows PS5 filesystem
 journal/error/refusal cases; owner-loader dry-run/tamper refusal; and an actual
 ephemeral certificate-authenticated HTTPS/JEA endpoint on a non-domain Windows
-runner. It uses only new owned fixture identities/files/certificates. This does
+runner, using a separately trusted self-signed client certificate and a
+CA-issued server certificate. It uses only new owned fixture identities/files/certificates. This does
 not prove Kerberos, AD/GPO, gMSA ACLs or a user's installed Codex boundary. Public
 PRs receive no directory credential or persistent privileged runner.
+It does not validate a deployed client PKI's issuance or revocation service.
 
 Sources refreshed 2026-10-30: [JEA configuration](https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/session-configurations),
 [JEA security](https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/security-considerations),
