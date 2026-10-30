@@ -6,6 +6,8 @@ A modular, Codex-first platform for bounded, evidence-driven infrastructure work
 
 This project demonstrates system administration and DevOps engineering practices: decomposing operational ownership, classifying risk, planning recovery, constraining privileged changes, validating packages, and collecting verification evidence. It is not a certification, a managed service, or an autonomous administrator.
 
+PostgreSQL and Redis recovery now has dedicated engine procedures and isolated native restore checks, alongside the existing MySQL/MariaDB drills. See [PostgreSQL/Redis recovery scope and native checks](docs/postgres-redis-recovery.md).
+
 DNS, TLS and reverse proxies now cover authoritative/cache-aware diagnosis, certificate renewal and safe pair rotation, upstream/trust failures, staged changes and partial recovery. See [edge scope and real DNS/TLS/proxy checks](docs/network-edge-depth.md).
 
 CI/CD now covers GitHub Actions trust, effective secrets/OIDC rights, artifact and signed-provenance admission, staged deployments and recovery after partial effects. See [CI/CD scope and actual workflow/artifact checks](docs/cicd-operations-depth.md).
@@ -143,7 +145,7 @@ Managed-service boundaries are normative in the [control-plane ownership matrix]
 
 ## Host, monitoring and database operations
 
-Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedures for cgroups/OOM, packages, storage/boot, networking and mandatory access controls. Reliability covers Prometheus/Alertmanager, Grafana, Loki/OTel, missing data, burn rates, capacity and release acceptance. The database module separates everyday PostgreSQL/MySQL/MariaDB diagnosis from recovery. Data resilience now includes [MySQL/MariaDB backup, PITR and isolated restore drills](docs/mysql-mariadb-recovery.md). Read the [scope, examples and validation limits](docs/operations-depth.md).
+Linux covers Debian/Ubuntu and confirmed RHEL-family hosts with focused procedures for cgroups/OOM, packages, storage/boot, networking and mandatory access controls. Reliability covers Prometheus/Alertmanager, Grafana, Loki/OTel, missing data, burn rates, capacity and release acceptance. The database module separates everyday PostgreSQL/MySQL/MariaDB diagnosis from recovery. Data resilience includes [MySQL/MariaDB backup, PITR and isolated restore drills](docs/mysql-mariadb-recovery.md) and [PostgreSQL PITR and Redis persistence recovery](docs/postgres-redis-recovery.md). Read the [scope, examples and validation limits](docs/operations-depth.md).
 
 ## Windows Server operations
 

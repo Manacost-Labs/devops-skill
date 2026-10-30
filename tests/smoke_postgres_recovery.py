@@ -46,18 +46,16 @@ def restore(fixture, base, archive=None, *, target="fixture_safe", negative=Fals
 
 
 UNREACHED = r"recovery ended before configured recovery target was reached"
-INVALID_WAL = r"(incorrect size|invalid (?:magic|record)|incorrect.*checksum)"
+WRONG_WAL_SIZE = r'FATAL:\s+archive file "[0-9A-F]{24}" has wrong size: \d+ instead of \d+'
 
 
-def require_startup_failure(fixture, identity, reason, *, corrupt=False):
+def require_startup_failure(fixture, identity, reason, *, expected_pattern=UNREACHED):
     result = start(fixture, identity, expected=None)
     status = fixture.execute(identity, "pg_ctl", "-D", "/fixture/target", "status", expected=None)
     if result.returncode == 0 or status.returncode == 0:
         raise RuntimeError(reason+" did not prevent completed recovery/startup")
     log = fixture.execute(identity, "cat", "/fixture/engine.log").stdout
-    require_native_rejection(result.returncode, log, UNREACHED)
-    if corrupt:
-        require_native_rejection(result.returncode, log, INVALID_WAL)
+    require_native_rejection(result.returncode, log, expected_pattern)
     print("OK: PostgreSQL refuses "+reason)
 
 
@@ -147,7 +145,8 @@ def main():
         corrupt = fixture.folder/"corrupt"
         shutil.copytree(archive, corrupt)
         (corrupt/needed_wal).write_bytes(b"not PostgreSQL WAL")
-        require_startup_failure(fixture, restore(fixture, base, corrupt, negative=True), "corrupt required WAL", corrupt=True)
+        require_startup_failure(fixture, restore(fixture, base, corrupt, negative=True), "corrupt required WAL",
+                                expected_pattern=WRONG_WAL_SIZE)
         require_startup_failure(fixture, restore(fixture, base, archive, target="never_created", negative=True), "unreachable recovery target")
         broken = fixture.folder/"broken-base"
         shutil.copytree(base, broken)

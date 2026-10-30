@@ -6,9 +6,10 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from recovery_fixture import extract_regular_archive, require_native_rejection
-from smoke_postgres_recovery import UNREACHED
+from smoke_postgres_recovery import UNREACHED, WRONG_WAL_SIZE, require_startup_failure
 
 
 def tar_bytes(entries):
@@ -29,7 +30,7 @@ class NativeRejectionEvidenceTests(unittest.TestCase):
     def test_generic_startup_or_checker_errors_are_not_recovery_evidence(self):
         for evidence in ("Permission denied", "FATAL: unrecognized configuration parameter",
                          "Cannot open file: Permission denied", "Killed by OOM"):
-            for pattern in (UNREACHED, r"RDB CRC error", r"AOF [^\n]+ is not valid"):
+            for pattern in (UNREACHED, WRONG_WAL_SIZE, r"RDB CRC error", r"AOF [^\n]+ is not valid"):
                 with self.subTest(evidence=evidence, pattern=pattern), self.assertRaises(RuntimeError):
                     require_native_rejection(1, evidence, pattern)
 
@@ -39,6 +40,20 @@ class NativeRejectionEvidenceTests(unittest.TestCase):
 
     def test_rejection_requires_both_nonzero_exit_and_specific_evidence(self):
         require_native_rejection(1, "FATAL: recovery ended before configured recovery target was reached", UNREACHED)
+
+    def test_short_archive_has_its_own_fatal_cause_before_target_evaluation(self):
+        # PG18 aborts in archive-size verification before it can evaluate the target.
+        expected = '2026-10-30 [123] FATAL:  archive file "000000010000000000000004" has wrong size: 18 instead of 1048576'
+        for evidence, accepted in ((expected, True), ("FATAL: Permission denied", False),
+                                   ("FATAL: unrecognized configuration parameter", False)):
+            fixture = SimpleNamespace(execute=lambda _identity, *argv, **_kwargs: SimpleNamespace(
+                returncode=3 if "status" in argv else 1, stdout=evidence if argv[0] == "cat" else ""))
+            with self.subTest(evidence=evidence):
+                if accepted:
+                    require_startup_failure(fixture, "synthetic", "short WAL", expected_pattern=WRONG_WAL_SIZE)
+                else:
+                    with self.assertRaises(RuntimeError):
+                        require_startup_failure(fixture, "synthetic", "short WAL", expected_pattern=WRONG_WAL_SIZE)
 
 
 class RecoveryTransferBoundaryTests(unittest.TestCase):

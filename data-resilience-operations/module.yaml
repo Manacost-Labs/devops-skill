@@ -1,5 +1,5 @@
 name: data-resilience-operations
-version: 0.4.0
+version: 0.5.0
 kind: executor
 allowed_tools:
 - Read
@@ -26,6 +26,11 @@ capabilities:
 - mariadb-backup-and-recovery
 - binlog-recovery-chain-validation
 - mysql-mariadb-asynchronous-cutover
+- postgresql-physical-backup-and-recovery
+- postgresql-wal-pitr
+- postgresql-single-writer-cutover
+- redis-rdb-aof-recovery
+- redis-topology-recovery-planning
 risk_domains:
 - production-state
 - destructive-change
@@ -37,7 +42,7 @@ platforms:
 - MySQL
 - MariaDB
 source_freshness:
-  last_verified: '2026-10-29'
+  last_verified: '2026-10-30'
   refresh_before_change: true
   official_sources:
   - https://www.postgresql.org/docs/current/maintenance.html
@@ -68,6 +73,20 @@ source_freshness:
   - https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html
   - https://dev.mysql.com/doc/refman/8.4/en/mysqlbinlog.html
   - https://mariadb.com/docs/server/clients-and-utilities/logging-tools/mariadb-binlog/mariadb-binlog-options
+  - https://www.postgresql.org/docs/18/app-pgbasebackup.html
+  - https://www.postgresql.org/docs/18/app-pgverifybackup.html
+  - https://www.postgresql.org/docs/18/backup-dump.html
+  - https://www.postgresql.org/docs/18/app-pgdump.html
+  - https://www.postgresql.org/docs/18/app-pgrestore.html
+  - https://www.postgresql.org/docs/18/continuous-archiving.html
+  - https://www.postgresql.org/docs/18/runtime-config-wal.html
+  - https://www.postgresql.org/docs/18/warm-standby-failover.html
+  - https://www.postgresql.org/docs/18/app-pgrewind.html
+  - https://redis.io/docs/latest/commands/bgsave/
+  - https://redis.io/docs/latest/commands/bgrewriteaof/
+  - https://redis.io/docs/latest/commands/waitaof/
+  - https://redis.io/docs/latest/commands/restore/
+  - https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/
   capability_sources:
     postgresql-operations:
     - https://www.postgresql.org/docs/current/maintenance.html
@@ -132,3 +151,25 @@ source_freshness:
     - https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html
     - https://mariadb.com/docs/server/ha-and-performance/standard-replication/gtid
     - https://mariadb.com/docs/server/ha-and-performance/standard-replication/setting-up-replication
+    postgresql-physical-backup-and-recovery:
+    - https://www.postgresql.org/docs/18/app-pgbasebackup.html
+    - https://www.postgresql.org/docs/18/app-pgverifybackup.html
+    - https://www.postgresql.org/docs/18/backup-dump.html
+    - https://www.postgresql.org/docs/18/app-pgdump.html
+    - https://www.postgresql.org/docs/18/app-pgrestore.html
+    postgresql-wal-pitr:
+    - https://www.postgresql.org/docs/18/continuous-archiving.html
+    - https://www.postgresql.org/docs/18/runtime-config-wal.html
+    postgresql-single-writer-cutover:
+    - https://www.postgresql.org/docs/18/warm-standby-failover.html
+    - https://www.postgresql.org/docs/18/app-pgrewind.html
+    redis-rdb-aof-recovery:
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    - https://redis.io/docs/latest/commands/bgsave/
+    - https://redis.io/docs/latest/commands/bgrewriteaof/
+    - https://redis.io/docs/latest/commands/waitaof/
+    - https://redis.io/docs/latest/commands/restore/
+    redis-topology-recovery-planning:
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/replication/
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/
+    - https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/

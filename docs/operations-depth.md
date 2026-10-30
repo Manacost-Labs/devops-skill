@@ -35,4 +35,6 @@ Unit tests cover arithmetic boundaries, ambiguous/malformed inputs and Linux dis
 
 These are syntax and bounded behavior checks, not production load, replication, recovery, privilege-matrix or full Linux distribution certification. No real paging receiver or production database is contacted. Run release/version-specific preflight and acceptance against an authorized target before any operational change.
 
+Separate recovery jobs exercise actual [MySQL/MariaDB restore](mysql-mariadb-recovery.md) and [PostgreSQL/Redis restore](postgres-redis-recovery.md) on isolated synthetic datasets. Diagnostic SQL checks alone do not establish recoverability; each recovery procedure states its own version, artifact, topology and native coverage limits.
+
 Official-source mappings are checked for all three modules. Documentation freshness and a passing validator establish provenance and structure; independent review and target evidence are still needed for correctness.
