@@ -109,12 +109,18 @@ class EdgeDepthTests(unittest.TestCase):
         with patch("sys.argv", ["check", "https://example.com/private?token=synthetic"]), patch.object(EDGE, "request_once", return_value=result), contextlib.redirect_stdout(stream):
             self.assertEqual(EDGE.main(), 0)
         self.assertNotIn("synthetic", stream.getvalue())
+
         self.assertNotIn("private?", stream.getvalue())
         self.assertIn("single-hop-only", stream.getvalue())
         stream = io.StringIO()
         with patch("sys.argv", ["check", "https://example.com/"]), patch.object(EDGE, "request_once", side_effect=OSError("secret=synthetic")), contextlib.redirect_stdout(stream):
             self.assertEqual(EDGE.main(), 1)
         self.assertNotIn("synthetic", stream.getvalue())
+
+    def test_untrusted_redirect_origin_cannot_inject_terminal_controls(self):
+        for location in ("https://evil\x1b.example/private?token=synthetic", "https://evil\x00.example/", "https://example.com/\r\nstatus: forged", "https://example.com\\@evil.example/"):
+            with self.subTest(location=location):
+                self.assertEqual(EDGE.origin(location), "[invalid location suppressed]")
 
 
 if __name__ == "__main__":

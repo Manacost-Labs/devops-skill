@@ -57,6 +57,8 @@ def resolve_target(url, allow_private=False, connect_ip=None):
 def origin(url):
     """Never print paths, queries, fragments or credential-bearing locations."""
     try:
+        if len(url) > 8192 or any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in url) or "\\" in url:
+            return "[invalid location suppressed]"
         parsed = urlsplit(url)
         if parsed.username is not None or parsed.password is not None:
             return "[credential-bearing location suppressed]"
@@ -64,7 +66,7 @@ def origin(url):
             return "[invalid location suppressed]"
         host = parsed.hostname.encode("idna").decode("ascii")
         host = "[" + host + "]" if ":" in host else host
-        return parsed.scheme + "://" + host + (":" + str(parsed.port) if parsed.port else "") + "/[path-query-suppressed]"
+        return safe_header(parsed.scheme + "://" + host + (":" + str(parsed.port) if parsed.port else "") + "/[path-query-suppressed]")
     except (ValueError, UnicodeError):
         return "[invalid location suppressed]"
 

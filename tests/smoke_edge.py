@@ -234,8 +234,9 @@ http {{ access_log off; client_body_temp_path /tmp/client; proxy_temp_path /tmp/
             return json.dumps({"admin": {"listen": "127.0.0.1:2019"}, "logging": {"logs": {"default": {"level": "ERROR"}}},
                 "apps": {"tls": {"certificates": {"load_files": [{"certificate": cert, "key": key}]}},
                     "http": {"servers": {"fixture": {"listen": [":8443"], "automatic_https": {"disable": True},
-                        "tls_connection_policies": [{}], "routes": [{"match": [{"host": [HOST]}], "handle": [{"handler": "reverse_proxy",
-                            "upstreams": [{"dial": f"upstream:{port}"}], "transport": {"protocol": "http", "response_header_timeout": "1s", "dial_timeout": "1s"}}]}]}}}}})
+                        "tls_connection_policies": [{}], "routes": [{"match": [{"host": [HOST]}], "terminal": True, "handle": [{"handler": "reverse_proxy",
+                            "upstreams": [{"dial": f"upstream:{port}"}], "transport": {"protocol": "http", "response_header_timeout": "1s", "dial_timeout": "1s"}}]},
+                            {"handle": [{"handler": "static_response", "status_code": 421}]}]}}}}})
         return json.dumps({"http": {"routers": {"fixture": {"rule": f"Host(`{HOST}`)", "entryPoints": ["websecure"], "service": "fixture", "tls": {}}},
             "services": {"fixture": {"loadBalancer": {"servers": [{"url": f"http://upstream:{port}"}], "serversTransport": "fixture"}}},
             "serversTransports": {"fixture": {"forwardingTimeouts": {"dialTimeout": "1s", "responseHeaderTimeout": "1s"}}}},
