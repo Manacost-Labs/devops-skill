@@ -85,8 +85,19 @@ def exercise(folder):
     class BadTLS(B.PSRP):
         def __enter__(self):
             try:return super().__enter__()
-            except SSLError:
-                tls_failures.append(True)
+            except SSLError as error:
+                # Requests/urllib3 nest the OpenSSL verification exception.
+                # Protocol alerts, SNI rejection and EOF are not proof of
+                # certificate validation, even though they use SSLError too.
+                pending=[error];seen=set();verified=[]
+                while pending and len(seen)<32:
+                    current=pending.pop()
+                    if not isinstance(current,BaseException) or id(current) in seen:continue
+                    seen.add(id(current))
+                    if isinstance(current,ssl.SSLCertVerificationError):verified.append(current.verify_code)
+                    pending.extend([getattr(current,'reason',None),current.__cause__,current.__context__])
+                    pending.extend(item for item in current.args if isinstance(item,BaseException))
+                tls_failures.append(verified)
                 raise
     for field,bad_value in (('ca_file',str(folder/'client.pem')),('server','wrong-fixture.invalid')):
         altered=dict(resource);altered[field]=bad_value
@@ -94,7 +105,8 @@ def exercise(folder):
         count=len(tls_failures)
         with mock.patch.object(socket,'getaddrinfo',fixture_lookup):
             assert B.run(refused,transport=BadTLS)[1]==3,'TLS failure was not rejected before task dispatch'
-        assert len(tls_failures)==count+1,'missing actual certificate validation failure'
+        assert len(tls_failures)==count+1 and tls_failures[-1],'missing actual certificate validation failure'
+        if field=='server':assert 62 in tls_failures[-1],'missing actual DNS hostname mismatch'
         assert target.read_text()=='external-change'
     # The same certificate-mapped nonadmin connector must not receive a raw
     # filesystem cmdlet or a code evaluation primitive in this actual endpoint.

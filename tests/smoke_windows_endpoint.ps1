@@ -12,7 +12,7 @@ $tag=[guid]::NewGuid().ToString('N')
 $root=Join-Path $env:RUNNER_TEMP ('devops-jea-'+$tag)
 $name='DvJ'+$tag.Substring(0,10);$groupName='DvJW'+$tag.Substring(0,10);$endpoint='DevopsBound-'+$tag
 $createdUser=$null;$createdGroup=$null;$certs=@();$listenerPath=$null;$mappingPath=$null;$registered=$false
-$fixtureStart=Get-Date
+$fixtureStart=Get-Date;$requestStart=$fixtureStart
 $serviceBefore=(Get-Service WinRM).Status;$certificateBefore=$null
 function Grant-Fixture([string]$Path,$Sid,[Security.AccessControl.FileSystemRights]$Rights,[switch]$Private){
     if((Get-Item -LiteralPath $Path).PSIsContainer){$acl=[Security.AccessControl.DirectorySecurity]::new()}else{$acl=[Security.AccessControl.FileSecurity]::new()}
@@ -73,6 +73,13 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture ($existingMappings.Count -eq 0)
     $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $ca.Thumbprint -Credential $credential -Force
     $mappingPath=$mapping.PSPath
+    Require-Fixture ($client.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::UpnName,$false) -ceq $subject)
+    $chain=[Security.Cryptography.X509Certificates.X509Chain]::new()
+    try{
+        Require-Fixture ($chain.Build($client) -and $chain.ChainElements[$chain.ChainElements.Count-1].Certificate.Thumbprint -ieq $ca.Thumbprint)
+    }finally{$chain.Dispose()}
+    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\Enabled')).Value -ieq 'true')
+    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\UserName')).Value -ieq ($env:COMPUTERNAME+'\'+$name))
     # Match the exact IPv4 listener; localhost can select ::1 while HTTP.sys
     # has a port binding but WinRM has no matching IPv6 listener. The server
     # certificate explicitly includes the verified 127.0.0.1 IP SAN.
@@ -96,20 +103,28 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture ([int]$observed.Port -eq $port -and $observed.Hostname -ceq 'localhost' -and $observed.CertificateThumbprint -ieq $server.Thumbprint -and $observed.Enabled -ieq 'true')
     Require-Fixture (@($observed.ListeningOn).Count -eq 1 -and @($observed.ListeningOn)[0] -ceq '127.0.0.1')
     Require-Fixture $server.HasPrivateKey
+    Require-Fixture ((Get-Item WSMan:\localhost\Service\Auth\Certificate).Value -ieq 'true')
+    $requestStart=Get-Date
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') diagnose-tls --folder $root
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') exercise --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0)
 }catch{
     foreach($log in @('System','Microsoft-Windows-WinRM/Operational')){
         try{
-            $events=Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=$fixtureStart} -MaxEvents 24 -ErrorAction Stop
+            $events=Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=$requestStart} -MaxEvents 24 -ErrorAction Stop
             foreach($event in $events){if($log -ne 'System' -or $event.ProviderName -eq 'Schannel'){
                 $message=[string]$event.Message
                 if($message.Length -gt 1800){$message=$message.Substring(0,1800)}
-                @{fixture_diagnostic_log=$log;id=$event.Id;level=$event.LevelDisplayName;message=$message}|ConvertTo-Json -Compress
+                @{fixture_diagnostic_log=$log;at=$event.TimeCreated.ToUniversalTime().ToString('o');record=$event.RecordId;id=$event.Id;level=$event.LevelDisplayName;message=$message}|ConvertTo-Json -Compress
             }}
         }catch{ 'FIXTURE_EVENT_DIAGNOSTIC_UNAVAILABLE' }
     }
+    try{
+        foreach($event in @(Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625;StartTime=$requestStart} -MaxEvents 16 -ErrorAction Stop)){
+            $data=@{};foreach($entry in ([xml]$event.ToXml()).Event.EventData.Data){$data[$entry.Name]=[string]$entry.'#text'}
+            if($data['TargetUserName'] -ieq $name){@{fixture_logon_failure=$true;at=$event.TimeCreated.ToUniversalTime().ToString('o');status=$data['Status'];substatus=$data['SubStatus'];logon_type=$data['LogonType']}|ConvertTo-Json -Compress}
+        }
+    }catch{'FIXTURE_LOGON_DIAGNOSTIC_UNAVAILABLE'}
     throw
 }finally{
     if($registered){Unregister-PSSessionConfiguration -Name $endpoint -NoServiceRestart -Force | Out-Null}
