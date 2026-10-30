@@ -11,9 +11,13 @@ Require-Fixture (-not $computer.PartOfDomain -and $computer.DomainRole -in @(0,2
 $tag=[guid]::NewGuid().ToString('N')
 $root=Join-Path $env:RUNNER_TEMP ('devops-jea-'+$tag)
 $name='DvJ'+$tag.Substring(0,10);$groupName='DvJW'+$tag.Substring(0,10);$endpoint='DevopsBound-'+$tag
-$createdUser=$null;$createdGroup=$null;$certs=@();$listenerPath=$null;$mappingPath=$null;$registered=$false
+$createdUser=$null;$createdGroup=$null;$certs=@();$listenerPath=$null;$mappingPath=$null;$registered=$false;$configuredWinrm=$false
 $fixtureStart=Get-Date;$requestStart=$fixtureStart
 $serviceBefore=(Get-Service WinRM).Status;$certificateBefore=$null
+$serviceConfigBefore=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
+$serviceRegistryBefore=Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM
+$requiredPrivilegesBefore=@($serviceRegistryBefore.RequiredPrivileges)
+Require-Fixture ($serviceConfigBefore.StartName -in @('LocalSystem','NT AUTHORITY\NetworkService','NT AUTHORITY\LocalService') -and $serviceRegistryBefore.Type -in @(16,32) -and $requiredPrivilegesBefore.Count -gt 0) 'restorable_service_configuration'
 function Grant-Fixture([string]$Path,$Sid,[Security.AccessControl.FileSystemRights]$Rights,[switch]$Private){
     if((Get-Item -LiteralPath $Path).PSIsContainer){$acl=[Security.AccessControl.DirectorySecurity]::new()}else{$acl=[Security.AccessControl.FileSecurity]::new()}
     $acl.SetAccessRuleProtection($true,$false)
@@ -51,7 +55,19 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
 '@.Replace('__VALUE_PATH__',$valuePath) | Set-Content -LiteralPath (Join-Path $moduleRoot 'canary-write.ps1') -Encoding utf8
     $taskHash='sha256:'+(Get-FileHash -LiteralPath (Join-Path $moduleRoot 'canary-write.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
     $binding='sha256:'+('b'*64)
-    Start-Service WinRM
+    # JEA virtual-account prerequisites belong to the trusted WinRM service,
+    # never the connector. Configure through SCM before mapping credentials:
+    # Register-PSSessionConfiguration can otherwise change its account after
+    # those mappings were encrypted, invalidating them.
+    & (Join-Path $env:SystemRoot 'System32\sc.exe') config WinRM type= own obj= LocalSystem | Out-Null
+    Require-Fixture ($LASTEXITCODE -eq 0) 'configure_owned_service'
+    $configuredWinrm=$true
+    $requiredPrivileges=@($requiredPrivilegesBefore+@('SeTcbPrivilege') | Select-Object -Unique)
+    & (Join-Path $env:SystemRoot 'System32\sc.exe') privs WinRM ($requiredPrivileges -join '/') | Out-Null
+    Require-Fixture ($LASTEXITCODE -eq 0) 'configure_owned_service_privileges'
+    Restart-Service WinRM -Force
+    Require-Fixture ((Get-CimInstance Win32_Service -Filter "Name='WinRM'").StartName -ceq 'LocalSystem') 'service_identity'
+    Require-Fixture ((Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM).RequiredPrivileges -contains 'SeTcbPrivilege') 'service_virtual_account_privilege'
     $certificateBefore=(Get-Item WSMan:\localhost\Service\Auth\Certificate).Value
     Set-Item WSMan:\localhost\Service\Auth\Certificate -Value $true
     $ca=Import-Certificate -FilePath (Join-Path $root 'ca.pem') -CertStoreLocation Cert:\LocalMachine\Root
@@ -113,22 +129,11 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Require-Fixture $server.HasPrivateKey
     Require-Fixture ((Get-Item WSMan:\localhost\Service\Auth\Certificate).Value -ieq 'true')
     $requestStart=Get-Date
-    # Deliberate owner-side CI comparison, before any task dispatch. The
-    # connector remains the same nonadmin SID, certificate and JEA role.
+    # Require real named-endpoint binding before any task dispatch. The
+    # credential mapping and service account remain unchanged across it.
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') probe-binding --folder $root
-    $exactMappingCode=$LASTEXITCODE
-    Require-Fixture ($exactMappingCode -in @(0,3)) 'exact_mapping_probe'
+    Require-Fixture ($LASTEXITCODE -eq 0) 'exact_mapping_positive_binding'
     Require-Fixture ([IO.File]::ReadAllText((Join-Path $state 'value.txt')) -ceq 'before') 'mapping_probe_no_write'
-    Remove-Item -LiteralPath $mappingPath -Recurse -Force;$mappingPath=$null
-    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI '*' -Issuer $client.Thumbprint -Credential $credential -Force
-    $mappingPath=$mapping.PSPath
-    $mappingUser=[string](Get-Item -LiteralPath ($mappingPath+'\UserName')).Value
-    Require-Fixture ($mappingUser -ieq $name -or $mappingUser -ieq ($env:COMPUTERNAME+'\'+$name)) 'wildcard_mapping_user'
-    if($mappingUser -notmatch '\\'){$mappingUser=$env:COMPUTERNAME+'\'+$mappingUser}
-    Require-Fixture (([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier]).Value -ceq $createdUser.SID.Value) 'wildcard_mapping_sid'
-    & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') probe-binding --folder $root
-    Require-Fixture ($LASTEXITCODE -eq 0) 'wildcard_mapping_positive_binding'
-    Write-Output ('MAPPING_URI_COMPARISON exact_code='+$exactMappingCode+' wildcard_authenticated; named JEA role unchanged')
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') diagnose-tls --folder $root
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') exercise --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0)
@@ -158,7 +163,14 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     foreach($cert in $certs){if($cert.Private){Remove-Item -LiteralPath $cert.Path -DeleteKey -Force}else{Remove-Item -LiteralPath $cert.Path -Force}}
     if($createdUser){Require-Fixture ((Get-LocalUser -Name $name).SID.Value -ceq $createdUser.SID.Value);Remove-LocalUser -Name $name}
     if($createdGroup){Require-Fixture ((Get-LocalGroup -Name $groupName).SID.Value -ceq $createdGroup.SID.Value);Remove-LocalGroup -Name $groupName}
-    if($registered){Restart-Service WinRM -Force}
+    if($configuredWinrm){
+        $restoreType=if($serviceRegistryBefore.Type -eq 16){'own'}else{'share'}
+        & (Join-Path $env:SystemRoot 'System32\sc.exe') config WinRM type= $restoreType obj= $serviceConfigBefore.StartName | Out-Null
+        Require-Fixture ($LASTEXITCODE -eq 0) 'restore_service_identity'
+        & (Join-Path $env:SystemRoot 'System32\sc.exe') privs WinRM ($requiredPrivilegesBefore -join '/') | Out-Null
+        Require-Fixture ($LASTEXITCODE -eq 0) 'restore_service_privileges'
+        Restart-Service WinRM -Force
+    }elseif($registered){Restart-Service WinRM -Force}
     if($serviceBefore -eq 'Stopped'){Stop-Service WinRM -Force}
     $resolved=[IO.Path]::GetFullPath($root);$parent=[IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\')+'\'
     Require-Fixture ($resolved.StartsWith($parent,[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolved) -cmatch '^devops-jea-[a-f0-9]{32}$')

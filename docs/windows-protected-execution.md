@@ -171,11 +171,11 @@ CA-issued server certificate. It uses only new owned fixture identities/files/ce
 not prove Kerberos, AD/GPO, gMSA ACLs or a user's installed Codex boundary. Public
 PRs receive no directory credential or persistent privileged runner.
 It does not validate a deployed client PKI's issuance or revocation service.
-The disposable fixture compares exact-URI certificate mapping with wildcard
-authentication mapping before task dispatch. Native allow/deny tests use the
-same nonadmin connector and exact JEA role with wildcard authentication mapping;
-they are not proof of a deployed exact-URI certificate mapping. Default PS and
-WinRS refusals are checked after positive named-endpoint authentication.
+The disposable fixture prepares WinRM's documented virtual-account service
+prerequisites before creating its exact-URI certificate mapping. It restores the
+captured public service identity/type/required privileges during cleanup. These
+privileges belong to the trusted service; the connector remains nonadmin.
+Default PS and WinRS refusals are checked after positive named-endpoint authentication.
 
 Sources refreshed 2026-10-30: [JEA configuration](https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/session-configurations),
 [JEA security](https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/security-considerations),

@@ -193,12 +193,16 @@ def diagnose_tls(folder):
 
 
 def probe_binding(folder):
+    from pypsrp.exceptions import AuthenticationError
     resource=B.decode((folder/'target.json').read_bytes())
     try:
         with B.PSRP(resource) as client:binding=client.invoke('Get-DevopsEndpointBinding',{})
         assert binding=={'target_id':'fixture-target','binding_digest':resource['binding_digest']}
         print('MAPPING_BINDING_PROBE authenticated_named_endpoint')
         return 0
+    except AuthenticationError:
+        print('MAPPING_BINDING_PROBE authentication_401')
+        return 5
     except Exception as error:
         print('MAPPING_BINDING_PROBE refused',type(error).__name__,str(error)[:500])
         return 3
