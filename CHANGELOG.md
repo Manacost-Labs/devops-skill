@@ -29,6 +29,8 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 - Deepen cloudflare-operations 0.4.0 with Access policy/path precedence, WAF/ruleset replacement semantics, Tunnel connector/configuration/route recovery and Workers version/data compatibility. Preserve the protected task contract and production risk floors.
 - Add credential-free drift/partial-effect comparisons, a bounded read-only API observation helper, cross-platform adversarial/loopback CI, and a prepared disposable-account drill. Live provider recovery is explicitly not run while the test account is unavailable.
+- Deepen cloud-aws, cloud-gcp, cloud-azure and cloud-selectel 0.4.0 with concrete IAM, network and VM procedures, bounded observation, quota/capacity checks and recovery after uncertain or partial results.
+- Add provider-specific offline response inspectors and adversarial regression tests under the existing Linux/Windows CI. Preserve protected typed-task execution and specialist ownership; synthetic evidence does not verify a live cloud account or service.
 
 ## 0.14.0 — 2026-10-30
 

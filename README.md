@@ -18,6 +18,8 @@ CI/CD now covers GitHub Actions trust, effective secrets/OIDC rights, artifact a
 
 Secrets and access now include concrete HashiCorp Vault grants, consumer rotation and partial recovery, session/issuer revocation, emergency closeout and observed expiry. See [Vault procedure scope and actual-engine CI](docs/secrets-access-depth.md).
 
+AWS, Google Cloud, Azure and Selectel now include bounded IAM, network and VM procedures with provider-specific concurrency, asynchronous observation and recovery after lost responses or partial effects. See [cloud operation scope and evidence](docs/cloud-provider-depth.md).
+
 Terraform/OpenTofu now cover exact state/backend ownership, lock contention, drift, stale plans and recovery after partial apply or failed state persistence. See [state and recovery scope with native CI](docs/terraform-operations-depth.md).
 
 Ansible now covers repeatable configuration, exact group/host targeting, gradual fleet updates and recovery after a partial failure. See [Ansible scope and native CI evidence](docs/ansible-operations-depth.md).
