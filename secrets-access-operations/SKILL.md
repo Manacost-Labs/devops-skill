@@ -8,12 +8,14 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 
 Operate identities and secret references under the devops-core safety contract and platform contract v2. Never request, reveal, copy, log, or store a literal secret. A trusted provider/broker may use secret material internally for an approved authentication check; give the agent only redacted outcomes and opaque references.
 
+Local v2 requests, planners, gate results and unsigned approval metadata support planning and consistency only. Actual execution submits registered task IDs and typed parameters to the separately protected mTLS broker under externally signed finite authority. Target, risk, code and worker identity come from its administrator registry. Never use the removed arbitrary-argv wrapper, add execution allowlists or turn local metadata into authority. Missing registered Vault tasks or a protected provider means `blocked` with a precise handoff. Read the installed core [autonomy rules](../devops-core/references/autonomy-modes.md) and [protected execution deployment](../docs/protected-execution.md) before claiming enforcement.
+
 ## Workflow
 
 1. Confirm the resource owner, target, environment, identity type, requested action, bounded privileges, duration, justification, data classification, dependencies, and authoritative provider.
 2. Accept only opaque references such as credential-broker, vault, OIDC, workload-identity, SSH-config, or approved profile references. If secret material appears, do not repeat it; redact evidence and direct the owner to rotate it through the authoritative system.
 3. Prefer workload identity and short-lived, audience-bound credentials. For humans, use attributable JIT elevation and JEA or equivalent constrained administration instead of standing broad access.
-4. Classify grants, rotation, revocation, and emergency access by actual blast radius. For R2-R4, require a validated v2 request, immutable plan digest, exact target/scope, expiry, approvals, separation of duties where required, and immediate pre-execution gate.
+4. Classify grants, rotation, revocation, and emergency access by actual blast radius. For R2-R4, validate the v2 planning request and immutable plan/target/scope bindings; this local gate does not authorize execution. Require the broker's signed finite authority, separate exact admission where policy requires, recovery and separation of duties before a registered task can launch.
 5. Stage rotation with dependency inventory, overlap only when necessary, reference update, consumer verification, and prompt revocation of the old credential. Never print a credential to validate it.
 6. Record redacted authorization, actor, provider evidence, reference versions or identifiers, timestamps, changed principals/resources, verification, and revocation outcome. Return a contract-v2 status.
 
@@ -24,7 +26,7 @@ Operate identities and secret references under the devops-core safety contract a
 - Require dual control for production privileged access, root/break-glass use, high-impact revocation, and policy-defined R4 operations. Keep requester, approver, and executor separate where policy requires.
 - Make break-glass time-bound, attributable, least-privilege, monitored, automatically expiring where supported, and independently reviewed. It does not waive target identity, recovery, or evidence.
 - For emergency revocation, preserve a recovery administrator path and assess dependent workloads before removal unless immediate containment is explicitly authorized.
-- Hand provider-specific IAM, vault, KMS/HSM, directory, or broker mutations to the matching provider executor with the validated request. The Vault references describe a provider handoff, not a bundled production Vault executor. Do not substitute shell commands when that executor or a protected transport is missing.
+- Hand provider-specific IAM, vault, KMS/HSM, directory, or broker mutations to the matching protected provider through registered tasks and signed authority. The validated v2 request is planning input only. The Vault references describe a provider handoff, not a bundled production Vault executor. Do not substitute shell commands when that executor, registered task or protected transport is missing.
 - Stop on unknown identity ownership, unverified approver, changed plan, absent expiry, missing recovery path, or inability to preserve redacted evidence.
 
 Read [references/access-lifecycle.md](references/access-lifecycle.md) for lifecycle gates and handoff requirements.

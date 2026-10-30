@@ -9,8 +9,8 @@ allowed_tools:
 - Edit
 - Bash
 requires:
-- devops-platform-contracts >= 0.6.0
-- devops-core >= 0.6.0
+- devops-platform-contracts >= 0.7.0
+- devops-core >= 0.7.0
 capabilities:
 - secret-reference-governance
 - workload-identity
