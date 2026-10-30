@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import http.client
 import importlib.util
+import ipaddress
 import json
 import os
 import re
@@ -137,7 +138,8 @@ class EdgeFixture(DockerFixture):
             if not binary.exists():
                 extracted = binary.with_suffix(".image-source")
                 self.docker("cp", identity + ":" + source_binary, str(extracted))
-                if extracted.is_symlink() or not stat.S_ISREG(extracted.stat().st_mode) or extracted.stat().st_size > 100 * 1024 * 1024:
+                extracted_state = extracted.lstat()
+                if not stat.S_ISREG(extracted_state.st_mode) or extracted_state.st_size > 100 * 1024 * 1024:
                     raise RuntimeError("bounded regular pinned-image executable required")
                 content = extracted.read_bytes()
                 with binary.open("xb") as output:
@@ -145,8 +147,10 @@ class EdgeFixture(DockerFixture):
                 self.binary_digests[name] = hashlib.sha256(content).hexdigest()
                 binary.chmod(0o755)
                 extracted.unlink()
-            if (binary.is_symlink() or not stat.S_ISREG(binary.stat().st_mode)
-                    or binary.stat().st_uid != os.getuid() or "security.capability" in os.listxattr(binary)
+                print(f"owned native executable: engine={name} image={image_id} sha256={self.binary_digests[name]}", flush=True)
+            binary_state = binary.lstat()
+            if (not stat.S_ISREG(binary_state.st_mode) or stat.S_IMODE(binary_state.st_mode) != 0o755
+                    or binary_state.st_uid != os.getuid() or "security.capability" in os.listxattr(binary)
                     or hashlib.sha256(binary.read_bytes()).hexdigest() != self.binary_digests.get(name)):
                 raise RuntimeError("owned unchanged capability-free fixture binary required")
         return identity
@@ -162,6 +166,7 @@ class EdgeFixture(DockerFixture):
         address = networks[0]["IPAddress"]
         if not address:
             raise RuntimeError("owned native service lacks an address")
+        ipaddress.ip_address(address)
         return address
 
     def make_pki(self):
