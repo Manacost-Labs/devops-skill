@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import copy
+import contextlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -267,6 +269,28 @@ class LoopbackTransportTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     CAPTURE.read_once(opener, "/zones/" + "b" * 32, "synthetic-loopback-only")
         self.assertFalse(bodies)
+
+    def test_malformed_status_and_truncated_chunks_have_private_structured_cli_error(self):
+        responses = [b"synthetic-private-marker\r\n\r\n", b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n10\r\nshort"]
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.wfile.write(responses.pop(0))
+                self.wfile.flush()
+                self.close_connection = True
+            def log_message(self, *args): pass
+        server = self.serve(Handler)
+        with tempfile.TemporaryDirectory() as directory, patch.object(CAPTURE, "API", f"http://127.0.0.1:{server.server_port}"), patch.dict(CAPTURE.os.environ, {"CLOUDFLARE_API_TOKEN": "synthetic-loopback-only"}):
+            for index in range(2):
+                output = Path(directory) / f"result{index}.json"
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    code = CAPTURE.main(["--kind", "waf-ruleset", "--account-id", "a" * 32, "--zone-id", "b" * 32, "--resource-id", "fixture", "--output", str(output)])
+                self.assertEqual(code, 2)
+                self.assertEqual(json.loads(stdout.getvalue())["status"], "blocked")
+                self.assertNotIn("synthetic-private-marker", stdout.getvalue() + stderr.getvalue())
+                self.assertNotIn("Traceback", stdout.getvalue() + stderr.getvalue())
+                self.assertFalse(output.exists())
+        self.assertFalse(responses)
 
 
 if __name__ == "__main__":

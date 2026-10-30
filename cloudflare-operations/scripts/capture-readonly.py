@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import http.client
 import importlib.util
 import json
 import os
@@ -121,7 +122,7 @@ def main(argv=None):
             output.write("\n")
         print('{"status":"captured","coverage":"one_api_response_only","provider_behavior_verified":false}')
         return 0
-    except (ValueError, TypeError, OSError, RecursionError, OverflowError, urllib.error.URLError):
+    except (ValueError, TypeError, OSError, RecursionError, OverflowError, urllib.error.URLError, http.client.HTTPException):
         print('{"status":"blocked","detail":"observation unavailable; raw provider errors suppressed"}')
         return 2
 
