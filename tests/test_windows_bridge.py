@@ -39,7 +39,8 @@ class Transport:
         if command=='Get-DevopsBoundTaskStatus': return {'binding_digest':self.target['binding_digest'],'call_digest':parameters['CallDigest'],'status':'outcome_unknown'}
         if self.fail: raise OSError('lost reply after remote write')
         context=B.decode(parameters['ContextJson'])
-        return {'binding_digest':self.target['binding_digest'],'call_digest':context['call_digest'],'operation_id':context['operation_id'],'status':'executed','result':{'state':'after'}}
+        parameters=B.decode(parameters['ParametersJson'])
+        return {'binding_digest':self.target['binding_digest'],'call_digest':context['call_digest'],'input_digest':B.input_digest(context,parameters),'operation_id':context['operation_id'],'status':'executed','result':{'state':'after'}}
 
 
 class WindowsBridgeTests(unittest.TestCase):

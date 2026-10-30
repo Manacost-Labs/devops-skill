@@ -77,13 +77,19 @@ def exercise(folder):
         assert target.read_text()=='external-change'
     # The same certificate-mapped nonadmin connector must not receive a raw
     # filesystem cmdlet or a code evaluation primitive in this actual endpoint.
-    for command in ('Get-Item','Invoke-Expression','New-PSSession'):
+    denied_commands=(('Get-Item',{'LiteralPath':str(target)}),
+        ('Invoke-Expression',{'Command':'Get-DevopsEndpointBinding'}),
+        ('New-PSSession',{'ComputerName':'localhost','UseSSL':True,'Port':resource['port'],'ConfigurationName':resource['configuration_name']}))
+    for command,parameters in denied_commands:
         with B.PSRP(resource) as client:
             pipeline=client.PowerShell(client.pool);pipeline.add_cmdlet(command)
-            denied=False
-            try:pipeline.invoke();denied=pipeline.had_errors
-            except Exception:denied=True
-            assert denied,'unregistered command accepted'
+            for name,item in parameters.items():pipeline.add_parameter(name,item)
+            try:pipeline.invoke()
+            except Exception:pass
+            # Binding, authentication and transport failures do not prove a
+            # policy denial. Require the actual hidden-command error record.
+            denied=any(getattr(error,'fq_error','').split(',')[0]=='CommandNotFoundException' for error in pipeline.streams.error)
+            assert denied,'missing exact command-visibility denial for '+command
     # No access to the default unrestricted PS endpoint or Windows shell.
     from pypsrp.powershell import RunspacePool
     from pypsrp.shell import WinRS

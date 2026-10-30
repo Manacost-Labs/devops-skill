@@ -166,6 +166,7 @@ function Invoke-DevopsBoundTask {
     foreach ($key in @('call_digest','grant_digest','registry_digest','parameters_digest')) { Assert-Endpoint ($context[$key] -cmatch '^sha256:[0-9a-f]{64}$') }
     Assert-Endpoint ($context.epoch -cmatch '^[0-9a-f]{64}$')
     Assert-Endpoint ((Get-EndpointHash $ParametersJson) -ceq $context.parameters_digest)
+    $inputDigest = Get-EndpointHash ($ContextJson + [char]0 + $ParametersJson)
     Assert-EndpointWindow $context
     Assert-Endpoint ($config.Tasks.Contains($context.task_id))
     $task = $config.Tasks[$context.task_id]
@@ -185,7 +186,7 @@ function Invoke-DevopsBoundTask {
         $lock = [IO.FileStream]::new((Join-Path $config.StatePath 'target.lock'), [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
         if (Test-Path -LiteralPath ($stem + '.result.json')) {
             $old = Read-EndpointRecord ($stem + '.result.json')
-            Assert-Endpoint ($old['operation_id'] -ceq $context.operation_id -and $old['status'] -ceq 'executed')
+            Assert-Endpoint ($old['operation_id'] -ceq $context.operation_id -and $old['status'] -ceq 'executed' -and $old['input_digest'] -ceq $inputDigest)
             return $old | ConvertTo-Json -Depth 8 -Compress
         }
         Assert-Endpoint (-not (Test-Path -LiteralPath $latch) -and -not (Test-Path -LiteralPath ($stem + '.intent.json')))
@@ -194,7 +195,7 @@ function Invoke-DevopsBoundTask {
         Assert-Endpoint (-not (Test-Path -LiteralPath $operationPath))
         Assert-Endpoint (@(Get-ChildItem -LiteralPath $config.StatePath -File).Count -lt 8192)
         Assert-EndpointWindow $context
-        $intent = @{operation_id=$context.operation_id;call_digest=$context.call_digest;task_id=$context.task_id;binding_digest=$BindingDigest;status='outcome_unknown';observed_at=[DateTime]::UtcNow.ToString('o')}
+        $intent = @{operation_id=$context.operation_id;call_digest=$context.call_digest;input_digest=$inputDigest;task_id=$context.task_id;binding_digest=$BindingDigest;status='outcome_unknown';observed_at=[DateTime]::UtcNow.ToString('o')}
         Write-EndpointRecord $operationPath $intent
         Write-EndpointRecord $latch $intent
         Write-EndpointRecord ($stem + '.intent.json') $intent
@@ -211,7 +212,7 @@ function Invoke-DevopsBoundTask {
         }
         Assert-Endpoint ($count -eq 1 -and $global:LASTEXITCODE -eq 0)
         Assert-EndpointValues $task.Result $result
-        $receipt = @{operation_id=$context.operation_id;call_digest=$context.call_digest;binding_digest=$BindingDigest;status='executed';result=$result}
+        $receipt = @{operation_id=$context.operation_id;call_digest=$context.call_digest;input_digest=$inputDigest;binding_digest=$BindingDigest;status='executed';result=$result}
         Write-EndpointRecord ($stem + '.result.json') $receipt
         # Only a known successful, durably recorded task releases quarantine.
         Remove-Item -LiteralPath $latch -ErrorAction Stop

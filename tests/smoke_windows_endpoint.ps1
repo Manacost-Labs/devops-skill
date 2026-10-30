@@ -2,11 +2,12 @@
 [CmdletBinding()]param([Parameter(Mandatory=$true)][string]$PythonPath,[Parameter(Mandatory=$true)][string]$SourceRoot)
 $ErrorActionPreference='Stop';Set-StrictMode -Version Latest
 function Require-Fixture($Value){if(-not $Value){throw 'Owned Windows JEA fixture prerequisite failed'}}
-Require-Fixture ($env:GITHUB_ACTIONS -ceq 'true' -and $env:RUNNER_OS -ceq 'Windows' -and $env:DEVOPS_OWNED_JEA_FIXTURE -ceq '1')
+Require-Fixture ($env:GITHUB_ACTIONS -ceq 'true' -and $env:RUNNER_OS -ceq 'Windows' -and $env:RUNNER_ENVIRONMENT -ceq 'github-hosted' -and $env:DEVOPS_OWNED_JEA_FIXTURE -ceq '1')
 Require-Fixture (-not [string]::IsNullOrWhiteSpace($env:RUNNER_TEMP))
 $owner=[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
 Require-Fixture ($owner.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
-Require-Fixture ((Get-CimInstance Win32_ComputerSystem).DomainRole -lt 4)
+$computer=Get-CimInstance Win32_ComputerSystem
+Require-Fixture (-not $computer.PartOfDomain -and $computer.DomainRole -in @(0,2))
 $tag=[guid]::NewGuid().ToString('N')
 $root=Join-Path $env:RUNNER_TEMP ('devops-jea-'+$tag)
 $name='DvJ'+$tag.Substring(0,10);$groupName='DvJW'+$tag.Substring(0,10);$endpoint='DevopsBound-'+$tag

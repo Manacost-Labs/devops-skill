@@ -39,6 +39,10 @@ def digest(value):
     return "sha256:" + hashlib.sha256(canonical(value)).hexdigest()
 
 
+def input_digest(context, parameters):
+    return "sha256:" + hashlib.sha256(canonical(context) + b"\x00" + canonical(parameters)).hexdigest()
+
+
 def decode(raw):
     require(isinstance(raw, (str, bytes)) and len(raw) <= LIMIT)
     def pairs(items):
@@ -176,8 +180,9 @@ def run(value, route="execute", transport=PSRP):
             attempted = True  # Network failure from this point is uncertain.
             receipt = client.invoke("Invoke-DevopsBoundTask", {"BindingDigest": target["binding_digest"],
                 "ContextJson": canonical(context).decode("ascii"), "ParametersJson": canonical(value["parameters"]).decode("ascii")})
-            exact(receipt, {"operation_id", "call_digest", "binding_digest", "status", "result"})
+            exact(receipt, {"operation_id", "call_digest", "input_digest", "binding_digest", "status", "result"})
             require(receipt["operation_id"] == context["operation_id"] and receipt["call_digest"] == context["call_digest"])
+            require(receipt["input_digest"] == input_digest(context, value["parameters"]))
             require(receipt["binding_digest"] == target["binding_digest"] and receipt["status"] == "executed" and isinstance(receipt["result"], dict))
             return receipt["result"], 0
     except Exception:

@@ -51,6 +51,9 @@ try {
     [IO.File]::WriteAllText((Join-Path $moduleRoot 'testvalue.txt'),'outside-change')
     $null=Invoke-Test $context
     Assert-Test ([IO.File]::ReadAllText((Join-Path $moduleRoot 'testvalue.txt')) -ceq 'outside-change') 'replay never invokes task'
+    $changedRaw='{"value":"before"}';$changed=Make-Context $changedRaw;$changed.grant_digest='sha256:'+('4'*64)
+    Assert-Refusal $changed $changedRaw
+    Assert-Test ([IO.File]::ReadAllText((Join-Path $moduleRoot 'testvalue.txt')) -ceq 'outside-change') 'cached receipt binds actual context and parameters'
     $context.call_digest='sha256:'+('1'*64)
     Assert-Refusal $context
 
