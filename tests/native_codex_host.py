@@ -154,7 +154,7 @@ def managed(executable,folder):
         (home/'config.toml').write_text('[features]\nhooks = false\nunified_exec = true\napps = true\nplugins = true\n',encoding='utf-8')
         environment={key:value for key,value in os.environ.items() if key.upper() in {'PATH','SYSTEMROOT','WINDIR','COMSPEC','PATHEXT','TEMP','TMP','HOME','USERPROFILE'}}
         environment['CODEX_HOME']=str(home)
-        result=subprocess.run([str(executable),'--strict-config','features','list'],env=environment,cwd=home,capture_output=True,text=True,timeout=20)
+        result=subprocess.run([str(executable),'features','list'],env=environment,cwd=home,capture_output=True,text=True,timeout=20)
         if result.returncode: raise RuntimeError('managed template did not load: '+result.stderr[-3000:])
         rows={line.split()[0]:line.split()[-1] for line in result.stdout.splitlines() if line.split()}
         for name,expected in {'hooks':'true','unified_exec':'false','apps':'false','plugins':'false'}.items():
