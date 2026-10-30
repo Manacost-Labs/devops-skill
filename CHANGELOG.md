@@ -31,6 +31,8 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 - Add credential-free drift/partial-effect comparisons, a bounded read-only API observation helper, cross-platform adversarial/loopback CI, and a prepared disposable-account drill. Live provider recovery is explicitly not run while the test account is unavailable.
 - Deepen cloud-aws, cloud-gcp, cloud-azure and cloud-selectel 0.4.0 with concrete IAM, network and VM procedures, bounded observation, quota/capacity checks and recovery after uncertain or partial results.
 - Add provider-specific offline response inspectors and adversarial regression tests under the existing Linux/Windows CI. Preserve protected typed-task execution and specialist ownership; synthetic evidence does not verify a live cloud account or service.
+- Deepen AD replication/SYSVOL, GPO applicability/inheritance and delegation diagnosis, and exact object/GPO recovery planning in identity-directory-operations 0.4.0. Preserve contract-v2 approval, identity, recovery and least-privilege boundaries.
+- Add a separate two-DC disposable-domain read-only preflight, planned external recovery drill and unconditional mutation-refusal regressions; keep client-policy/delegated-identity/SYSVOL-fault checks explicit and unverified until a real domain rehearsal. Hosted Windows fixtures do not prove AD behavior.
 
 ## 0.14.0 — 2026-10-30
 

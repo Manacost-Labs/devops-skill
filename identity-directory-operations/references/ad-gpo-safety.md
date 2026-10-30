@@ -2,7 +2,7 @@
 
 ## Official source baseline
 
-Last verified: 2026-08-17. Before a mutation, refresh the exact Microsoft Learn page for the intended cmdlet and reconcile it with read-only discovery from the authoritative writable domain controller.
+Last verified: 2026-10-30. Before a mutation, refresh the exact Microsoft Learn page for the intended cmdlet and reconcile it with read-only discovery from the authoritative writable domain controller.
 
 - Active Directory cmdlets: <https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps>
 - Group Policy cmdlets: <https://learn.microsoft.com/en-us/powershell/module/grouppolicy/?view=windowsserver2025-ps>
@@ -22,6 +22,8 @@ Last verified: 2026-08-17. Before a mutation, refresh the exact Microsoft Learn 
 For every mutation record the forest/domain, authoritative server, exact target DN/GUID, current object or GPO version, planned delta, execution identity, change lock, approval reference, and expiry. Never preserve passwords, ticket material, key material, or unrestricted reports.
 
 For GPO work, require a fresh `Backup-GPO` artifact reference, baseline report, link/filter/precedence capture, approved pilot scope, result-of-policy evidence, and an explicit restore or unlink decision. For group/delegation work, require before/after immutable principal identifiers, a bounded positive test, a meaningful denied-action test, and a recovery administrator path.
+
+For object recovery, establish exact deleted GUID/SID, original parent, retention and Recycle Bin eligibility before selecting a method. Read [object-and-gpo-recovery.md](object-and-gpo-recovery.md); a backup instance ID differs from a GPO GUID and an AD restore does not restore SYSVOL contents. Back up the remaining current state and do not overwrite unrelated concurrent changes.
 
 ## Stop conditions
 

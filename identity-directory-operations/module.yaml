@@ -1,5 +1,5 @@
 name: identity-directory-operations
-version: 0.3.0
+version: 0.4.0
 kind: executor
 allowed_tools:
   - Read
@@ -9,8 +9,8 @@ allowed_tools:
   - Edit
   - Bash
 requires:
-  - devops-platform-contracts >= 0.3.0
-  - devops-core >= 0.3.0
+  - devops-platform-contracts >= 0.7.0
+  - devops-core >= 0.7.0
 capabilities:
   - active-directory-readonly-discovery
   - active-directory-ou-and-object-provisioning
@@ -20,6 +20,9 @@ capabilities:
   - group-policy-inventory-and-reporting
   - group-policy-staged-change-management
   - group-policy-backup-restore-planning
+  - active-directory-replication-and-sysvol-diagnosis
+  - group-policy-applicability-and-delegation-diagnosis
+  - active-directory-single-object-recovery-planning
 risk_domains:
   - directory-control-plane
   - privileged-group-membership
@@ -33,7 +36,7 @@ platforms:
   - Windows Server 2022
   - Windows Server 2025
 source_freshness:
-  last_verified: "2026-08-17"
+  last_verified: "2026-10-30"
   refresh_before_change: true
   official_sources:
     - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
@@ -45,6 +48,14 @@ source_freshness:
     - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/backup-gpo?view=windowsserver2025-ps
     - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/import-gpo?view=windowsserver2025-ps
     - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory
+    - https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-adreplicationpartnermetadata?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/troubleshoot-missing-sysvol-and-netlogon-shares
+    - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/group-policy/group-policy-processing
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gpinheritance?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gppermission?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/powershell/module/activedirectory/restore-adobject?view=windowsserver2025-ps
+    - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/adac/active-directory-recycle-bin?tabs=powershell
+    - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/restore-gpo?view=windowsserver2025-ps
   capability_sources:
     active-directory-readonly-discovery:
       - https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
@@ -67,3 +78,14 @@ source_freshness:
     group-policy-backup-restore-planning:
       - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/backup-gpo?view=windowsserver2025-ps
       - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/import-gpo?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/restore-gpo?view=windowsserver2025-ps
+    active-directory-replication-and-sysvol-diagnosis:
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-adreplicationpartnermetadata?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/troubleshoot-missing-sysvol-and-netlogon-shares
+    group-policy-applicability-and-delegation-diagnosis:
+      - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/group-policy/group-policy-processing
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gpinheritance?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gppermission?view=windowsserver2025-ps
+    active-directory-single-object-recovery-planning:
+      - https://learn.microsoft.com/en-us/powershell/module/activedirectory/restore-adobject?view=windowsserver2025-ps
+      - https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/adac/active-directory-recycle-bin?tabs=powershell
