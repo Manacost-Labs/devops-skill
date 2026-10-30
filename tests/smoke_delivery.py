@@ -86,7 +86,16 @@ class DeliveryLab:
             if host == fail_host:
                 if lose_response:
                     raise InterruptedRelease("response lost after actual activation")
-                self.record(host, "recovery-failed" if recovery_fails else "acceptance-failed")
+                self.record(host, "acceptance-failed")
+                stabilization = self.root / (host + "-recovery")
+                if recovery_fails:
+                    stabilization.mkdir()  # Real, owned filesystem fault injection.
+                try:
+                    stabilization.write_text("preserve exclusion and current data", encoding="utf-8")
+                except OSError:
+                    self.record(host, "recovery-failed")
+                    raise InterruptedRelease("bounded stabilization failed") from None
+                self.record(host, "stabilized-excluded")
                 raise InterruptedRelease("halt next batch; preserve exclusion and current data")
             if self.read(host)["active"] != self.digest:
                 raise InterruptedRelease("actual running digest mismatch")
@@ -150,6 +159,7 @@ class DeliveryTests(unittest.TestCase):
         with self.assertRaises(InterruptedRelease):
             self.lab.deploy(fail_host="node2", recovery_fails=True)
         self.assertIn('"recovery-failed"', self.lab.journal.read_text())
+        self.assertTrue((self.root / "node2-recovery").is_dir())
         self.assertEqual(self.lab.read("node2")["traffic"], "excluded")
         self.assertEqual(self.lab.read("node3")["active"], self.lab.old)
 
@@ -188,6 +198,9 @@ class DeliveryTests(unittest.TestCase):
         for value, expected in ((self.value + b"x", digest), (self.value.replace(b"synthetic-v2", b"synthetic-v9"), digest), (payload_bytes(dict(ctx, attempt="999")), digest)):
             with self.assertRaises(ValueError):
                 validate_payload(value, expected, ctx)
+        forged = payload_bytes(dict(ctx, attempt="999"))
+        with self.assertRaises(ValueError):
+            validate_payload(forged, hashlib.sha256(forged).hexdigest(), ctx)
 
     def test_archives_refuse_traversal_links_duplicates_and_extra_members(self):
         for names in (("../payload.json",), ("/payload.json",), ("payload.json", "payload.json"), ("payload.json", "other"), ("link",)):
@@ -200,6 +213,13 @@ class DeliveryTests(unittest.TestCase):
                     archive.writestr(info, self.value)
             with self.assertRaises(ValueError):
                 zip_payload(stream.getvalue())
+        stream = io.BytesIO()
+        with ZipFile(stream, "w") as archive:
+            link = ZipInfo("payload.json")
+            link.external_attr = (stat.S_IFLNK | 0o777) << 16
+            archive.writestr(link, self.value)
+        with self.assertRaises(ValueError):
+            zip_payload(stream.getvalue())
 
     def test_archive_and_payload_digest_domains_are_distinct(self):
         stream = io.BytesIO()
