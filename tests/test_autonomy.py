@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest import mock
 from contextlib import redirect_stdout
 
-from test_platform import operation
+from test_platform import operation, bind_approvals
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT.parent
@@ -92,6 +92,7 @@ class AutonomyTests(unittest.TestCase):
                 else:
                     self.assertTrue(any("approval" in item for item in reasons), (mode, level, reasons))
                     req["approvals"] = operation(risk="R"+str(level), approvals=1)["approvals"]
+                    bind_approvals(req)  # Synthetic exact re-approval after all operation facts are set.
                     self.assertEqual(self.validate(req), [])
 
     def test_balanced_does_not_reclassify_a_production_deploy(self):
@@ -124,6 +125,7 @@ class AutonomyTests(unittest.TestCase):
             self.bind(req, record(req, "full-auto"))
             self.assertTrue(any("approval" in item for item in self.validate(req)))
             req["approvals"] = operation(risk="R4", approvals=1)["approvals"]
+            bind_approvals(req)  # Synthetic exact re-approval after all operation facts are set.
             self.assertEqual(self.validate(req), [])
             req["approvals"][0]["plan_digest"] = "sha256:"+"f"*64
             self.assertTrue(self.validate(req))
@@ -142,6 +144,7 @@ class AutonomyTests(unittest.TestCase):
             req = copy.deepcopy(base); self.bind(req, value); mutate(req)
             self.assertTrue(any("approval" in item for item in self.validate(req)))
             req["approvals"] = operation(approvals=1)["approvals"]
+            bind_approvals(req)  # Synthetic exact re-approval after all operation facts are set.
             self.assertEqual(self.validate(req), [])
         req = request(); value = record(req); value["allow_external_side_effects"] = False
         authorize(value); self.bind(req, value)
@@ -167,6 +170,7 @@ class AutonomyTests(unittest.TestCase):
         ):
             req = copy.deepcopy(base); self.bind(req, record(req)); mutate(req)
             req["approvals"] = operation(approvals=1)["approvals"]
+            bind_approvals(req)  # Synthetic exact re-approval after all operation facts are set.
             self.assertTrue(self.validate(req))
 
     def test_expiry_revocation_change_and_deletion_fail_closed(self):
@@ -227,6 +231,87 @@ class AutonomyTests(unittest.TestCase):
         req = request(); req["change"]["action"] = "untrusted_content_authority"
         self.bind(req, record(req))
         self.assertTrue(any("denies" in item for item in self.validate(req)))
+
+    def test_manual_admission_binds_every_declared_operation_fact(self):
+        base = request("R4"); recovery(base)
+        self.bind(base, record(base, "full-auto"))
+        base["approvals"] = operation(risk="R4")["approvals"]
+        bind_approvals(base)
+        self.assertEqual(self.validate(base), [])
+        for section, field, value in (
+            ("target", "owner", "team:other"), ("target", "environment", "production"),
+            ("target", "profile_digest", "sha256:"+"f"*64),
+            ("change", "scope", ["backup:other"]), ("change", "action", "backup_erasure"),
+            ("change", "irreversible", True), ("change", "destructive", True),
+            ("change", "stateful", False), ("change", "external_side_effects", False),
+            ("execution", "window_end", "2026-08-17T10:45:00Z"),
+            ("execution", "executor", "service:other"),
+            ("recovery", "method", "another recovery method"),
+            ("verification", "criteria", ["different acceptance"]),
+        ):
+            changed = copy.deepcopy(base); changed[section][field] = value
+            self.assertTrue(any("whole operation digest" in reason for reason in self.validate(changed)), (section, field))
+        changed = copy.deepcopy(base)
+        changed["change"].update(scope=["backup:outside"], destructive=True, irreversible=True)
+        self.assertTrue(any("whole operation digest" in reason for reason in self.validate(changed)))
+        bind_approvals(changed)  # New separate synthetic admission for the changed operation.
+        self.assertEqual(self.validate(changed), [])
+        del changed["approvals"][0]["operation_digest"]
+        self.assertTrue(self.validate(changed))
+
+    def test_authority_issuers_cover_strictest_class_below_ceiling(self):
+        policy = copy.deepcopy(POLICY); policy["minimum_approvals"]["R2"] = 2
+        G.validate_policy_shape(policy, "stricter")
+        G.ensure_not_weaker(POLICY, policy, "stricter")
+        binding = A.digest(policy)
+        req = request(); req["policy"]["digest"] = binding
+        grant = record(req, "full-auto"); self.bind(req, grant)
+        self.assertTrue(any("authorizers" in reason for reason in self.validate(req, policy, binding)))
+        authorize(grant, actors=(("user:owner", "service-owner"), ("user:security", "security-owner")))
+        self.bind(req, grant)
+        self.assertEqual(self.validate(req, policy, binding), [])
+
+    def test_operation_hash_utility_never_issues_admission(self):
+        req = request(); path = self.store/"operation.json"
+        path.write_text(json.dumps(req), encoding="utf-8")
+        result = subprocess.run([sys.executable, str(ROOT/"devops-platform-contracts/scripts/operation_gate.py"),
+                                 "--request", str(path), "--print-operation-digest"], capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn(G.operation_digest(req), result.stdout)
+        self.assertNotIn("ALLOWED:", result.stdout)
+        self.assertIn("does not validate or authorize", result.stdout)
+        before = G.operation_digest(req)
+        req["approvals"] = operation()["approvals"]
+        bind_approvals(req)
+        self.assertEqual(G.operation_digest(req), before)
+        req["change"]["scope"] = ["service:other"]
+        self.assertNotEqual(G.operation_digest(req), before)
+
+    def test_revocation_during_durable_intent_blocks_child_launch(self):
+        wrapper_spec = importlib.util.spec_from_file_location("final_admission_executor", ROOT/"tools/devops_exec.py")
+        wrapper = importlib.util.module_from_spec(wrapper_spec); wrapper_spec.loader.exec_module(wrapper)
+        marker, path, journal = self.store/"must-not-launch", self.store/"plan.json", self.store/"journal.jsonl"
+        argv = [sys.executable, "-c", "from pathlib import Path; Path("+repr(str(marker))+").touch()"]
+        req = request(); req["change"]["plan_digest"] = wrapper.canonical_command_digest(argv)
+        now = datetime.now(timezone.utc)
+        req["execution"].update(window_start=(now-timedelta(minutes=1)).isoformat(), requested_at=now.isoformat(), window_end=(now+timedelta(minutes=10)).isoformat())
+        grant = record(req); self.bind(req, grant)
+        path.write_text(json.dumps(req), encoding="utf-8")
+        append = wrapper.append_ledger
+        def revoke_after_intent(destination, entry):
+            append(destination, entry)
+            if entry["status"] == "launch_intent":
+                grant["status"] = "revoked"
+                (self.store/(IDENTITY+".json")).write_text(json.dumps(grant), encoding="utf-8")
+        with (
+            mock.patch.dict(os.environ, {A.AUTHORITY_ENV: str(self.store)}),
+            mock.patch.object(wrapper, "append_ledger", side_effect=revoke_after_intent),
+            mock.patch.object(sys, "argv", ["devops_exec.py", "--operation", str(path), "--ledger", str(journal), "--", *argv]),
+            redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(wrapper.execute(), 3)
+        self.assertFalse(marker.exists())
+        self.assertEqual([json.loads(line)["status"] for line in journal.read_text().splitlines()], ["launch_intent", "blocked_final_gate"])
 
     def test_authority_store_is_explicit_external_and_rejects_malformed_files(self):
         with mock.patch.dict(os.environ, {}, clear=True):

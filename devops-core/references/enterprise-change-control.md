@@ -12,6 +12,7 @@ A per-operation approval is valid only when it includes:
 - exact target and environment;
 - operation ID, action, and bounded scope;
 - immutable plan/change-set digest;
+- whole-operation digest binding target metadata, action/scope/risk/effects, identity/window, recovery, verification and any autonomy/exception selection;
 - approval evidence reference such as a change ticket or signed record;
 - approval and expiry timestamps;
 - any maintenance window or conditions.

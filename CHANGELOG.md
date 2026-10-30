@@ -6,6 +6,7 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## 0.9.0 — 2026-10-30
 
+- Bind exact approvals to the complete operation, including scope, target metadata and irreversible effects; check admission again after durable journal intent and preserve the strictest issuer count below a mode ceiling.
 - Add Safe, Balanced, Semi-Auto and Full Auto with scoped prior authority, finite windows, policy caps, explicit trusted-environment references and revocation checks. Keep Safe as the absent-selection default and enterprise baseline.
 - Reuse issued authority across new exact plans inside its envelope; retain separate exact admission for destructive/irreversible effects and exceptions, recovery/locks/verification and issuer separation.
 - Add unapproved authority preparation, planner selection/window clipping, launch/outcome authority references, strict external-record loading, adversarial and repeated-launch/revocation checks.

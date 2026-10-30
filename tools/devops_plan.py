@@ -144,6 +144,7 @@ def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tu
         "role": "",
         "target": name,
         "plan_digest": plan_digest,
+        "operation_digest": "",
         "policy_digest": policy_digest,
         "approved_at": None,
         "expires_at": None,
@@ -226,6 +227,7 @@ def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tu
     if required_approvals:
         distinct = " from distinct approvers with distinct roles" if required_approvals > 1 else ""
         todo.append(f"fill {required_approvals} approval slot(s){distinct}: approver, role, evidence_ref, approved_at, expires_at (within {ttl} minutes)")
+        todo.append("after completing all operation facts, calculate --print-operation-digest with the gate and bind every real per-operation approval to that operation_digest")
     if required_approvals and policy["require_separation_of_duties"][args.risk]:
         todo.append(f"separation of duties applies at {args.risk}: the executor '{args.executor}' must not appear as an approver")
     if needs_lock and not args.change_lock:

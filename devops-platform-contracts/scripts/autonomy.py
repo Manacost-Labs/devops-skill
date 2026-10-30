@@ -185,7 +185,7 @@ def validate_record(record, policy, policy_digest, now):
         if not approved <= start <= now < end <= expires or (expires-approved).total_seconds() > ttl*60:
             raise AuthorityError("authority authorization is stale or does not cover its window")
         actors.add(actor.casefold()); roles.add(role.casefold())
-    minimum = max(1, policy["minimum_approvals"]["R"+str(MODES[mode])])
+    minimum = max(1, *(policy["minimum_approvals"]["R"+str(rank)] for rank in range(MODES[mode]+1)))
     if len(actors) < minimum or (minimum > 1 and len(roles) < 2):
         raise AuthorityError("authority lacks required independent authorizers/roles")
 

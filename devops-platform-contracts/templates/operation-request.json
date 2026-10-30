@@ -36,6 +36,7 @@
     "role": "service-owner",
     "target": "example-lab",
     "plan_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "operation_digest": "sha256:c898e5bddb30abde641972a40487af32840693cf2cacedd6d1e9d2368c623bce",
     "policy_digest": "sha256:a2a758c85dfaf0ae96cb914da7a84ce4fb949a78c1460a30b5a8b731ca566d95",
     "approved_at": "2026-08-17T09:55:00Z",
     "expires_at": "2026-08-17T11:00:00Z",

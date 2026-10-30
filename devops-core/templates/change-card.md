@@ -42,6 +42,7 @@
 ## Required approval
 
 - Minimum approver count and roles:
+- Whole-operation digest after all facts are complete (for exact per-operation admission):
 - Approval evidence references:
 - Approval expiry / execution window:
 - Separation-of-duties result:

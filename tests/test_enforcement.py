@@ -2,7 +2,7 @@ from __future__ import annotations
 import hashlib, json, subprocess, sys, tempfile, unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from test_platform import NOW, operation
+from test_platform import NOW, operation, bind_approvals
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
@@ -21,7 +21,7 @@ def bound_operation(argv):
     request["change"]["plan_digest"] = digest
     for approval in request["approvals"]:
         approval["plan_digest"] = digest
-    return request
+    return bind_approvals(request)
 
 
 class WrapperTests(unittest.TestCase):
@@ -216,6 +216,7 @@ class PlanBuilderTests(unittest.TestCase):
                     "approved_at": "2026-08-17T10:15:00Z",
                     "expires_at": "2026-08-17T11:00:00Z",
                 })
+            bind_approvals(request)
             request_path.write_text(json.dumps(request), encoding="utf-8")
             wrapper = subprocess.run(
                 [PYTHON, str(WRAPPER), "--operation", str(request_path), "--at", NOW,
@@ -442,6 +443,7 @@ class HookTests(unittest.TestCase):
         if refresh_approvals:
             for approval in request["approvals"]:
                 approval.update({"approved_at": stamp(-5), "expires_at": stamp(10)})
+            bind_approvals(request)
         request_path = Path(directory) / "operation.json"
         request_path.write_text(json.dumps(request), encoding="utf-8")
         return (

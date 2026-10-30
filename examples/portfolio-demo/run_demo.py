@@ -63,7 +63,7 @@ def policy_digest() -> str:
 
 
 def make_request(plan_digest: str, target_digest: str, selected_policy_digest: str) -> dict[str, Any]:
-    return {
+    request = {
         "schema_version": "2.0",
         "operation_id": "ops-portfolio-demo-0001",
         "objective": "Exercise exact approval binding for a synthetic lab rollout",
@@ -118,6 +118,10 @@ def make_request(plan_digest: str, target_digest: str, selected_policy_digest: s
         },
         "exception": None,
     }
+    payload = {key: value for key, value in request.items() if key != "approvals"}
+    binding = "sha256:" + hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    request["approvals"][0]["operation_digest"] = binding
+    return request
 
 
 def gate_request(request: dict[str, Any], directory: Path, name: str) -> subprocess.CompletedProcess[str]:

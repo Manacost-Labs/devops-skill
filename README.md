@@ -55,7 +55,7 @@ Skills teach the agent how to investigate and plan. The planner prepares a reque
 
 Above-Safe work uses one operator-issued scope/target/window authorization, then reuses it for new exact plans inside that envelope. Every launch still checks policy, risk, identity/scope bindings, recovery and audit. A tested production deployment remains R3. The agent prepares unapproved drafts; a protected external issuer/store supplies actual authority. The enterprise baseline retains Safe. Read the [operator setup, examples and trust limits](docs/autonomy-modes.md). These modes are independent of install profiles and host/tool permission settings.
 
-Policy bindings changed in 0.9.0: regenerate pending requests and obtain real replacement approvals; old approvals are not silently migrated. No environment is automatically upgraded to a higher mode by installation.
+Policy bindings changed in 0.9.0, and exact approvals now require a whole-operation `operation_digest` binding target/scope/risk/effects as well as the command: regenerate pending requests and obtain real replacement approvals; old approvals are not silently migrated. No environment is automatically upgraded to a higher mode by installation.
 
 These pieces have different responsibilities: a successful package check proves compatible files; a command exit code proves only a process outcome; service acceptance needs its own evidence. See the [5-minute safe evaluation](#5-minute-safe-evaluation) for a read-only introduction.
 

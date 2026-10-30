@@ -149,6 +149,13 @@ def execute():
             append_ledger(args.ledger, entry)
         except OSError:
             return blocked("execution journal could not persist intent", args.ledger, entry, "blocked_ledger")
+        # Journal fsync can stall. Recheck after it to avoid extending admission
+        # beyond a grant's expiry/revocation while waiting for durable storage.
+        final_gate = subprocess.run(gate_arguments, input=json.dumps(request, ensure_ascii=True, allow_nan=False),
+                                    capture_output=True, text=True, check=False)
+        if final_gate.returncode or not final_gate.stdout.startswith("ALLOWED:"):
+            print(redact((final_gate.stdout + final_gate.stderr).strip()))
+            return blocked("final admission expired, changed or was refused after durable intent; no child launched", args.ledger, entry, "blocked_final_gate")
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except OSError:

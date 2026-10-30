@@ -31,6 +31,8 @@ python devops-platform-contracts/scripts/autonomy.py --draft-from operations/pla
 
 The operator/broker reviews exact actions/scopes and timing, sets the activation/trust fields, obtains the payload hash with `--digests`, and adds real issuer records bound to it. It publishes the complete reviewed record as `authority-shop-build.json` in the protected store. The example template is deliberately unapproved; filling invented identities or evidence does not establish real authority. Hashes are integrity bindings, not signatures.
 
+The direct preparation example assumes an authorized tool session. If an optional interception adapter does not register the new preparer, prepare/execute it through the existing Safe R1 planner and wrapper with an exact output path and verification; do not disable interception. Adapter support is separate from authority issuance.
+
 After issuance the agent prepares each concrete command against that authority:
 
 ```powershell
@@ -40,11 +42,11 @@ python tools/devops_exec.py --operation operations/plans/build-001.json --timeou
 
 The issued record must cover those exact declared actions/scopes and the validated target. A later plan may use a new command digest inside the same envelope; the planner clips its window to the remaining grant lifetime. The gate re-reads current authority at every launch and the journal records its ID/digest/mode. It does not re-request already issued authority.
 
-Changing mode, target/profile/owner, policy or execution identity requires a new matching grant. Above-ceiling/outside-scope work needs one grouped exact approval or a new envelope; destructive/irreversible effects still need separate exact admission. Mark an irreversible operation with `--irreversible` (R4). The agent must not relabel risk/effects to stay below the ceiling.
+Changing mode, target/profile/owner, policy or execution identity requires a new matching grant. Above-ceiling/outside-scope work needs one grouped exact approval or a new envelope; destructive/irreversible effects still need separate exact admission. Mark an irreversible operation with `--irreversible` (R4). Exact approval now binds the complete operation through `operation_digest`, including scope/risk/effects, rather than argv alone. After completing the operation facts, the agent calculates it with `operation_gate.py --request operation.json --print-operation-digest`; the real approver binds admission to it. The agent must not relabel risk/effects to stay below the ceiling.
 
 ## Stop and revoke
 
-Expired, revoked, changed or missing authority stops new launches. Remove/revoke the record through the trusted issuer; already running processes require their own containment decision. Invalid authority is not silently ignored, and policy-denied actions cannot be approved by a casual prompt.
+Expired, revoked, changed or missing authority at the final admission check stops launch. Remove/revoke the record through the trusted issuer. The check runs after durable journal intent so storage delays cannot extend permission; its successful completion is the admission point. Revocation after that point is not an atomic cancellation of process creation or an already running process: those require containment or coordinated issuer/launcher control. Invalid authority is not silently ignored, and policy-denied actions cannot be approved by a casual prompt.
 
 Failures in discovery or verification are not automatically permission questions. The agent should resolve missing evidence within its authority, ask once for an actual missing permission, and report unresolved/uncertain outcomes honestly. Recovery/data compatibility, locks, secrets handling and verification remain required in every mode.
 

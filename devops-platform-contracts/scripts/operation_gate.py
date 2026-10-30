@@ -37,7 +37,7 @@ FIELDS = {
     "target": {"name", "environment", "owner", "profile_digest"},
     "change": {"action", "risk", "scope", "plan_digest", "stateful", "destructive", "external_side_effects", "irreversible"},
     "execution": {"executor", "requested_at", "window_start", "window_end", "idempotency_key", "change_lock_ref"},
-    "approval": {"approver", "role", "target", "plan_digest", "policy_digest", "approved_at", "expires_at", "evidence_ref"},
+    "approval": {"approver", "role", "target", "plan_digest", "operation_digest", "policy_digest", "approved_at", "expires_at", "evidence_ref"},
     "recovery": {"required", "method", "artifact_ref", "restore_tested_at", "rpo_minutes", "rto_minutes"},
     "verification": {"criteria", "observation_window_minutes"},
     "exception": {"owner", "evidence_ref", "rationale", "compensating_controls", "approved_at", "expires_at"},
@@ -261,6 +261,11 @@ def reject_unknown(value: dict[str, Any], contract: str, label: str, reasons: li
         reasons.append(f"{label} contains unknown fields: {', '.join(unknown)}")
 
 
+def operation_digest(request):
+    """Bind all declared operation facts, excluding only the approval collection."""
+    return AUTONOMY.digest({key: value for key, value in request.items() if key != "approvals"})
+
+
 def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str, now: datetime, authority_dir=None) -> list[str]:
     reasons: list[str] = []
     unknown = sorted(set(request) - TOP_LEVEL)
@@ -383,6 +388,7 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
     valid_approvers: set[str] = set()
     valid_roles: set[str] = set()
     max_ttl = policy["approval_ttl_minutes"]
+    approved_operation_digest = operation_digest(request)
     for index, approval_value in enumerate(approvals):
         approval = require_mapping(approval_value, f"approvals[{index}]", reasons)
         reject_unknown(approval, "approval", f"approvals[{index}]", reasons)
@@ -403,6 +409,8 @@ def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str
             reasons.append(f"approvals[{index}] target does not match")
         if not isinstance(approval.get("plan_digest"), str) or approval.get("plan_digest") != plan_digest:
             reasons.append(f"approvals[{index}] plan digest does not match")
+        if approval.get("operation_digest") != approved_operation_digest:
+            reasons.append(f"approvals[{index}] whole operation digest does not match")
         if not isinstance(approval.get("policy_digest"), str) or approval.get("policy_digest") != policy_digest:
             reasons.append(f"approvals[{index}] policy digest does not match")
         if not valid_text(approval.get("evidence_ref"), 4):
@@ -500,6 +508,7 @@ def main() -> int:
     parser.add_argument("--policy", default="default-policy.json", help="Registered policy basename.")
     parser.add_argument("--at", help="RFC3339 evaluation time for deterministic testing; defaults to now.")
     parser.add_argument("--print-policy-digest", action="store_true", help="Print the canonical effective policy digest.")
+    parser.add_argument("--print-operation-digest", action="store_true", help="Hash all operation facts except approvals; this does not validate or authorize execution.")
     args = parser.parse_args()
     try:
         if args.at and os.environ.get(AUTONOMY.AUTHORITY_ENV):
@@ -522,6 +531,10 @@ def main() -> int:
                              parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite operation JSON")))
         if not isinstance(request, dict):
             raise ValueError("request must be a JSON object")
+        if args.print_operation_digest:
+            print("OPERATION: " + operation_digest(request))
+            print("Hash only: this does not validate or authorize execution.")
+            return 0
         time_errors: list[str] = []
         now = parse_time(args.at, "--at", time_errors) if args.at else datetime.now(timezone.utc)
         if time_errors or now is None:
