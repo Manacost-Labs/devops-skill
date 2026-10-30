@@ -156,7 +156,7 @@ class ChatModeTests(unittest.TestCase):
             result, path, marker, argv = self.plan(index)
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
             req = json.loads(path.read_text()); self.assertEqual(req["autonomy"]["mode"], "balanced")
-            self.assertEqual(req["approvals"], []); self.assertIn("No additional human confirmation", result.stderr)
+            self.assertEqual(req["approvals"], []); self.assertIn("PLANNING ONLY", result.stderr); self.assertNotIn("--operation", result.stderr)
             executed = self.execute(path, argv)
             self.assertEqual(executed.returncode, 3, executed.stdout+executed.stderr)
             self.assertFalse(marker.exists())
