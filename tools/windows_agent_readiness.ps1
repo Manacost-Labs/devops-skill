@@ -14,6 +14,14 @@ $forbidden=@('S-1-5-32-544','S-1-5-32-548','S-1-5-32-549','S-1-5-32-550','S-1-5-
 foreach($group in $identity.Groups){
     if($forbidden -ccontains $group.Value -or $group.Value -match '-(512|518|519)$'){$reasons.Add('privileged_group_membership')}
 }
+$privileges=& (Join-Path $env:SystemRoot 'System32\whoami.exe') /priv /fo csv /nh 2>$null
+if($LASTEXITCODE -ne 0){$reasons.Add('token_privileges_unavailable')}
+else{
+    $dangerous=@('SeTcbPrivilege','SeDebugPrivilege','SeBackupPrivilege','SeRestorePrivilege','SeTakeOwnershipPrivilege','SeLoadDriverPrivilege','SeCreateTokenPrivilege','SeImpersonatePrivilege','SeAssignPrimaryTokenPrivilege','SeTrustedCredManAccessPrivilege','SeEnableDelegationPrivilege','SeManageVolumePrivilege')
+    foreach($row in $privileges){
+        if($row -match '^"(Se[A-Za-z0-9]+)"' -and $dangerous -ccontains $Matches[1]){$reasons.Add('privileged_token_right')}
+    }
+}
 try {
     $dockerGroup=Get-LocalGroup -Name 'docker-users' -ErrorAction Stop
     if(@($identity.Groups | ForEach-Object Value) -ccontains $dockerGroup.SID.Value){$reasons.Add('docker_control')}

@@ -68,7 +68,7 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $mappingPath=$mapping.PSPath
     $target=@{kind='windows-jea-v1';server='localhost';port=$port;configuration_name=$endpoint;ca_file=(Join-Path $root 'ca.pem');authentication=@{method='certificate';certificate_pem=(Join-Path $root 'client.pem');certificate_key_pem=(Join-Path $root 'client.key')};binding_digest=$binding}
     $target|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $root 'target.json') -Encoding utf8
-    $digest=& $PythonPath -c 'import hashlib,json,sys;v=json.load(open(sys.argv[1],encoding="utf-8-sig"));print("sha256:"+hashlib.sha256(json.dumps(v,ensure_ascii=True,sort_keys=True,separators=(",",":")).encode("ascii")).hexdigest())' (Join-Path $root 'target.json')
+    $digest=& $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') digest --folder $root
     Require-Fixture ($LASTEXITCODE -eq 0 -and $digest -cmatch '^sha256:[0-9a-f]{64}$')
     $boot=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o');$safeState=$state.Replace("'","''")
     @"

@@ -125,11 +125,12 @@ def exercise(folder):
 
 def main():
     parser=argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument('action',choices=('certificates','exercise'))
+    parser.add_argument('action',choices=('certificates','digest','exercise'))
     parser.add_argument('--folder',type=Path,required=True)
     parser.add_argument('--username')
     args=parser.parse_args()
     if args.action=='certificates':certificates(args.folder,args.username)
+    elif args.action=='digest':print(B.digest(B.decode((args.folder/'target.json').read_bytes())))
     else:exercise(args.folder)
 
 
