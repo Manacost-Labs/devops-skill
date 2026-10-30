@@ -1,12 +1,44 @@
 # Data resilience official sources
 
-Last verified: 2026-10-29. Refresh exact server/client/backup-tool and topology documentation before material change.
+Last verified: 2026-10-30. Refresh exact server/client/backup-tool and topology documentation before material change.
 
-Baselines: Oracle MySQL 8.4 logical/file-position recovery; MariaDB 11.4 logical and physical full/incremental recovery. PostgreSQL/Redis retain their existing engine contracts. Other versions/products/topologies need explicit compatibility discovery; this is not a vendor support-lifecycle guarantee.
+Baselines: Oracle MySQL 8.4 logical/file-position recovery; MariaDB 11.4 logical and physical full/incremental recovery; PostgreSQL 18 full physical/WAL recovery and version-reviewed logical restoration; Redis Open Source 7.4 standalone RDB/multipart AOF recovery. Conditional topology/cutover guidance requires separate rehearsal. Other versions/products/topologies need explicit compatibility discovery; this is not a vendor support-lifecycle guarantee.
 
 ## postgresql-operations
 
 - [www.postgresql.org](https://www.postgresql.org/docs/current/maintenance.html)
+
+## postgresql-physical-backup-and-recovery
+
+- [Full physical backup](https://www.postgresql.org/docs/18/app-pgbasebackup.html)
+- [Native manifest/WAL verification](https://www.postgresql.org/docs/18/app-pgverifybackup.html)
+- [Logical scope](https://www.postgresql.org/docs/18/backup-dump.html)
+- [pg_dump](https://www.postgresql.org/docs/18/app-pgdump.html)
+- [pg_restore](https://www.postgresql.org/docs/18/app-pgrestore.html)
+
+## postgresql-wal-pitr
+
+- [Archive and timeline recovery](https://www.postgresql.org/docs/18/continuous-archiving.html)
+- [Recovery settings and targets](https://www.postgresql.org/docs/18/runtime-config-wal.html)
+
+## postgresql-single-writer-cutover
+
+- [Failover and fencing](https://www.postgresql.org/docs/18/warm-standby-failover.html)
+- [Rewind compatibility and failure conditions](https://www.postgresql.org/docs/18/app-pgrewind.html)
+
+## redis-rdb-aof-recovery
+
+- [Persistence and multipart AOF](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/)
+- [Snapshot operation](https://redis.io/docs/latest/commands/bgsave/)
+- [AOF rewrite](https://redis.io/docs/latest/commands/bgrewriteaof/)
+- [Fsync acknowledgement boundary](https://redis.io/docs/latest/commands/waitaof/)
+- [Restore and expiry](https://redis.io/docs/latest/commands/restore/)
+
+## redis-topology-recovery-planning
+
+- [Replication](https://redis.io/docs/latest/operate/oss_and_stack/management/replication/)
+- [Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/)
+- [Cluster](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)
 
 ## redis-operations
 

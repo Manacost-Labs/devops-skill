@@ -19,6 +19,9 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+- Deepen PostgreSQL physical backup/WAL/PITR and Redis RDB/AOF recovery, artifact identity, quarantine, acceptance and cutover boundaries in data-resilience-operations 0.5.0. Preserve existing MySQL/MariaDB procedures and core authority, risk, gate and journal contracts.
+- Add dedicated real-engine native recovery CI with immutable images and synthetic isolated datasets; distinguish restored data evidence from hashes, process success and production failover validation.
+
 - Deepen secrets-access-operations 0.4.0 with concrete Vault grants, wrapped delivery, consumer rotation and partial recovery, session/issuer containment, emergency closeout and observed expiry. Preserve protected provider handoff and existing authority, gate, risk and evidence boundaries.
 - Add checksum-pinned native Vault CI on owned in-memory loopback state, negative transport/disclosure checks and forward-evaluation scenarios. Distinguish Vault token/KV proof from downstream sessions, production transport/HA/audit and root quorum recovery.
 
