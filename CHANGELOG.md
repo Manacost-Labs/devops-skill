@@ -4,6 +4,11 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.13.0 — 2026-10-30
+
+- Deepen GitHub Actions event/runner/caller trust, effective secrets/OIDC/environment admission, artifact provenance and partial-release recovery in cicd-operations 0.4.0. Preserve existing authority/gate/journal and replace unconditional failure rollback with actual-state/compatibility decisions.
+- Add real pinned actionlint and public signed-release verification, cross-job immutable synthetic artifact transfer with API/archive/payload checks, and isolated staged-release failure/recovery scenarios. Keep all credentials read-only and state cloud/environment/data-recovery limits explicitly.
+
 ## 0.12.0 — 2026-10-30
 
 - Deepen Terraform/OpenTofu state/backend identity, locking, drift and saved-plan discipline, migration and partial-apply/persistence recovery in iac-operations 0.5.0. Preserve core mode/admission/journal and distinguish state metadata from infrastructure/data rollback.

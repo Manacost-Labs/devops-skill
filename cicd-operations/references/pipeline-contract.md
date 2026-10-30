@@ -23,3 +23,5 @@ Use ephemeral clean runners for privileged jobs. Pin the runner image/toolchain,
 Use a unique release ID, artifact digest, target, idempotency key, concurrency lock, start/end window, and abort criteria. Prefer canary/rolling/blue-green strategies when the application supports them. Verify target-reported digest rather than pipeline success alone.
 
 Predefine rollback to a known-good immutable digest and preserve configuration compatibility. Record database migrations, feature flags, queues/events, and external API changes that make code rollback unsafe. For forward-only data changes, define stabilization and forward-fix ownership instead of promising rollback.
+
+For staged execution and interrupted jobs read `references/deployment-recovery.md`. Preserve per-target/effect state and failed-attempt evidence, distinguish pipeline scheduling from remote locking/fencing, and re-admit exact recovery actions under existing scoped authority. Verify signed producer identity and the actual promoted bytes using `references/artifacts-provenance.md`; archive/payload digests and self-reported provenance are not interchangeable evidence.
