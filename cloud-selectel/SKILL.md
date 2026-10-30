@@ -17,6 +17,17 @@ Operate bounded Selectel control-plane changes with exact account, project, regi
 
 Never invent CLI parameters, HTTPS paths or fields, OpenStack compatibility, IAM roles, token scopes, defaults, prices, quotas, regional availability, or recovery semantics. Inspect the actual client and plugin versions, service catalog, documented API version, and exact current official reference before every material call. Accept IAM or credential references only; never retrieve, print, or record tokens, application credentials, passwords, or secret values.
 
+## Operation runbooks
+
+Read the reference for the requested operation. The API shapes describe planning and verification; agent-executed live writes require an externally registered typed broker task and signed authority under [protected execution](../docs/protected-execution.md). A planner or standalone gate PASS is consistency evidence only. If the required task is absent, return a blocked handoff instead of directly invoking a credentialed CLI. Offline helpers do not extend tool permissions or the hook allowlist.
+
+- For one existing service user's project role, read [IAM changes](references/iam-changes.md). Selectel IAM and Keystone role administration have different ownership and APIs.
+- For an existing pool's security-group rule or port assignment, read [network changes](references/network-changes.md).
+- For one volume-backed Nova server, read [compute changes](references/compute-changes.md).
+- Before any write, after an uncertain response, or when quotas are incomplete, read [asynchronous effects, quotas and recovery](references/async-recovery.md). Keep one in-flight mutation per service user/role scope, group or port, and VM dependency chain; these are local coordination limits, not provider rate guarantees.
+
+The optional `scripts/inspect-server.py` reads saved native Nova server-detail JSON. It checks a small identity/state/attachment subset and never calls Selectel, proves ownership, permits retry, or verifies service health. Invoke it explicitly with a local Python runtime as described in the compute runbook.
+
 ## Workflow
 
 1. Receive a secret-free contract-v2 request from `devops-core`. Confirm operation ID, owner, environment, data classification, target fingerprint, requested capabilities, constraints, and acceptance criteria.

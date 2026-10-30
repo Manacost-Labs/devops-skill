@@ -1,0 +1,33 @@
+# One volume-backed Nova server
+
+Bind account, project UUID, pool, pool segment, catalog-discovered Nova/Neutron/Cinder endpoints and supported versions. `OS_REGION_NAME` selects the pool; the VM availability zone selects its segment. Confirm the image in the same pool and network volume in the same segment, with the correct type/size, bootability, encryption/key access, attachment state and retention. Pin flavor ID, network/port UUIDs, security groups, keypair reference and exact public-IP behavior. Names are neither unique identity nor ownership evidence.
+
+Selectel documents Nova Zed API 2.1 up to microversion 2.93, Neutron v2.0 and Cinder v3 up to 3.64 at this refresh. These are documented ceilings, not proof that every endpoint exposes every extension. Discover and pin the actual compatible version; do not copy newer upstream examples. The Cloud Platform Projects and Resources v2 API manages the resource envelope and does not create VMs; server creation uses OpenStack.
+
+## Preflight and exact launch
+
+Use a ready, explicitly retained boot volume and a reviewed port, or plan their creation as separate journaled steps with their own UUIDs, quota/cost impact and ownership. A preexisting volume must not gain implicit deletion permission. Confirm port security and group assignments before launch: a server-create security-group option affects ports created with that server, not a separately supplied existing port.
+
+For a volume-backed Nova `POST {compute_service_url}/servers`, retain the reviewed `server.name`, `flavorRef`, `availability_zone`, `networks` port UUID and `block_device_mapping_v2` volume mapping (`uuid`, `source_type=volume`, `destination_type=volume`, `boot_index=0`, explicit `delete_on_termination`). Confirm this exact supported shape against the pinned API/client. Keep count one; no automatic subnet, image, keypair or zone substitution. A returned server UUID is the durable identity to observe.
+
+The provider also documents `openstack server create --volume <volume> --flavor <flavor> --availability-zone <pool_segment> ...`; inspect installed client behavior before translating an exact retained port/volume plan into argv. API and CLI formatted JSON are different evidence shapes. Avoid response/body logging that could expose generated passwords, user data or connection secrets.
+
+## Bounded observation and uncertain create
+
+An acknowledgement does not complete scheduling, volume attachment, networking or guest initialization. GET the exact server UUID from the same endpoint and project; inspect `tenant_id`, `OS-EXT-AZ:availability_zone`, `status`, `OS-EXT-STS:task_state`, `OS-EXT-STS:vm_state`, power state, fault information and attached volume IDs. Follow Cinder and Neutron separately for attachment/port state. `ACTIVE` while a task remains, or a working server with the wrong UUID, is not acceptance. Use the [common deadline](async-recovery.md); a timeout does not prove failure or authorize a second VM.
+
+Nova request IDs correlate requests/logs; they are not a general create-idempotency key. Preserve global/local request IDs when the negotiated API supports them, original input digest, actor/time evidence and returned UUID. If create response is lost, do not submit another POST or invent a new name/request ID. Reconcile complete same-project/pool server inventory, known volume/port relationships and audit/request evidence. An exact name/metadata match is only a candidate. No match, several matches, or uncertain attribution remains unresolved and requires provider/owner handoff.
+
+## Partial effects and recovery
+
+Quota, balance/account restrictions and physical capacity are separate constraints. Read project limits/quotas and required compute, volume-type/storage, port, subnet-address and public-IP consumption, including transitional replacement resources. A successful quota check cannot reserve scheduler capacity. Capacity/quota failure does not authorize changing pool, segment, type or volume source.
+
+Journal VM, volume, port, floating-IP and IAM effects separately. After a later failure, halt new changes and enumerate actual surviving resources, attachments, writers and charges. Keep or repair a usable VM only within current authority. Destructive recovery names the exact server UUID, approved data-retention decision and current `delete_on_termination` behavior; check every disk/port/IP independently afterward. Never force-delete a volume attachment, reset a volume state, delete a preexisting disk/port or remove every same-name server as cleanup. Compensating responses can also be lost; reconcile them before reporting rollback or stopped billing.
+
+## Optional saved-evidence inspector
+
+`python cloud-selectel/scripts/inspect-server.py --checklist checklist.json --capture capture.json` reads local files only. Checklist has exactly `project_id`, `pool`, `pool_segment`, `compute_endpoint`, `server_id`, `volume_ids`; retain the intended UUIDs from original acknowledged/attributed effects. Capture has exactly `project_id`, `pool`, `compute_endpoint`, `response`, with `response` the native Nova GET `{"server": ...}` or `null` when no independent GET is available. It does not accept CLI-formatted output or lists and does not discover a lost server UUID.
+
+Scope metadata comes from separately preserved caller/catalog evidence; the helper cannot authenticate it or verify freshness. Its matching subset is exact server/project/segment/attached-volume identities plus quiescent active state. Missing restricted fields are rejected conservatively. Exit 0 means only that this saved subset matches; exit 2 is unresolved/attention, exit 1 rejected evidence. Retry permission, ownership, full-plan and service-health verification stay false. Capture provenance, quota, ports/disks, desired configuration and user-path acceptance remain separate checks.
+
+Sources checked 2026-10-30: [Selectel server creation](https://docs.selectel.ru/en/cloud-servers/create/create-server/), [existing-port SG behavior](https://docs.selectel.ru/en/cloud-servers/security-groups/manage-groups/assign-security-groups/), [network volumes](https://docs.selectel.ru/en/cloud-servers/volumes/about-network-volumes/), [supported component versions](https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/about-openstack-cli/), [CLI scope](https://docs.selectel.ru/en/cloud-servers/tools/openstack-cli/configure-openstack-cli/), [resource-envelope API](https://docs.selectel.ru/en/api/cloud-projects-and-resources/), [Nova create/detail/request IDs](https://docs.openstack.org/api-ref/compute/). Refresh exact version-specific payload, permissions, deletion and billing behavior before execution.
