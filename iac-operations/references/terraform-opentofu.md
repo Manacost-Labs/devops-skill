@@ -1,29 +1,13 @@
-# Terraform and OpenTofu operations
+# Terraform/OpenTofu routing and invariants
 
-## Plan identity
+Use the Terraform/OpenTofu workflow in `SKILL.md`. Load only the focused references needed:
 
-Record CLI version, dependency lockfile digest, repository commit, root module, workspace, backend fingerprint, provider identity, variable sources, environment variables by name only, refresh mode, target/replace/import options, and state lineage/serial. A saved plan is valid only for this complete identity.
+- `references/terraform-state-locking.md`: backend/workspace identity, protected state, contention, stale locks, migration and state surgery.
+- `references/terraform-drift-plans.md`: refresh, drift classification, saved-plan identity, graph/address changes and blind spots.
+- `references/terraform-partial-recovery.md`: partial applies, lost responses/controllers, failed persistence and state-aware recovery.
 
-Create a binary saved plan for execution, render a redacted review form, and hash the binary artifact. Store it as a restricted artifact because plans can contain sensitive values. Approve the binary-plan digest, not copied terminal text. Before apply, confirm the digest, target identity, source revision, dependency lockfile, state lineage/serial, and approval window still match. Apply only the saved plan.
+Terraform and OpenTofu are different engines. Record exact versions, provider/registry addresses, schemas, lockfiles and backend features; validate upgrades/transitions separately on an isolated copy with the owners. Do not interchange binary plans, assume identical state/lock/encryption support, or use another engine to rewrite production state during troubleshooting. Parsing a state file is not proof of safe bidirectional migration.
 
-## State and locking
+State maps configuration addresses to real objects and engine/provider metadata. It is not a resource backup, service-health report or transaction log. A backend lock coordinates cooperating writers to one state; the platform change/resource lock also bounds overlapping jobs and shared objects. Neither replaces application/provider consistency controls.
 
-Use a remote backend with encryption, access control, versioning where supported, and locking. Do not disable locking. Diagnose contention through the backend and execution owner. Before force-unlock, prove the exact lock is stale and no writer remains.
-
-Treat state as restricted. Never print, attach, or commit raw state. Before backend migration, state push, state remove/move, import batches, or lineage repair, create a backend-native version/snapshot, record its digest/reference, and test recovery where risk requires it. Verify lineage, serial, resource addresses, provider bindings, and remote-object identity before and after.
-
-`import` only associates an existing object with an address; it does not prove configuration parity. After import, run a full reviewed plan and reconcile configuration without overwriting live settings unintentionally. Prefer declarative import blocks when supported and reviewed.
-
-## Drift and recovery
-
-Use a normal refresh-backed full plan for drift detection with read-capable credentials. Classify drift as expected, unauthorized, provider-computed, or configuration debt. Do not auto-apply unexpected drift. Refresh-only operations still mutate state and require state controls.
-
-Terraform/OpenTofu has no universal rollback. Choose among a reviewed forward fix, reapplying known-good configuration, provider-native rollback, or restoring state only when remote objects still match. Never restore old state merely to make a plan quiet.
-
-## Dangerous patterns
-
-- Unreviewed modules, providers, provisioners, or external data sources can execute code or disclose data.
-- `-target`, disabled refresh, ignored changes, and insufficient read permissions can hide impact.
-- Resource renames can appear as destroy/create unless moved blocks or exact state moves are reviewed.
-- Provider upgrades can alter schemas and plans; pin and review them separately.
-- Backend reconfiguration can select a different state. Confirm fingerprints before accepting migration prompts.
+A saved plan, CLI auto-approval flag, provider identity, snapshot or log text does not grant authority. Keep core's mode, exact gate, journal, risk floor, recovery and destructive/irreversible admission. A fresh exact plan inside an unchanged valid scoped envelope needs fresh review/gating, not redundant human confirmation.

@@ -1,5 +1,5 @@
 name: iac-operations
-version: 0.4.0
+version: 0.5.0
 kind: executor
 allowed_tools:
   - Read
@@ -16,6 +16,9 @@ capabilities:
   - terraform-opentofu-plan-apply
   - iac-drift-import-review
   - iac-state-backend-recovery
+  - iac-state-lock-diagnosis
+  - iac-drift-reconciliation
+  - iac-partial-apply-recovery
   - bounded-ansible-execution
   - ansible-inventory-scope-review
   - ansible-repeatability-validation
@@ -25,6 +28,8 @@ capabilities:
 risk_domains:
   - infrastructure-state
   - backend-and-locking
+  - ambiguous-resource-outcomes
+  - state-persistence-loss
   - secrets-in-plans-and-state
   - provider-supply-chain
   - configuration-fanout
@@ -45,6 +50,21 @@ source_freshness:
     - https://developer.hashicorp.com/terraform/language/backend
     - https://developer.hashicorp.com/terraform/language/state/sensitive-data
     - https://opentofu.org/docs/cli/commands/plan/
+    - https://developer.hashicorp.com/terraform/language/state/locking
+    - https://developer.hashicorp.com/terraform/cli/commands/state/push
+    - https://developer.hashicorp.com/terraform/cli/commands/force-unlock
+    - https://developer.hashicorp.com/terraform/cli/commands/init
+    - https://developer.hashicorp.com/terraform/cli/commands/apply
+    - https://developer.hashicorp.com/terraform/language/state/backends
+    - https://developer.hashicorp.com/terraform/language/backend/http
+    - https://developer.hashicorp.com/terraform/language/backend/s3
+    - https://opentofu.org/docs/language/state/locking/
+    - https://opentofu.org/docs/cli/commands/state/push/
+    - https://opentofu.org/docs/language/settings/backends/http/
+    - https://opentofu.org/docs/language/settings/backends/s3/
+    - https://opentofu.org/docs/language/state/encryption/
+    - https://developer.hashicorp.com/terraform/cli/commands/providers/lock
+    - https://opentofu.org/docs/cli/commands/providers/lock/
     - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
     - https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_patterns.html
     - https://docs.ansible.com/projects/ansible/latest/reference_appendices/general_precedence.html
@@ -57,6 +77,8 @@ source_freshness:
     terraform-opentofu-audit:
       - https://developer.hashicorp.com/terraform/cli/commands/plan
       - https://opentofu.org/docs/cli/commands/plan/
+      - https://developer.hashicorp.com/terraform/cli/commands/providers/lock
+      - https://opentofu.org/docs/cli/commands/providers/lock/
     terraform-opentofu-plan-apply:
       - https://developer.hashicorp.com/terraform/cli/commands/plan
       - https://opentofu.org/docs/cli/commands/plan/
@@ -65,6 +87,24 @@ source_freshness:
     iac-state-backend-recovery:
       - https://developer.hashicorp.com/terraform/language/backend
       - https://developer.hashicorp.com/terraform/language/state/sensitive-data
+      - https://opentofu.org/docs/language/state/encryption/
+    iac-state-lock-diagnosis:
+      - https://developer.hashicorp.com/terraform/language/state/locking
+      - https://developer.hashicorp.com/terraform/cli/commands/force-unlock
+      - https://developer.hashicorp.com/terraform/language/backend/s3
+      - https://opentofu.org/docs/language/state/locking/
+      - https://opentofu.org/docs/language/settings/backends/s3/
+    iac-drift-reconciliation:
+      - https://developer.hashicorp.com/terraform/cli/commands/plan
+      - https://opentofu.org/docs/cli/commands/plan/
+      - https://developer.hashicorp.com/terraform/cli/commands/init
+    iac-partial-apply-recovery:
+      - https://developer.hashicorp.com/terraform/cli/commands/apply
+      - https://developer.hashicorp.com/terraform/language/state/backends
+      - https://developer.hashicorp.com/terraform/cli/commands/state/push
+      - https://opentofu.org/docs/cli/commands/state/push/
+      - https://developer.hashicorp.com/terraform/language/backend/http
+      - https://opentofu.org/docs/language/settings/backends/http/
     bounded-ansible-execution:
       - https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_checkmode.html
     ansible-inventory-scope-review:

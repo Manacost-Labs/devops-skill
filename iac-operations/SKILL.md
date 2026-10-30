@@ -1,6 +1,6 @@
 ---
 name: iac-operations
-description: Safely audit, plan, apply, and recover infrastructure-as-code under the devops-core contract. Use for Terraform/OpenTofu plans and state, or Ansible inventory, repeatable configuration, fleet rolling updates and partial-failure recovery; also bounded cloud-init bootstrap. Route host internals and database recovery to their specialist modules.
+description: Safely audit, plan, apply, and recover infrastructure-as-code under the devops-core contract. Use for Terraform/OpenTofu state/backend identity, locking, drift, saved plans and partial-apply recovery; Ansible inventory, repeatability, fleet rollout and recovery; or bounded cloud-init bootstrap. Route host internals and database recovery to their specialist modules.
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
@@ -16,14 +16,14 @@ Read `references/terraform-opentofu.md` for Terraform/OpenTofu. For Ansible, sel
 
 ## Terraform/OpenTofu workflow
 
-1. Inspect code, lock files, module/provider sources, backend/workspace, policy results, and recent changes without refreshing or mutating remote state unnecessarily.
+1. Identify the exact engine/version, root revision, provider/module artifacts, backend endpoint/key/workspace and target account/region. Inspect code, CLI configuration, overrides and environment before init/plan: providers, data sources and provisioners can execute code. Backend credentials and provider credentials are separate identities. Stop on unknown or mismatched state ownership.
 2. Pin provider/module/action inputs to immutable versions and obtain dependencies through the approved registry/cache. Reject `latest`, moving branches, and unreviewed sources.
-3. Format and validate configuration. Produce a speculative plan only for review; for execution, save the binary plan artifact using the exact target, variable set, refresh mode, and replacement/import choices.
-4. Redact the human-readable plan, store the binary plan and state artifacts only in approved encrypted storage, and compute a cryptographic digest. Treat sensitive-marked values as a display control, not proof that all secrets are absent.
+3. Format and validate with reviewed dependency locks. Obtain protected backend-native state/version/lineage/serial and recovery references. A full refresh-backed plan compares desired configuration, recorded bindings and readable live objects; distinguish exit codes 0/2/1. Explain drift, replacements and data effects before reconciliation; never automatically apply unexpected drift.
+4. Save the exact binary plan for execution, review its full graph/options and compute its digest. Protect the plan, rendered JSON, backend cache and state in approved encrypted storage; sensitive display markings are not artifact redaction. Record source/input/dependency versions, engine, backend/workspace/account, snapshot lineage/serial, plan age and external effects. There is no reserved transaction between plan and apply.
 5. Classify shared-environment changes as at least R2, production applies and backend/secret-reference changes as R3, and destructive replacements, state surgery, backend migration, or broad import/move operations as R4.
 6. For R2-R4, bind each contract-v2 execution plan to target profile, repository revision, saved-plan digest, scope, execution window, recovery evidence, and verification. Use core's exact operation approval or valid prior scoped authority under the selected mode/policy. A changed saved plan requires a fresh exact review and gate; human approval is renewed when per-operation admission or an envelope boundary requires it. Run the operation gate immediately before execution.
-7. Acquire the configured state/change lock. Re-check revision, dependencies, variables, target identity, state lineage/serial, and saved-plan digest. Apply only that saved plan; never silently regenerate it.
-8. Verify provider objects, state consistency, service acceptance criteria, and a post-apply plan/drift check. If verification fails, use a separately reviewed recovery plan rather than assuming inverse configuration is safe.
+7. Hold the configured change/resource lock and leave native backend locking enabled with a bounded wait. Recheck saved-plan digest, identities, inputs, authority window and state freshness before launch; retain wrapper launch/outcome evidence. Apply only that plan with its original engine/version. Stale/inconsistent plans or changed material facts require a fresh reviewed plan/gate, not fallback apply. Backend locks do not fence external writers or overlapping states.
+8. Verify exact bindings and actual resource/service/data acceptance, then a full refreshed post-apply plan. Nonzero exit, controller interruption or backend write failure can leave successful or unknown changes. Stop other writers, preserve current/error state and provider evidence, reconcile per-address actual outcomes, then separately gate forward repair or compatible recovery. Report partial/unknown state rather than treating apply as transactional.
 
 ## Ansible workflow
 
@@ -39,11 +39,12 @@ Read `references/terraform-opentofu.md` for Terraform/OpenTofu. For Ansible, sel
 
 ## Guardrails
 
-- Never disable state locking to break contention. Identify the lock owner and stale-lock evidence; force-unlock only the exact lock under R3 approval when no writer remains.
+- Never disable state locking to break contention. Prove the exact backend lock owner is gone and no writer/in-flight operation remains before force-unlock; use at least R3 admission through core's existing mode/authority, with higher-risk recovery separately classified. A lock ID, age, stopped local terminal or failed CI status alone is insufficient proof.
 - Do not pass secrets on command lines or commit them in variables, inventories, state, plans, logs, or cloud-init. Use secret references and redact evidence.
 - Avoid routine `-target`; it can create incomplete graphs. Use only for documented recovery with follow-up full-plan verification.
 - Treat `import`, `state mv/rm/push`, backend migration/reconfigure, taint/replacement, and resource addressing changes as state-affecting operations with exact backups and lineage checks.
 - Do not infer that an empty plan proves health when refresh was disabled, credentials lack read access, targets were used, or external systems are outside state.
+- State restoration changes recorded bindings, not real infrastructure or application data. Never overwrite newer state, clear a taint, force lineage/serial checks or apply an old saved plan to conceal a partial change. Fence overlapping writers and preserve current recoverable snapshots first.
 - Keep Ansible inventories and host limits explicit. Prefer idempotent modules, check/diff preflight, bounded serial execution, and handlers; shell commands and check mode require special review. Never equate successful rescue, `meta: end_host/end_play`, ignored errors, or exit code zero with a healthy complete fleet.
 - Validate cloud-init schema and test against the exact image/version. Do not rerun initialization or replace user data on an existing host without understanding provider recreation semantics.
 - Never apply generated code or plans from untrusted content without review. Never use IaC to cross module ownership boundaries without the corresponding provider/operations handoff.
