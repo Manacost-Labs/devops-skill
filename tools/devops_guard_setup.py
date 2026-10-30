@@ -26,6 +26,7 @@ def prepare(runtime, interpreter, platform):
         '# Owner review and administrator deployment required. This file grants no task authority.',
         'allowed_approval_policies = ["on-request"]',
         'allowed_approvals_reviewers = ["user"]',
+        'allowed_sandbox_modes = ["read-only"]',
         'default_permissions = ":read-only"',
         'allow_login_shell = false',
         'allow_browser_and_computer_use = false',

@@ -86,8 +86,8 @@ def cli(folder):
     return executable
 
 
-def run(executable,folder,guarded,helper=False,managed_probe=False):
-    home=folder/('managed-exec' if managed_probe else 'helper' if helper else 'guarded' if guarded else 'control'); home.mkdir()
+def run(executable,folder,guarded,helper=False,managed_probe=None):
+    home=folder/('managed-exec-'+managed_probe if managed_probe else 'helper' if helper else 'guarded' if guarded else 'control'); home.mkdir()
     workspace=home/'workspace'; workspace.mkdir()
     marker=workspace/'canary'
     script="from pathlib import Path; Path("+repr(str(marker))+").write_text('executed')"
@@ -104,6 +104,8 @@ def run(executable,folder,guarded,helper=False,managed_probe=False):
         '[features]','hooks = true','unified_exec = false','enable_request_compression = false','plugins = false','apps = false',
         '[model_providers.fixture]','name = "owned loopback fixture"','base_url = "http://127.0.0.1:'+str(provider.server_port)+'/v1"',
         'wire_api = "responses"','requires_openai_auth = false','supports_websockets = false']
+    if managed_probe=='named':
+        config.remove('sandbox_mode = "danger-full-access"')
     if guarded:
         spec=importlib.util.spec_from_file_location('native_setup',ROOT/'tools/devops_guard_setup.py')
         setup=importlib.util.module_from_spec(spec); spec.loader.exec_module(setup)
@@ -115,14 +117,17 @@ def run(executable,folder,guarded,helper=False,managed_probe=False):
     environment['CODEX_HOME']=str(home); environment['RUST_LOG']='error'
     try:
         try:
-            result=subprocess.run([str(executable),'exec','--json','--ephemeral','--skip-git-repo-check','--dangerously-bypass-hook-trust','fixture'],cwd=workspace,env=environment,input='',capture_output=True,text=True,encoding='utf-8',timeout=40)
+            selection=['--sandbox','danger-full-access'] if managed_probe=='legacy' else ['-c','default_permissions=":danger-full-access"'] if managed_probe=='named' else []
+            result=subprocess.run([str(executable),'exec','--json','--ephemeral','--skip-git-repo-check','--dangerously-bypass-hook-trust',*selection,'fixture'],cwd=workspace,env=environment,input='',capture_output=True,text=True,encoding='utf-8',timeout=40)
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError('native timeout; requests='+str(len(provider.requests))+'; failure='+str(provider.failure)+'; stdout='+str(exc.stdout)[-3000:]+'; stderr='+str(exc.stderr)[-3000:]) from None
         if provider.failure: raise RuntimeError(provider.failure)
         if managed_probe and result.returncode and not provider.outputs:
             refusal=(result.stderr+result.stdout).lower()
-            if 'danger-full-access' in refusal and any(word in refusal for word in ('not allowed','not permitted','allowed_permission_profiles')):
+            if not provider.requests and 'danger-full-access' in refusal and any(word in refusal for word in ('not allowed','not permitted','allowed_permission_profiles','allowed_sandbox_modes','requirement')):
                 print('managed Full Access: actual profile refusal before model/tool execution'); return
+        if managed_probe:
+            raise RuntimeError('explicit managed '+managed_probe+' refusal before model execution not established: '+result.stderr[-3000:]+result.stdout[-3000:])
         if result.returncode or not provider.outputs: raise RuntimeError('native tool loop failed: '+result.stderr[-3000:]+' '+result.stdout[-3000:])
         observation=json.dumps(provider.outputs)
         if helper:
@@ -159,15 +164,11 @@ def managed(executable,folder):
         rows={line.split()[0]:line.split()[-1] for line in result.stdout.splitlines() if line.split()}
         for name,expected in {'hooks':'true','unified_exec':'false','apps':'false','plugins':'false'}.items():
             if rows.get(name)!=expected: raise RuntimeError('managed feature override accepted: '+name+' '+result.stdout)
-        # Bypass the model and hooks entirely: hook denial must never mask an
-        # unenforced profile allowlist. Only an explicit profile policy error is
-        # accepted, not an OS/auth/network/sandbox-launch failure.
-        profile=subprocess.run([str(executable),'sandbox','--include-managed-config','--permission-profile',':danger-full-access','--',
-            sys.executable,'-I','-c',"print('profile-was-accepted')"],env=environment,cwd=home,capture_output=True,text=True,timeout=20)
-        refusal=(profile.stderr+profile.stdout).lower()
-        if profile.returncode==0 or 'danger-full-access' not in refusal or not any(word in refusal for word in ('not allowed','not permitted','allowed_permission_profiles')):
-            raise RuntimeError('independent managed profile refusal not established: '+refusal[-3000:])
-        run(executable,folder,False,managed_probe=True)
+        # Use actual production exec selectors. The standalone sandbox debugging
+        # command does not establish runtime profile admission. No hook/model/OS
+        # refusal may masquerade as managed configuration enforcement.
+        run(executable,folder,False,managed_probe='legacy')
+        run(executable,folder,False,managed_probe='named')
         print('managed policy: hostile feature overrides and Full Access refused by actual Codex')
     finally:
         subprocess.run([*prefix,sys.executable,'-I','-c',remove,str(path),str(source)],check=True,capture_output=True,text=True)
