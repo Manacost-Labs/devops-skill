@@ -30,6 +30,13 @@ ROOT_FILES = {
 }
 PUBLIC_TREES = {".claude-plugin", ".github", "docs", "evaluations", "examples", "tests"}
 PUBLIC_TOOLS = {
+    "tools/smoke_broker_boundary.py",
+    "tools/broker_server.py",
+    "tools/broker_worker.py",
+    "tools/devops_authorize.py",
+    "tools/devops_guard_setup.py",
+    "tools/hooks/codex_pretooluse_gate.py",
+
     "tools/runtime_lock.py",
     "tools/build_public_source.py",
     "tools/build_release.py",
@@ -160,6 +167,8 @@ def main() -> int:
             if source.suffix.lower() == ".json":
                 try: value = json.loads(data.decode("utf-8-sig"))
                 except (ValueError, UnicodeError): value = None
+                if isinstance(value, dict) and (value.get("kind") in {"grant", "admission"} and value.get("signatures") or "client_private_key" in value or "agent_uids" in value):
+                    raise ValueError("private broker deployment or issued authority must not enter packages")
                 if isinstance(value, dict) and value.get("schema_version") == "1.0" and value.get("status") in {"active", "revoked"} and isinstance(value.get("authorization_id"), str) and value["authorization_id"].startswith("authority-"):
                     raise ValueError("issued private autonomy records must not enter public source")
             if b"\r" in data:

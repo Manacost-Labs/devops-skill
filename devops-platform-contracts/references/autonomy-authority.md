@@ -1,23 +1,38 @@
-# Delegated authority contract
+# Legacy planning authority and protected execution
 
-Modes are Safe/R0–R1, Balanced/R0–R2, Semi-Auto/R0–R3 and Full Auto/R0–R4. Safe is the absent-selection default. `schemas/autonomy-authorization.schema.json` describes the external record; `scripts/autonomy.py` implements validation and draft/hash utilities.
+The legacy autonomy JSON schema and local chat selection are retained for plan
+compatibility and contract consistency. They do not authorize execution in0.15.
+A metadata approver/evidence string, digest, chosen DEVOPS_AUTHORITY_DIR or forged
+host callback cannot substitute for an independently authenticated owner signature.
+The arbitrary local argv wrapper has been removed and always refuses.
 
-An optional v2 request `autonomy` object contains only mode, authorization ID and canonical record digest. Delegated modes also require explicit boolean `change.irreversible`. The existing exact command-plan digest is still mandatory. The record comes only from operator-configured `DEVOPS_AUTHORITY_DIR`, an absolute, non-reparse external directory outside the runtime/source tree. Request-provided paths/bodies are not authority. The loader rejects invalid IDs, symlinks/reparse paths, hardlinks, nonregular files, duplicate/nonfinite JSON and oversized input.
+Actual execution uses `scripts/broker_contract.py` and strict broker call/grant/
+admission schemas. Only registered task IDs and bounded typed parameters cross
+mTLS. Protected registry facts supply target, risk/effects, code manifest, fixed
+argv, executable hash, timeout, worker identity and recovery/verification. Trusted
+owner public keys restrict target/mode/risk; private keys stay outside agent and
+broker. Finite Ed25519 grants bind client certificate, server, registry, epoch,
+mode, task set, time window and operation count. Exact admission additionally
+binds the full call digest for above-ceiling/destructive/irreversible effects.
 
-From 0.10.0, a trusted native chat adapter can supply the external store through its pinned runtime-private configuration instead of a manual environment variable. Optional record `chat_binding` adds full runtime identity, actual host session, canonical workspace and card digest. Admission requires the exact current session selection; a copied grant in another chat/workspace, a mode override, a removed autonomy field, changed profile, Safe or revoked selection cannot bypass it. Runtime/session directory keys are shortened for Windows paths, while the full identities are checked inside state records.
+The broker durably journals intent, freezes verified code, rechecks current
+admission and drops worker privileges before actual execution. Principal-wide
+Safe revokes overlapping/certificate-alias grants; restrictions cannot raise the
+persisted ceiling or revive older high-risk grants. New owner authority for the
+fresh nonce applies only to its signed scope. Unknown/failed mutation outcomes
+remain quarantined, and unclean restart requires accountable reconciliation.
 
-The agent-facing mode helper only sets up, prepares, reports or restricts. The host-only issuer callback processes an exact whole-message confirmation code. Pending cards bind immutable scope/policy/profile and a finite confirmation interval. Existing grant files recover interrupted issuance without re-timing, and selection publication commits admission; an orphan grant is unusable without the matching selection. Replays do not extend TTL or revive Safe/revoked state. Ordinary setup does not trust hooks, issue authority or establish issuer isolation. The hook wire format has no authenticated user/human-only proof; independent protected issuer execution remains an external requirement. Never substitute a model-supplied boolean or CLI approval flag.
+Modes never override policy, recovery, secrets handling or verification. The
+enterprise immutable audit sink is not implemented; policies requiring it refuse
+live execution. The local hash chain is private integrity evidence only.
 
-The canonical payload digest excludes only `authorizations`. Each issuer record binds that payload digest, attributable actor/role, evidence and a covering approval window; the full record digest includes the issuer records. Distinct issuer/role counts follow the strictest selected-policy requirement across every risk class through the mode ceiling, with at least one issuer and executor/issuer separation. These are metadata/evidence checks, not cryptographic identity signatures: an accountable operator/broker must verify the real issuers and protect the store from agent writes.
+The agent prepares one finite card, the independent owner signs once, and covered
+registered tasks run without repeated confirmations. Local chat confirmation is
+planning-only; this release does not implement a human-only authenticated chat
+signing provider. A configured Safe command sends an actual broker restriction;
+without a broker profile report local-only planning restriction honestly.
 
-Record scope uses exact action and scope entries, never wildcard/prefix expansion. Targets include owner/environment/profile digest. Selected mode, executor and policy must match. Grant/issuer/operation windows must fit; default grant TTL is at most120 minutes and the enterprise baseline caps autonomy at Safe. Policy inheritance cannot broaden maximum mode, TTL or delegated production permission.
-
-Valid same-target authority can substitute prior scoped authorization for individual confirmations below the mode ceiling. Above-ceiling or outside action/scope/data/effect permissions falls back to exact manual operation approval with at least one approver. Invalid/stale/revoked/changed records or target/executor/policy/mode drift are hard stops, not fallback. Destructive/irreversible work and exceptions never use delegated admission. Hard policy-denied actions remain blocked.
-
-Delegated R3/R4 needs a target lock; stateful R3/R4 must satisfy recovery requirements. Every operation still gets verification criteria, exact argv digest and journal. Grant references/mode are recorded in the launch/outcome journal; raw grants are not copied there. A new plan inside an envelope needs a fresh gate check, not new human authority.
-
-The executor sends its frozen in-memory request through bounded gate stdin, so changing the original request path between parent and gate cannot substitute a differently authorized plan. With an authority store configured, deterministic `--at` clocks are refused. Admission is checked again after durable journal intent, immediately adjacent to process creation; slow journal storage cannot extend a grant window. The final successful check is the admission point. A revocation after that check is not an atomic cancellation of process creation or an already running child; stricter guarantees require coordinated issuer/launcher leases or a broker. Per-operation admission binds the whole operation digest as described in `contract-v2.md`, so a routine approval cannot be reused after scope/risk/irreversibility changes.
-
-`scripts/autonomy.py --draft-from ...` creates a deliberately unapproved draft outside the active store. It has no approve/issue switch. `--digests` prints hashes only. Activation, actual issuer evidence and protected-store publication are operator/broker tasks. Private issued records must never enter source/release archives. Changing policy semantics rotates its digest and invalidates prior bindings.
-
-The wrapper validates declared scopes and facts; it is not an arbitrary CLI scope parser or OS sandbox. Real credential/sandbox restrictions and protected runtime/store are required, especially in Full Auto. Do not represent metadata references or “trusted” text as proof that isolation/access has been independently established.
+Read [protected deployment and migration](../../docs/protected-execution.md) in a
+complete runtime. Independent OS/IAM permissions, protected runtime/interpreter/
+dependencies and bounded target access are required; same-UID Full Access cannot
+be secured by instructions or optional hooks alone.

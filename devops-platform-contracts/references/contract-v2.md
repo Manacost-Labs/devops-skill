@@ -1,5 +1,11 @@
 # Contract v2
 
+From 0.15 the local gate is a consistency validator, not an execution authorizer.
+The protected broker derives this contract from its administrator task registry
+and verified external signatures; its plan digest binds the typed call, grant,
+registry and epoch rather than caller-supplied argv alone. Legacy request approval
+JSON never authorizes arbitrary execution. Read `autonomy-authority.md`.
+
 Contract v2 binds infrastructure execution to a validated target, immutable plan, time-bounded authority, recovery evidence, and observable acceptance criteria.
 
 From platform 0.9.0, the optional `autonomy` selection can reference an operator-issued external authority envelope. Read `autonomy-authority.md`. Requests without it remain Safe. This adds scoped prior authorization without removing per-launch validation, target/command digests, journal, recovery or verification. Explicit `change.irreversible` is required in delegated modes and never receives automatic admission.

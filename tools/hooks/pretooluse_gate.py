@@ -201,43 +201,8 @@ def classify_segment(argv, cwd):
     return False, f"{name!r} is outside the inspection grammar"
 
 def verify_wrapper(argv, cwd):
-    arguments = argv[2:]
-    if "--" not in arguments:
-        return False, "wrapper is missing the -- command separator"
-    split = arguments.index("--")
-    flags, inner = arguments[:split], arguments[split + 1:]
-    values = {}
-    if not inner or len(flags) % 2:
-        return False, "wrapper arguments are malformed"
-    for index in range(0, len(flags), 2):
-        flag = flags[index]
-        if flag not in {"--operation", "--policy", "--ledger", "--timeout-seconds"} or flag in values:
-            return False, f"unknown or duplicate wrapper flag: {flag}"
-        values[flag] = flags[index + 1]
-    if "--operation" not in values:
-        return False, "operation request is missing"
-    if "--ledger" in values:
-        ledger = resolve_script(values["--ledger"], cwd)
-        if ROOT.resolve() / "operations" not in ledger.parents or ledger.suffix != ".jsonl":
-            return False, "protected ledger must stay under runtime operations with a .jsonl suffix"
-    if "--timeout-seconds" in values and (not values["--timeout-seconds"].isdigit() or int(values["--timeout-seconds"]) < 1):
-        return False, "timeout must be a positive integer"
-    operation_path = resolve_script(values["--operation"], cwd)
-    request = json.loads(operation_path.read_text(encoding="utf-8-sig"))
-    if not isinstance(request, dict) or not isinstance(request.get("change"), dict):
-        return False, "operation request has no change"
-    if request["change"].get("plan_digest") != canonical_command_digest(inner):
-        return False, "approved plan digest does not match the canonical digest of the wrapped command"
-    execution = request.get("execution")
-    if not isinstance(execution, dict):
-        return False, "operation request has no execution window"
-    now = datetime.now(timezone.utc)
-    if not parse_rfc3339(str(execution.get("window_start"))) <= now <= parse_rfc3339(str(execution.get("window_end"))):
-        return False, "execution window is not currently open"
-    gate = subprocess.run([sys.executable, str(GATE), "--request", str(operation_path), "--policy", values.get("--policy", "default-policy.json")], capture_output=True, text=True, check=False)
-    if gate.returncode or not gate.stdout.startswith("ALLOWED:"):
-        return False, "operation gate did not return a fresh PASS: " + (gate.stdout + gate.stderr).strip()[:400]
-    return True, "fresh gate PASS is bound to the exact wrapped command digest"
+    return False, "legacy arbitrary-command execution is disabled; use registered tasks through the protected broker"
+
 
 def evaluate(payload):
     tool = payload.get("tool_name")

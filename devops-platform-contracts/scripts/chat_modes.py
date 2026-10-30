@@ -1,4 +1,4 @@
-"""Host-driven chat mode workflow; trusted hook/store protection is external."""
+"""Local planning-mode workflow; signed broker grants alone admit execution."""
 from __future__ import annotations
 
 import argparse
@@ -208,6 +208,15 @@ def validate_binding(record):
         raise ChatError("chat authority is not active for this host session/workspace")
 
 
+def hook_command(relative):
+    """Literal launcher; registering a hook never trusts or activates it."""
+    if os.name == "nt":
+        quote = lambda value: "'"+str(value).replace("'", "''")+"'"
+        script = "$OutputEncoding=[Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); & "+quote(sys.executable)+" -I "+quote(ROOT/relative)+"; exit $LASTEXITCODE"
+        return "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand "+base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    return __import__("shlex").join([sys.executable, "-I", str(ROOT/relative)])
+
+
 def setup(codex_home, policy_name, apply):
     settings = config()
     policy_name = policy_name or (settings["policy"] if settings else "default-policy.json")
@@ -215,12 +224,7 @@ def setup(codex_home, policy_name, apply):
     if settings and settings["policy"] != policy_name: raise ChatError("setup cannot change existing chat policy")
     home = codex_home.expanduser().absolute()
     hook_path = home/"hooks.json"
-    if os.name == "nt":
-        quote = lambda value: "'"+str(value).replace("'", "''")+"'"
-        script = "$OutputEncoding=[Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); & "+quote(sys.executable)+" "+quote(ROOT/"tools/hooks/chat_mode_hook.py")+"; exit $LASTEXITCODE"
-        command = "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand "+base64.b64encode(script.encode("utf-16-le")).decode("ascii")
-    else:
-        command = __import__("shlex").join([sys.executable, str(ROOT/"tools/hooks/chat_mode_hook.py")])
+    command = hook_command("tools/hooks/chat_mode_hook.py")
     value = read(hook_path) if hook_path.exists() or hook_path.is_symlink() else {"hooks": {}}
     original_hooks = authority().digest(value)
     if not isinstance(value.get("hooks"), dict): raise ChatError("existing hook configuration is malformed")
@@ -229,6 +233,10 @@ def setup(codex_home, policy_name, apply):
         groups = value["hooks"].setdefault(event, [])
         if not isinstance(groups, list): raise ChatError("existing hook event must be a list")
         if entry not in groups: groups.append(entry)
+    guard = {"matcher": "*", "hooks": [{"type": "command", "command": hook_command("tools/hooks/codex_pretooluse_gate.py"), "timeout": 15, "statusMessage": "Checking protected DevOps tool path"}]}
+    groups = value["hooks"].setdefault("PreToolUse", [])
+    if not isinstance(groups, list): raise ChatError("existing tool hook event must be a list")
+    if guard not in groups: groups.append(guard)
     if settings is None:
         settings = {"schema_version": "1.0", "runtime_id": runtime_id(), "policy": policy_name,
                     "authority_dir": str(Path(os.environ.get("DEVOPS_AUTHORITY_DIR") or state_root()/"authorities").absolute()),
@@ -295,7 +303,7 @@ def prepare(args):
                     and set(scope) <= set(existing["scope"]) and classification in existing["data_classifications"]
                     and (not args.stateful or existing["allow_stateful"]) and (not args.external_side_effects or existing["allow_external_side_effects"])
                     and trust == existing["trusted_environment"] and args.minutes is None):
-                print("ALREADY ACTIVE: reuse existing boundaries and original expiry; no additional confirmation.")
+                print("PLANNING_ALREADY_SELECTED: reuse existing boundaries and original expiry; no additional confirmation.")
                 return
         except (OSError, ValueError, KeyError, TypeError):
             pass  # New explicit confirmation is required; never silently renew.
@@ -331,16 +339,27 @@ def render(body, token):
             f"Подтвердить до: {body['confirm_before']}\n"
             f"Рабочая область: {body['workspace']}\n"+trust_text+
             "Разрушительные/необратимые действия и выход за границы требуют отдельного допуска. Проверка, восстановление и журнал сохраняются.\n"
-            f"Для одного подтверждения ответьте: Подтверждаю границы {token}\nДля отмены: Safe")
+            "Подтверждение выбирает границы планирования. Исполнение требует отдельного подписанного допуска защищённого брокера.\n"
+            f"Для выбора границ ответьте: Подтверждаю границы {token}\nДля отмены: Safe")
 
 
 def safe(sid=None):
     sid = session_id(sid)
+    remote = False
+    profile = ROOT/"broker-client.json"
+    if profile.exists() or profile.is_symlink():
+        client = module("chat_broker_restriction_client", ROOT/"tools/devops_exec.py")
+        result = client.call_broker(read(profile), {"mode": "safe", "grant": None}, "restrict")
+        if result.get("status") != "restricted" or result.get("mode") != "safe":
+            raise ChatError("broker Safe acknowledgement unavailable; do not claim restriction took effect")
+        remote = True
     atomic_write(latch_path(sid), {"safe": True, "session_id": sid, "nonce": uuid.uuid4().hex, "requested_at": datetime.now(timezone.utc).isoformat()})
-    return "SAFE: higher-mode launches are disabled for this session; no confirmation required."
+    return ("SAFE: protected broker cancelled prior higher-mode grants for this client identity; no confirmation required."
+            if remote else "SAFE: local planning restricted only; broker not configured. This is not remote execution revocation.")
 
 
 def status(sid=None):
+    print("PLANNING ONLY: chat events and local JSON do not authorize execution; the protected broker checks signed scope.")
     settings = config()
     if settings is None:
         print("SETUP_REQUIRED: the agent can prepare setup automatically; no mode is activated.")
@@ -422,7 +441,7 @@ def host_event(event):
             policy, pdigest = gate().load_registered_policy(settings["policy"])
             a.validate_record(record, policy, pdigest, now)
             if a.digest(record) != previous["selection"]["authorization_digest"]: raise ChatError("prior authority changed")
-            return "ALREADY ACTIVE: same boundaries and original expiry; no new confirmation needed."
+            return "PLANNING_ALREADY_SELECTED: same boundaries and original expiry; no new confirmation needed."
         if a.digest(previous) != body["base_selection_digest"]: raise ChatError("selection changed after preparation; old confirmation cannot reactivate it")
         if not a.timestamp(body["created_at"], "card created") <= now < a.timestamp(body["confirm_before"], "card expiry"): raise ChatError("confirmation card expired or not open")
         policy, pdigest = gate().load_registered_policy(settings["policy"])
@@ -449,7 +468,7 @@ def host_event(event):
         atomic_write(selection_path(sid), value)
         if safety_epoch(sid) != body["base_safety_epoch"]:
             return "SAFE: a newer cancellation wins over this confirmation; higher-mode launches remain blocked."
-        return "ACTIVE: "+body["mode"]+" until "+record["window_end"]+". Reuse these boundaries without new human questions; retain fresh gate/recovery/verification/journal checks."
+        return "PLANNING_SELECTED: "+body["mode"]+" until "+record["window_end"]+". Reuse these boundaries without new human questions; retain fresh gate/recovery/verification/journal checks."
     finally:
         lock.__exit__(None, None, None)
 

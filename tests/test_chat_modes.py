@@ -108,7 +108,7 @@ class ChatModeTests(unittest.TestCase):
         self.assertFalse(self.state.exists()); self.assertEqual(json.loads(file.read_text()), old)
         self.setup(); after = file.read_bytes()
         value = json.loads(after); self.assertEqual(value["hooks"]["Stop"], old["hooks"]["Stop"])
-        self.assertEqual(set(value["hooks"]), {"Stop", "SessionStart", "UserPromptSubmit"})
+        self.assertEqual(set(value["hooks"]), {"Stop", "SessionStart", "UserPromptSubmit", "PreToolUse"})
         self.assertFalse(list((self.state/"authorities").iterdir()))
         self.setup(); self.assertEqual(file.read_bytes(), after)
         self.assertEqual(len(list(self.codex_home.glob("hooks.devops-backup-*.json"))), 1)
@@ -127,9 +127,9 @@ class ChatModeTests(unittest.TestCase):
 
     def test_one_confirmation_two_automatic_plans_and_duplicate_does_not_renew(self):
         self.assertEqual(self.prepare().returncode, 0)
-        self.assertIn("ACTIVE:", self.confirm().stdout)
+        self.assertIn("PLANNING_SELECTED:", self.confirm().stdout)
         original_grant = self.grant().read_bytes(); original_selection = self.selection_path().read_bytes()
-        self.assertIn("ALREADY ACTIVE", self.confirm().stdout)
+        self.assertIn("PLANNING_ALREADY_SELECTED", self.confirm().stdout)
         self.assertEqual(self.grant().read_bytes(), original_grant)
         self.assertEqual(self.selection_path().read_bytes(), original_selection)
         for index in (1, 2):
@@ -138,10 +138,10 @@ class ChatModeTests(unittest.TestCase):
             req = json.loads(path.read_text()); self.assertEqual(req["autonomy"]["mode"], "balanced")
             self.assertEqual(req["approvals"], []); self.assertIn("No additional human confirmation", result.stderr)
             executed = self.execute(path, argv)
-            self.assertEqual(executed.returncode, 0, executed.stdout+executed.stderr)
-            self.assertEqual(marker.read_text(), "owned")
+            self.assertEqual(executed.returncode, 3, executed.stdout+executed.stderr)
+            self.assertFalse(marker.exists())
         reused = self.prepare(setup=False)
-        self.assertIn("ALREADY ACTIVE", reused.stdout)
+        self.assertIn("PLANNING_ALREADY_SELECTED", reused.stdout)
         self.assertEqual(self.grant().read_bytes(), original_grant)
 
     def test_other_session_workspace_and_card_tampering_do_not_activate(self):
@@ -193,10 +193,10 @@ class ChatModeTests(unittest.TestCase):
         result = self.cli("tools/devops_mode.py", "safe")
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
-        self.prepare(setup=False); self.assertIn("ACTIVE:", self.confirm().stdout)
+        self.prepare(setup=False); self.assertIn("PLANNING_SELECTED:", self.confirm().stdout)
         result, path, marker, argv = self.plan(2)
         self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-        self.assertEqual(self.execute(path, argv).returncode, 0)
+        self.assertEqual(self.execute(path, argv).returncode, 3)
 
     def test_scope_and_ceiling_still_need_exact_admission(self):
         self.prepare(); self.confirm()
@@ -230,7 +230,7 @@ class ChatModeTests(unittest.TestCase):
 
     def test_semi_and_full_auto_require_their_existing_safeguards(self):
         self.assertEqual(self.prepare("semi-auto").returncode, 0)
-        self.assertIn("ACTIVE:", self.confirm().stdout)
+        self.assertIn("PLANNING_SELECTED:", self.confirm().stdout)
         result, path, marker, argv = self.plan(risk="R3")
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(self.execute(path, argv).returncode, 3)  # Missing target lock.
@@ -239,7 +239,7 @@ class ChatModeTests(unittest.TestCase):
         result = self.prepare("full-auto", extra=["--isolation-ref", "fixture:isolated-lab", "--credential-scope-ref", "fixture:bounded-role", "--owner-evidence-ref", "fixture:owner-review"], setup=False)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("fixture:isolated-lab", result.stdout)
-        self.assertIn("ACTIVE:", self.confirm().stdout)
+        self.assertIn("PLANNING_SELECTED:", self.confirm().stdout)
 
     def test_malformed_host_input_cannot_issue_or_leak_raw_event(self):
         self.setup()
@@ -256,7 +256,7 @@ class ChatModeTests(unittest.TestCase):
                           "--action", "build_release", "--scope", "service:api", cwd=other)
         self.assertEqual(result.returncode, 0, result.stdout)
         prompt = "Подтверждаю границы "+digest(self.pending())[7:23]
-        self.assertIn("ACTIVE:", self.hook(prompt, cwd=other).stdout)
+        self.assertIn("PLANNING_SELECTED:", self.hook(prompt, cwd=other).stdout)
         self.assertEqual(self.selected()["workspace"], str(other.resolve()))
 
     def test_no_clock_override_in_registered_chat_runtime(self):
@@ -311,14 +311,14 @@ class ChatModeTests(unittest.TestCase):
                           "--action", "build_release", "--scope", "service:api", env=env)
         self.assertEqual(result.returncode, 0, result.stdout)
         body = json.loads(self.pending_path(other).read_text())
-        self.assertIn("ACTIVE:", self.hook("Подтверждаю границы "+digest(body)[7:23], sid=other).stdout)
+        self.assertIn("PLANNING_SELECTED:", self.hook("Подтверждаю границы "+digest(body)[7:23], sid=other).stdout)
         second = json.loads(self.selection_path(other).read_text())
         self.assertNotEqual(self.selected()["selection"]["authorization_id"], second["selection"]["authorization_id"])
         self.hook("Safe", sid=other)
         self.assertEqual(json.loads(first_grant.read_text())["status"], "active")
         result, path, _, argv = self.plan()
         self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-        self.assertEqual(self.execute(path, argv).returncode, 0)
+        self.assertEqual(self.execute(path, argv).returncode, 3)
 
     def test_interrupted_publication_recovers_without_renewal_or_orphan_admission(self):
         self.prepare()
@@ -339,7 +339,7 @@ class ChatModeTests(unittest.TestCase):
         result, path, marker, argv = self.plan(extra=["--target-profile", str(self.profile), "--mode", "balanced", "--authorization-id", orphan["authorization_id"]])
         self.assertNotEqual(result.returncode, 0, result.stdout+result.stderr)
         self.assertFalse(marker.exists())
-        self.assertIn("ACTIVE:", self.confirm().stdout)
+        self.assertIn("PLANNING_SELECTED:", self.confirm().stdout)
         self.assertEqual(records[0].read_bytes(), original)
 
     def test_unknown_card_fields_and_post_activation_profile_drift_block(self):
@@ -353,14 +353,14 @@ class ChatModeTests(unittest.TestCase):
         self.profile.write_bytes(self.profile.read_bytes().replace(b"example-lab", b"changed-lab"))
         self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
         self.assertNotEqual(self.cli("tools/devops_mode.py", "status").returncode, 0)
-        self.assertNotIn("ALREADY ACTIVE", self.confirm().stdout)
+        self.assertNotIn("PLANNING_ALREADY_SELECTED", self.confirm().stdout)
 
     def test_concurrent_same_confirmation_issues_once_with_fixed_expiry(self):
         from concurrent.futures import ThreadPoolExecutor
         self.prepare(); body = self.pending(); prompt = "Подтверждаю границы "+digest(body)[7:23]
         with ThreadPoolExecutor(max_workers=3) as pool:
             outputs = list(pool.map(lambda _: self.hook(prompt).stdout, range(3)))
-        self.assertTrue(any("ACTIVE:" in output for output in outputs))
+        self.assertTrue(any("PLANNING_SELECTED:" in output for output in outputs))
         self.assertEqual(len(list((self.state/"authorities").glob("*.json"))), 1)
         self.assertEqual(json.loads(self.grant().read_text())["window_end"], body["window_end"])
 
@@ -410,10 +410,10 @@ class ChatModeTests(unittest.TestCase):
             self.assertEqual(installer.install_runtime(args), 0)
         self.assertGreaterEqual(len(destination_reads), 2)
         self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
-        self.prepare(setup=False); self.assertIn("ACTIVE:", self.confirm().stdout)
+        self.prepare(setup=False); self.assertIn("PLANNING_SELECTED:", self.confirm().stdout)
         result, path, marker, argv = self.plan(2)
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertEqual(self.execute(path, argv).returncode, 0)
+        self.assertEqual(self.execute(path, argv).returncode, 3)
 
     def test_new_safe_after_selection_publication_wins_without_deleting_epoch(self):
         self.prepare()

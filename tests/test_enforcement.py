@@ -25,128 +25,39 @@ def bound_operation(argv):
 
 
 class WrapperTests(unittest.TestCase):
-    def run_wrapper(self, request, directory, command, at=NOW):
-        request_path = Path(directory) / "operation.json"
-        request_path.write_text(json.dumps(request), encoding="utf-8")
-        ledger_path = Path(directory) / "ledger.jsonl"
-        arguments = [
-            PYTHON, str(WRAPPER),
-            "--operation", str(request_path),
-            "--policy", "default-policy.json",
-            "--ledger", str(ledger_path),
-        ]
-        if at:
-            arguments += ["--at", at]
-        arguments += ["--", *command]
-        result = subprocess.run(arguments, capture_output=True, text=True, check=False)
-        records = []
-        if ledger_path.is_file():
-            records = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines()]
-        return result, records
+    def test_legacy_argv_never_launches_even_with_matching_fabricated_approvals(self):
+        for risk in ("R0", "R1", "R3", "R4"):
+            with self.subTest(risk=risk), tempfile.TemporaryDirectory() as directory:
+                marker = Path(directory) / "must-not-run"
+                command = [PYTHON, "-c", f"from pathlib import Path;Path({str(marker)!r}).touch()"]
+                request = bound_operation(command)
+                request["change"]["risk"] = risk
+                bind_approvals(request)
+                file = Path(directory) / "request.json"
+                file.write_text(json.dumps(request), encoding="utf-8")
+                result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(file), "--", *command], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 3, result.stdout)
+                self.assertFalse(marker.exists())
+                self.assertIn("BLOCKED", result.stdout)
 
-    def test_wrapper_executes_command_bound_to_plan_digest(self):
-        command = [PYTHON, "-c", "print('wrapper-executed')"]
+    def test_legacy_script_replacement_and_test_clock_cannot_restore_execution(self):
         with tempfile.TemporaryDirectory() as directory:
-            result, records = self.run_wrapper(bound_operation(command), directory, command)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("ALLOWED:", result.stdout)
-        self.assertIn("wrapper-executed", result.stdout)
-        self.assertEqual([record["status"] for record in records], ["launch_intent", "executed"])
-        self.assertEqual(records[1]["exit_code"], 0)
-        self.assertEqual(records[0]["execution_id"], records[1]["execution_id"])
-        self.assertEqual(records[0]["command_digest"], command_digest(command))
-
-    def test_wrapper_blocks_command_digest_drift(self):
-        approved = [PYTHON, "-c", "print('approved-command')"]
-        with tempfile.TemporaryDirectory() as directory:
-            marker = Path(directory) / "must-not-exist.txt"
-            tampered = [PYTHON, "-c", f"open(r'{marker}', 'w').close()"]
-            result, records = self.run_wrapper(bound_operation(approved), directory, tampered)
+            marker = Path(directory) / "must-not-run"
+            script = Path(directory) / "approved.py"
+            script.write_text("print('approved')", encoding="utf-8")
+            command = [PYTHON, str(script)]
+            request = Path(directory) / "request.json"
+            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
+            script.write_text(f"from pathlib import Path;Path({str(marker)!r}).touch()", encoding="utf-8")
+            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request), "--at", NOW, "--", *command], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 3)
             self.assertFalse(marker.exists())
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("BLOCKED:", result.stdout)
-        self.assertIn("does not match approved plan digest", result.stdout)
-        self.assertEqual([record["status"] for record in records], ["blocked_digest_mismatch"])
 
-    def test_wrapper_reruns_gate_and_blocks_expired_approval(self):
-        command = [PYTHON, "-c", "print('should-not-run')"]
-        request = bound_operation(command)
-        for approval in request["approvals"]:
-            approval["expires_at"] = "2026-08-17T10:05:00Z"
+    def test_client_has_no_fallback_when_broker_configuration_is_missing(self):
         with tempfile.TemporaryDirectory() as directory:
-            result, records = self.run_wrapper(request, directory, command)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("BLOCKED", result.stdout)
-        self.assertNotIn("should-not-run", result.stdout)
-        self.assertEqual([record["status"] for record in records], ["blocked_gate"])
-
-    def test_wrapper_redacts_secrets_in_ledger_and_output(self):
-        command = [PYTHON, "-c", "print('password=hunter2-literal'); print('api_key: k-1234567890')"]
-        with tempfile.TemporaryDirectory() as directory:
-            result, records = self.run_wrapper(bound_operation(command), directory, command)
-            ledger_text = (Path(directory) / "ledger.jsonl").read_text(encoding="utf-8")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertNotIn("hunter2-literal", ledger_text)
-        self.assertNotIn("k-1234567890", ledger_text)
-        self.assertIn("[REDACTED]", ledger_text)
-        self.assertNotIn("hunter2-literal", result.stdout)
-
-    def test_wrapper_fails_closed_on_malformed_request(self):
-        command = [PYTHON, "-c", "print('should-not-run')"]
-        request = {"schema_version": "2.0", "change": {}}
-        with tempfile.TemporaryDirectory() as directory:
-            result, records = self.run_wrapper(request, directory, command)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("BLOCKED", result.stdout)
-        self.assertNotIn("should-not-run", result.stdout)
-
-    def test_unavailable_journal_prevents_launch(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            marker = root / "must-not-exist"
-            command = [PYTHON, "-c", f"from pathlib import Path; Path({str(marker)!r}).touch()"]
-            request = root / "operation.json"
-            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
-            ledger = root / "directory"
-            ledger.mkdir()
-            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request),
-                "--at", NOW, "--ledger", str(ledger), "--", *command], capture_output=True, text=True)
-            self.assertEqual(result.returncode, 3, result.stdout)
-            self.assertFalse(marker.exists())
-            self.assertIn("no command was launched", result.stdout)
-
-    def test_journal_failure_after_execution_never_reports_blocked(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            marker, ledger = root / "executed", root / "ledger.jsonl"
-            command = [PYTHON, "-c",
-                f"from pathlib import Path; p=Path({str(ledger)!r}); "
-                f"p.rename(p.with_suffix('.saved')); p.mkdir(); Path({str(marker)!r}).touch()"]
-            request = root / "operation.json"
-            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
-            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request),
-                "--at", NOW, "--ledger", str(ledger), "--", *command], capture_output=True, text=True)
-            self.assertTrue(marker.exists())
-            self.assertEqual(result.returncode, 74, result.stdout)
-            self.assertIn("AUDIT ERROR", result.stdout)
-            self.assertNotIn("BLOCKED", result.stdout)
-            intent = json.loads(ledger.with_suffix(".saved").read_text(encoding="utf-8"))
-            self.assertEqual(intent["status"], "launch_intent")
-
-    def test_timeout_reports_possible_changes_and_retains_intent(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            marker, ledger = root / "executed", root / "ledger.jsonl"
-            command = [PYTHON, "-c", f"from pathlib import Path; import time; Path({str(marker)!r}).touch(); time.sleep(10)"]
-            request = root / "operation.json"
-            request.write_text(json.dumps(bound_operation(command)), encoding="utf-8")
-            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request),
-                "--at", NOW, "--timeout-seconds", "1", "--ledger", str(ledger), "--", *command], capture_output=True, text=True)
-            self.assertTrue(marker.exists())
-            self.assertEqual(result.returncode, 124, result.stdout)
-            self.assertNotIn("BLOCKED", result.stdout)
-            records = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
-            self.assertEqual([record["status"] for record in records], ["launch_intent", "timed_out"])
+            result = subprocess.run([PYTHON, str(WRAPPER), "--broker-config", str(Path(directory) / "missing.json"), "--task-id", "fixture-task", "--parameters", "{}", "--operation-id", "ops-fixture-none", "--grant", str(Path(directory) / "missing-grant.json")], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("no local command was launched", result.stdout)
 
 
 class PlanBuilderTests(unittest.TestCase):
@@ -202,30 +113,19 @@ class PlanBuilderTests(unittest.TestCase):
             self.assertNotEqual(wrapper.returncode, 0)
             self.assertNotIn("must-not-run", wrapper.stdout)
 
-    def test_planned_request_executes_after_approval(self):
-        command = [PYTHON, "-c", "print('gated-execution')"]
+    def test_planned_json_approvals_are_not_execution_authority(self):
+        command = [PYTHON, "-c", "print('must-not-execute')"]
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(self.build(command, directory).returncode, 0)
             request_path = Path(directory) / "request.json"
             request = json.loads(request_path.read_text(encoding="utf-8"))
             for approval in request["approvals"]:
-                approval.update({
-                    "approver": "user:service-owner",
-                    "role": "service-owner",
-                    "evidence_ref": "ticket:CHG-9001",
-                    "approved_at": "2026-08-17T10:15:00Z",
-                    "expires_at": "2026-08-17T11:00:00Z",
-                })
+                approval.update(approver="user:invented-owner", role="service-owner", evidence_ref="ticket:invented", approved_at="2026-08-17T10:15:00Z", expires_at="2026-08-17T11:00:00Z")
             bind_approvals(request)
             request_path.write_text(json.dumps(request), encoding="utf-8")
-            wrapper = subprocess.run(
-                [PYTHON, str(WRAPPER), "--operation", str(request_path), "--at", NOW,
-                 "--ledger", str(Path(directory) / "ledger.jsonl"), "--", *command],
-                capture_output=True, text=True, check=False,
-            )
-        self.assertEqual(wrapper.returncode, 0, wrapper.stdout + wrapper.stderr)
-        self.assertIn("ALLOWED:", wrapper.stdout)
-        self.assertIn("gated-execution", wrapper.stdout)
+            result = subprocess.run([PYTHON, str(WRAPPER), "--operation", str(request_path), "--at", NOW, "--", *command], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 3)
+        self.assertNotIn("must-not-execute", result.stdout)
 
     def test_builder_refuses_to_understate_risk(self):
         result = self.build([PYTHON, "-c", "print(1)"], extra=["--destructive"])
@@ -451,14 +351,13 @@ class HookTests(unittest.TestCase):
             "--policy default-policy.json -- " + " ".join(inner)
         )
 
-    def test_hook_allows_wrapper_with_fresh_gate_pass(self):
+    def test_hook_rejects_legacy_wrapper_even_with_consistent_contract(self):
         inner = ["hypothetical-mutator", "--switch", "release-2"]
         with tempfile.TemporaryDirectory() as directory:
             command = self.wrapper_command(bound_operation(inner), directory, inner)
             returncode, decision, reason = self.run_hook(command)
-        self.assertEqual(decision, "allow", reason)
-        self.assertEqual(returncode, 0)
-        self.assertIn("gate PASS", reason)
+        self.assertEqual(decision, "deny", reason)
+        self.assertNotEqual(returncode, 0)
 
     def test_hook_rejects_caller_supplied_time_override(self):
         inner = ["hypothetical-mutator", "--switch", "release-2"]
@@ -470,17 +369,15 @@ class HookTests(unittest.TestCase):
             returncode, decision, reason = self.run_hook(forged)
         self.assertNotEqual(returncode, 0)
         self.assertEqual(decision, "deny")
-        self.assertIn("--at", reason)
+        self.assertIn("legacy", reason)
 
-    def test_hook_accepts_literal_tilde_inside_an_approved_path(self):
-        inner = ["hypothetical-mutator", "--switch", "release-2"]
+    def test_hook_accepts_literal_tilde_inside_an_inspection_path(self):
         with tempfile.TemporaryDirectory() as directory:
             short_path = Path(directory) / "RUNNER~1"
             short_path.mkdir()
-            command = self.wrapper_command(bound_operation(inner), short_path, inner)
-            returncode, decision, reason = self.run_hook(command)
-        self.assertEqual(returncode, 0, reason)
-        self.assertEqual(decision, "allow", reason)
+            result = self.run_hook(f'cat "{short_path.as_posix()}/input.txt"')
+        self.assertEqual(result[0], 0, result)
+        self.assertEqual(result[1], "allow", result)
         self.assert_blocked("cat ~/private-config")
 
     def test_hook_blocks_wrapper_with_digest_mismatch(self):
@@ -490,7 +387,7 @@ class HookTests(unittest.TestCase):
             command = self.wrapper_command(bound_operation(approved), directory, tampered)
             returncode, decision, reason = self.run_hook(command)
         self.assertEqual(decision, "deny", reason)
-        self.assertIn("digest", reason)
+        self.assertIn("legacy", reason)
 
     def test_hook_blocks_wrapper_when_gate_refuses(self):
         inner = ["hypothetical-mutator", "--switch", "release-2"]
@@ -501,7 +398,7 @@ class HookTests(unittest.TestCase):
             command = self.wrapper_command(request, directory, inner, refresh_approvals=False)
             returncode, decision, reason = self.run_hook(command)
         self.assertEqual(decision, "deny", reason)
-        self.assertIn("gate", reason)
+        self.assertIn("legacy", reason)
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.14.0")
+        self.assertEqual(catalog["version"], "0.15.0")
         self.assertEqual(len(catalog["skills"]), 23)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
@@ -149,7 +149,8 @@ class PlatformTests(unittest.TestCase):
         embedded_lock = (ROOT / "devops-platform-contracts/requirements.txt").read_text(encoding="utf-8").strip()
         self.assertEqual(root_lock, embedded_lock)
         self.assertTrue(root_lock.startswith("PyYAML==6.0.3 "))
-        self.assertEqual(root_lock.count("--hash=sha256:"), 10)
+        self.assertEqual(len(root_lock.splitlines()), 4)
+        self.assertTrue(all("--hash=sha256:" in line for line in root_lock.splitlines()))
     def test_compose_preflight_rejects_unsafe_workload(self):
         with tempfile.TemporaryDirectory() as directory:
             compose = Path(directory) / "compose.yaml"
@@ -541,7 +542,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.14.0")
+                self.assertEqual(manifest["version"], "0.15.0")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)

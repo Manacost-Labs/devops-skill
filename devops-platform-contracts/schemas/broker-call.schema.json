@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Protected typed broker call",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "task_id", "parameters"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "operation_id": {"type": "string", "pattern": "^ops-[a-z0-9-]{6,76}$"},
+    "task_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{5,79}$"},
+    "parameters": {"type": "object", "maxProperties": 32, "description": "Exact keys and finite choices/digests/integers come from the protected registered task, never the caller."}
+  }
+}

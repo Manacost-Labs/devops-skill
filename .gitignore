@@ -32,3 +32,9 @@ id_rsa*
 id_ed25519*
 secrets/
 credentials/
+
+# Protected broker deployment and issued capabilities stay local.
+broker-client.json
+broker-service.json
+broker-registry.json
+.broker-private/

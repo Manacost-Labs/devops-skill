@@ -134,7 +134,7 @@ def install_runtime(args) -> int:
                 return digest.hexdigest()
             expected = snapshot()
             print(f"runtime: {len(files)} allowlisted files -> {destination}")
-            print("Includes planner, executor, optional Claude hook, verifier and all 22 modules; hook settings are not enabled automatically.")
+            print("Includes planning, protected broker/client, native Codex guard, verifier and all 23 modules; no protected deployment is enabled automatically.")
             if not args.apply:
                 print("Dry-run only. Review then add --apply.")
                 return 0

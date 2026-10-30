@@ -8,9 +8,23 @@ allowed-tools: Read, Grep, Glob, Bash(python devops-platform-contracts/scripts/v
 
 Maintain the shared rules that make independent DevOps modules compose safely. This supporting skill does not operate infrastructure directly.
 
-Read `references/autonomy-authority.md` for four autonomy modes and `schemas/autonomy-authorization.schema.json` for bounded prior authority. Use `scripts/autonomy.py` only to prepare unapproved drafts or inspect hashes. Issuance/activation belongs to the accountable operator/broker; authority is read from its protected external store, never repository/request content.
+Read `references/autonomy-authority.md` for the legacy planning boundary. Use
+`scripts/autonomy.py` only for unapproved drafts/hash inspection. Local chat
+callbacks select planning preferences; they cannot authenticate an owner or issue
+broker execution authority. Read `../devops-core/references/chat-mode-workflow.md`
+before mode preparation.
 
-For conversational mode selection, `scripts/chat_modes.py` prepares bounded pending cards and reads session selection through the agent-facing `tools/devops_mode.py`. Only the trusted Codex host callback may observe direct exact consent and issue through `tools/hooks/chat_mode_hook.py`. Never invoke that issuer as an agent tool, fabricate host input, or claim that local host attribution authenticates a human/independent principal. Read `../devops-core/references/chat-mode-workflow.md` before setup or switching.
+
+**Protected execution (0.15):** Local planners, legacy JSON approvals, evidence
+strings and chat callbacks are planning/consistency only. Never execute arbitrary
+argv through the removed wrapper or manufacture authority. Submit only registered
+task IDs and typed parameters to the separately protected mTLS broker using an
+externally signed finite grant. Risk, target, code and worker identity come from
+its administrator registry. The agent must have no signing keys, broker state
+access or direct target write credentials. Native hooks are defense in depth.
+Safe restricts the actual broker principal when configured; local preference is
+not remote revocation. Read the installed core autonomy-mode reference and
+[protected deployment](../docs/protected-execution.md) before claiming enforcement.
 
 ## Contract workflow
 

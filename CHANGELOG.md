@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.15.0 — 2026-10-30
+
+- Remove arbitrary local argv execution and unsigned metadata admission.
+- Add a separately provisioned mTLS registered-task broker, scoped Ed25519 owner
+  grants, exact admission, principal-wide Safe revocation and separate workers.
+- Freeze verified task code, record durable intent/receipts and quarantine unknown
+  or unverified mutation outcomes. Native Codex guard and managed-policy review
+  generator provide defense in depth without modifying user settings.
+- Add signature/replay/durability regressions, actual Linux UID/TLS worker checks
+  and pinned actual Codex native hook loops on Linux and Windows.
+- Breaking migration: existing chat confirmations/legacy authority JSON select
+  planning only; old arbitrary-command executor always refuses. Provision the
+  protected boundary and reissue reviewed finite grants before live execution.
+
+
 All notable platform changes are recorded here. The project follows Semantic Versioning for the platform catalog; individual modules retain their own versions.
 
 ## Unreleased
