@@ -94,9 +94,25 @@ def minimum_risk(policy: dict[str, Any], action: str, environment: str, stateful
 
 
 def build_request(args: argparse.Namespace, command: list[str], gate: Any) -> tuple[dict[str, Any], list[str]]:
+    chat = gate.AUTONOMY.chat_module()
+    selected = chat.context()
+    settings = chat.config()
+    if settings and args.policy not in (None, settings["policy"]):
+        raise ValueError("chat policy cannot be replaced")
+    args.policy = args.policy or (settings["policy"] if settings else "default-policy.json")
+    if selected:
+        choice = selected["selection"]
+        if args.mode is not None and args.mode != choice["mode"]:
+            raise ValueError("change mode through confirmed chat boundaries before planning")
+        if args.authorization_id is not None and args.authorization_id != choice["authorization_id"]:
+            raise ValueError("plan authority differs from selected chat boundaries")
+        args.mode = choice["mode"]; args.authorization_id = choice["authorization_id"]
+        args.target_profile = args.target_profile or selected["profile_path"]
     policy, policy_digest = gate.load_registered_policy(args.policy)
-    if args.at and os.environ.get(gate.AUTONOMY.AUTHORITY_ENV):
+    if args.at and (os.environ.get(gate.AUTONOMY.AUTHORITY_ENV) or settings):
         raise ValueError("test clocks are forbidden with a configured authority store")
+    if not args.target_profile:
+        raise ValueError("a validated target profile is required before preparation")
     profile_path = Path(args.target_profile)
     profile = yaml.safe_load(profile_path.read_text(encoding="utf-8-sig"))
     if not isinstance(profile, dict):
@@ -247,13 +263,13 @@ def build_plan() -> int:
     split = arguments.index("--")
     command = arguments[split + 1 :]
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, allow_abbrev=False)
-    parser.add_argument("--target-profile", required=True, help="Validated non-secret target profile YAML.")
+    parser.add_argument("--target-profile", help="Validated non-secret target profile YAML; inherited from active chat boundaries when omitted.")
     parser.add_argument("--action", required=True, help="Action identifier, [a-z0-9_-]{2,80}.")
     parser.add_argument("--risk", required=True, choices=list(RISK_ORDER), help="Declared risk class; must not understate policy.")
     parser.add_argument("--objective", required=True, help="What this operation achieves, 8-1000 characters.")
     parser.add_argument("--scope", action="append", default=[], help="Affected scope entry; repeatable.")
     parser.add_argument("--verify", action="append", default=[], help="Acceptance criterion; repeatable, required at R2+.")
-    parser.add_argument("--policy", default="default-policy.json", help="Registered policy basename.")
+    parser.add_argument("--policy", help="Registered policy basename; inherited from trusted chat setup or default-policy.json.")
     parser.add_argument("--executor", default="service:codex", help="Execution identity.")
     parser.add_argument("--mode", choices=["safe", "balanced", "semi-auto", "full-auto"], help="Omit for Safe compatibility; higher modes require prior protected authority.")
     parser.add_argument("--authorization-id", help="Operator-issued ID in DEVOPS_AUTHORITY_DIR; never a request/repository file.")

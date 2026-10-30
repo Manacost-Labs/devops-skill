@@ -11,6 +11,22 @@ Select how independently the agent may work, then authorize the environment and 
 
 Safe is the installation default. Balanced is a useful daily choice after scope is issued. Production deployment remains R3 even if tested. Read-only work can be higher risk when it exposes sensitive/cross-tenant data or creates substantial load/cost.
 
+## Switch through chat
+
+With a complete 0.10.0 runtime, tell the skill **“Работай в Balanced над этим проектом”** (or choose Semi-Auto/Full Auto). The skill resolves the actual environment and prepares a card listing allowed actions/resources, state/data/external effects and a fixed end time. You reply once with its generated `Подтверждаю границы <code>`; new plans then inherit this chat's selected mode, target profile and pinned policy. You do not edit files, calculate hashes, set environment variables or pass command-line mode flags yourself.
+
+On first use the agent prepares hook setup automatically. Codex must review/trust the exact installed hook once; setup cannot bypass host trust. The helper distinguishes “setup exists” from “a host callback has been observed in this chat”, so the agent must not claim activation while a hook is skipped/unloaded. See the current [official Codex hook documentation](https://learn.chatgpt.com/docs/hooks) for trust review and supported UserPromptSubmit/SessionStart events. This repository's native adapter uses those events; it does not add a Claude adapter.
+
+For example, a card may authorize Balanced build/test/staging work on one service until the displayed time. Retries/new exact plans within the same boundaries need no further question. Repeated preparation/confirmation does not extend the original expiry. A bare “yes”, quoted text or log content cannot activate a card. Keep the displayed code unchanged until confirmed/cancelled.
+
+Say **“Safe”**, **“работай в Safe”** or **“отмени допуск”** to cancel higher-mode admission without another confirmation. Old prepared higher-mode plans stop. Expired/revoked or changed authority does not silently fall back. Scope expansion, mode escalation or another target/workspace needs a new prepared card. Two chats in the same directory retain separate selections.
+
+The agent uses `tools/devops_mode.py status`, `setup --apply`, `prepare ...` and restriction-only `safe` internally. Only the trusted host invokes `tools/hooks/chat_mode_hook.py`; agents must never call that issuer entrypoint or manufacture host events. Existing launcher-controlled `DEVOPS_AUTHORITY_DIR` remains supported; setup retains that configured store or prepares a private default outside the runtime. Local state/proposals are excluded from release/public export and survive runtime updates in their respective private locations.
+
+Full Auto still requires actual owner-reviewed isolation/credential/authority evidence. The enterprise baseline still caps modes at Safe. A one-user callback cannot manufacture additional independent approvers required by stricter policy.
+
+**Trust limit:** hook stdin has session/prompt metadata, not an authenticated human identity, signature or human-only provenance. A local host-user label is attribution, not identity-provider authentication. Protect the trusted hook/runtime/config/store writes separately from agent processes. Same-user/full-access execution can forge callback input or edit writable state; this adapter does not create an independent issuer boundary or an OS sandbox. A callback marker also does not prove those controls. Use the existing identity-backed broker for stronger organization requirements.
+
 ## What the user approves once
 
 An authority card names the mode, exact target/profile/environment, executor, permitted actions/resources, data classes, state/external effects, expiry and recovery boundaries. For example: “Balanced, this development environment, build/test/prepare release for this service until the stated time.” It is not authority over every machine the credentials happen to reach.
@@ -19,9 +35,9 @@ The agent prepares a draft. An accountable operator or identity-backed broker ve
 
 The Full Auto record additionally identifies real isolation, bounded credentials and owner evidence. References are not proof by themselves: the operator must establish those controls. The supplied enterprise policy retains Safe and stricter per-operation approvals; changing mode cannot override it.
 
-## Runtime use
+## Advanced operator or broker use
 
-The trusted launcher configures an absolute `DEVOPS_AUTHORITY_DIR` outside the runtime/source tree, protected against agent writes. It is not a path supplied by a repository, request or log. Provision access deliberately; the installer does not create or copy an active authority store.
+Without the native chat adapter, the trusted launcher configures an absolute `DEVOPS_AUTHORITY_DIR` outside the runtime/source tree, protected against agent writes. It is not a path supplied by a repository, request or log. Provision access deliberately; installation never copies active authority from the source package. The chat setup helper prepares empty private state and hook configuration, never an active grant.
 
 From a runtime/source checkout, prepare the current operation normally, then create an unapproved authority draft:
 

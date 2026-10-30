@@ -1,5 +1,5 @@
 name: devops-core
-version: 0.5.0
+version: 0.6.0
 kind: coordinator
 allowed_tools:
 - Read
@@ -9,6 +9,7 @@ allowed_tools:
 - Bash(python devops-core/scripts/validate_contracts.py:*)
 - Bash(python devops-platform-contracts/scripts/operation_gate.py:*)
 - Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
+- Bash(python tools/devops_mode.py:*)
 capabilities:
 - task-normalization
 - risk-classification
@@ -16,9 +17,10 @@ capabilities:
 - change-control
 - evidence-and-handoff
 - autonomy-mode-coordination
+- conversational-mode-coordination
 provides:
 - safety-contract-v2
 - operation-ledger-v2
 - untrusted-content-boundary-v1
 requires:
-- devops-platform-contracts >= 0.5.0
+- devops-platform-contracts >= 0.6.0

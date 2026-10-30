@@ -106,7 +106,7 @@ def execute():
     command = arguments[split + 1:]
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--operation", type=Path, required=True)
-    parser.add_argument("--policy", default="default-policy.json")
+    parser.add_argument("--policy")
     parser.add_argument("--at", help="Isolated CLI test clock; never allowed in a protected operator session.")
     parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
     parser.add_argument("--timeout-seconds", type=int)
@@ -115,6 +115,13 @@ def execute():
              "command": None, "command_digest": None}
     launched = False
     try:
+        gate_spec = importlib.util.spec_from_file_location("execution_chat_gate", GATE)
+        gate_module = importlib.util.module_from_spec(gate_spec); gate_spec.loader.exec_module(gate_module)
+        settings = gate_module.AUTONOMY.chat_module().config()
+        if settings and args.policy not in (None, settings["policy"]):
+            return blocked("chat policy cannot be replaced", args.ledger, entry, "blocked_policy")
+        args.policy = args.policy or (settings["policy"] if settings else "default-policy.json")
+        entry["policy"] = args.policy
         if not command or (args.timeout_seconds is not None and args.timeout_seconds < 1):
             return blocked("a command and a positive timeout are required", args.ledger, entry, "blocked_usage")
         entry["command"] = redact(subprocess.list2cmdline(command))

@@ -2,6 +2,8 @@
 
 Use the user's selected mode with the selected organization policy. No selection means Safe. A higher mode never supplies target access, chooses credentials, lowers risk or overrides policy. R0/R1 still require permitted reads and bounded side effects; sensitive/cross-tenant/expensive reads can be R2+.
 
+For “work in Balanced” and other conversational switches, read `chat-mode-workflow.md`. The agent prepares the card; the trusted host callback records the user's exact confirmation. Setup is agent-prepared and current-session selection is inherited by new plans. Host trust and actual protected issuer isolation remain separate requirements, not something the model can attest to itself.
+
 | Mode | Automatic ceiling | Human boundary |
 |---|---|---|
 | Safe | R0–R1 | R2–R4 need exact operation approval |
@@ -28,6 +30,6 @@ Production mutation is still at least R3. A tested deployment does not become R2
 
 ## Runtime boundary
 
-Read the platform's autonomy guide before configuring authority. Operator-issued records live in an external protected store selected by trusted launcher environment, never in a request, repository, task document or installed package. Agents must not author their own authorization records or edit that store.
+Read the platform's autonomy guide before configuring authority. Operator-issued records live in an external protected store selected by trusted launcher environment or trusted chat-adapter configuration, never in a request, repository, task document or installed package. Agents must not author their own authorization records or edit that store; only the trusted host/issuer callback records actual direct consent.
 
 The gate checks declared contract bindings and evidence references; it does not derive arbitrary command semantics, authenticate an issuer, inspect every credential permission or create an OS sandbox. Use real restricted identities, protected runtime/policy/store and independently verified isolation. If the agent can write the authority store, delegation is not an independent authorization boundary. Host/tool permission prompts are separate from this platform's approval policy.

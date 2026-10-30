@@ -87,6 +87,35 @@
       "maxItems": 16,
       "type": "array"
     },
+    "chat_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "card_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runtime_id": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "session_id": {
+          "maxLength": 128,
+          "minLength": 6,
+          "type": "string"
+        },
+        "workspace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "runtime_id",
+        "session_id",
+        "workspace",
+        "card_digest"
+      ],
+      "type": "object"
+    },
     "data_classifications": {
       "items": {
         "maxLength": 500,

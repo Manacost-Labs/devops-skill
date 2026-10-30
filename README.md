@@ -1,6 +1,6 @@
 # DevOps Skill Platform
 
-**Portfolio project · release candidate 0.9.0**
+**Portfolio project · release candidate 0.10.0**
 
 A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 23 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, the GitHub control plane, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
 
@@ -44,7 +44,7 @@ Use absolute paths to runtime programs when working in another project. The rela
 
 Skills teach the agent how to investigate and plan. The planner prepares a request for human review. The gate validates the request and its approval records. The executor checks the exact command, records launch intent, runs it, and records the process outcome. The optional Claude hook checks tool calls before they reach execution. The operator still verifies the service and supplies real authorization.
 
-## Autonomy modes in 0.9.0
+## Autonomy modes
 
 | Mode | Automatic ceiling inside issued authority | New exact confirmation |
 |---|---|---|
@@ -55,7 +55,9 @@ Skills teach the agent how to investigate and plan. The planner prepares a reque
 
 Above-Safe work uses one operator-issued scope/target/window authorization, then reuses it for new exact plans inside that envelope. Every launch still checks policy, risk, identity/scope bindings, recovery and audit. A tested production deployment remains R3. The agent prepares unapproved drafts; a protected external issuer/store supplies actual authority. The enterprise baseline retains Safe. Read the [operator setup, examples and trust limits](docs/autonomy-modes.md). These modes are independent of install profiles and host/tool permission settings.
 
-Policy bindings changed in 0.9.0, and exact approvals now require a whole-operation `operation_digest` binding target/scope/risk/effects as well as the command: regenerate pending requests and obtain real replacement approvals; old approvals are not silently migrated. No environment is automatically upgraded to a higher mode by installation.
+From 0.10.0, say **“work in Balanced for this project”**. The skill prepares the target and boundaries, asks for one exact card confirmation through the chat, then new plans inherit that session's mode/profile/policy without human edits, environment variables or repeated confirmations. “Safe” restricts the session immediately. The agent prepares Codex hook setup; the host still requires one-time review/trust of that exact hook before it processes confirmations. See the [conversational flow and trust limits](docs/autonomy-modes.md#switch-through-chat).
+
+Policy bindings changed in 0.9.0, and exact approvals require a whole-operation `operation_digest` binding target/scope/risk/effects as well as the command: regenerate pending older requests and obtain real replacement approvals; old approvals are not silently migrated. No environment is automatically upgraded to a higher mode by installation.
 
 These pieces have different responsibilities: a successful package check proves compatible files; a command exit code proves only a process outcome; service acceptance needs its own evidence. See the [5-minute safe evaluation](#5-minute-safe-evaluation) for a read-only introduction.
 
@@ -225,8 +227,8 @@ The following commands require a source checkout. Runtime release archives inten
 python devops-platform-contracts/scripts/validate_platform.py
 python -m unittest discover -s tests -v
 python tools/build_public_source.py --output ..\devops-skill-platform-public
-python tools/build_release.py --output dist/devops-skill-platform-0.9.0.zip
-python tools/verify_release.py dist/devops-skill-platform-0.9.0.zip
+python tools/build_release.py --output dist/devops-skill-platform-0.10.0.zip
+python tools/verify_release.py dist/devops-skill-platform-0.10.0.zip
 ```
 
 `PUBLIC-SOURCE-MANIFEST.json` is generated only in a fresh public-source export, not maintained as a stale receipt in the development tree. `build_public_source.py` creates a fresh allowlisted source tree without Git history, private operation records, lab artifacts, release archives, credentials, or target-specific tools. Use that clean tree—not an export of a private operations repository—as the source of a new public portfolio repository.

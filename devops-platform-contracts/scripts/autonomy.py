@@ -19,6 +19,15 @@ IDENTIFIER = re.compile(r"authority-[a-z0-9][a-z0-9-]{5,79}")
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 ACTION = re.compile(r"[a-z0-9_-]{2,80}")
 MAX_BYTES = 65536
+_CHAT = None
+
+
+def chat_module():
+    global _CHAT
+    if _CHAT is None:
+        spec = importlib.util.spec_from_file_location("autonomy_chat_context", Path(__file__).with_name("chat_modes.py"))
+        _CHAT = importlib.util.module_from_spec(spec); spec.loader.exec_module(_CHAT)
+    return _CHAT
 RECORD_FIELDS = {"schema_version", "authorization_id", "status", "mode", "policy", "target", "executor",
                  "actions", "scope", "data_classifications", "allow_stateful", "allow_external_side_effects",
                  "window_start", "window_end", "trusted_environment", "authorizations"}
@@ -111,6 +120,8 @@ def load_authorization(identifier, authority_dir=None):
         raise AuthorityError("authorization ID is invalid")
     configured = authority_dir if authority_dir is not None else os.environ.get(AUTHORITY_ENV)
     if not configured:
+        configured = chat_module().authority_directory()
+    if not configured:
         raise AuthorityError("an operator-owned external authority store is required")
     path = Path(configured)
     if not path.is_absolute():
@@ -123,7 +134,13 @@ def load_authorization(identifier, authority_dir=None):
 
 
 def validate_record(record, policy, policy_digest, now):
-    exact(record, RECORD_FIELDS, "authority record")
+    exact(record, RECORD_FIELDS | ({"chat_binding"} if "chat_binding" in record else set()), "authority record")
+    if "chat_binding" in record:
+        binding = record["chat_binding"]
+        exact(binding, {"runtime_id", "session_id", "workspace", "card_digest"}, "chat authority binding")
+        for value in binding.values(): text(value, "chat binding")
+        if not re.fullmatch(r"[0-9a-f]{64}", binding["runtime_id"]) or not DIGEST.fullmatch(binding["card_digest"]):
+            raise AuthorityError("chat authority digest binding is invalid")
     if record["schema_version"] != "1.0" or record["status"] != "active":
         raise AuthorityError("authority record must be active schema 1.0")
     if not isinstance(record["authorization_id"], str) or not IDENTIFIER.fullmatch(record["authorization_id"]):
@@ -208,6 +225,7 @@ def assess(request, policy, policy_digest, now, authority_dir=None):
         if selection["authorization_digest"] != digest(record):
             raise AuthorityError("authority record digest changed or was revoked")
         validate_record(record, policy, policy_digest, now)
+        chat_module().validate_binding(record)
         if record["authorization_id"] != selection["authorization_id"] or record["mode"] != mode:
             raise AuthorityError("authority ID or selected mode does not match")
         if record["target"] != request.get("target"):

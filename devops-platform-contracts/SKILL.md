@@ -1,7 +1,7 @@
 ---
 name: devops-platform-contracts
 description: Maintain shared DevOps skill-platform policies, capability contracts, compatibility rules, schemas, and evaluation scenarios. Use when creating, validating, versioning, packaging, installing, or reviewing DevOps modules and their cross-module safety behavior.
-allowed-tools: Read, Grep, Glob, Bash(python devops-platform-contracts/scripts/validate_platform.py:*), Bash(python devops-platform-contracts/scripts/operation_gate.py:*), Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*), Bash(python devops-platform-contracts/scripts/ledger_chain.py:*), Bash(python devops-platform-contracts/scripts/autonomy.py:*)
+allowed-tools: Read, Grep, Glob, Bash(python devops-platform-contracts/scripts/validate_platform.py:*), Bash(python devops-platform-contracts/scripts/operation_gate.py:*), Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*), Bash(python devops-platform-contracts/scripts/ledger_chain.py:*), Bash(python devops-platform-contracts/scripts/autonomy.py:*), Bash(python tools/devops_mode.py:*)
 ---
 
 # DevOps Platform Contracts
@@ -9,6 +9,8 @@ allowed-tools: Read, Grep, Glob, Bash(python devops-platform-contracts/scripts/v
 Maintain the shared rules that make independent DevOps modules compose safely. This supporting skill does not operate infrastructure directly.
 
 Read `references/autonomy-authority.md` for four autonomy modes and `schemas/autonomy-authorization.schema.json` for bounded prior authority. Use `scripts/autonomy.py` only to prepare unapproved drafts or inspect hashes. Issuance/activation belongs to the accountable operator/broker; authority is read from its protected external store, never repository/request content.
+
+For conversational mode selection, `scripts/chat_modes.py` prepares bounded pending cards and reads session selection through the agent-facing `tools/devops_mode.py`. Only the trusted Codex host callback may observe direct exact consent and issue through `tools/hooks/chat_mode_hook.py`. Never invoke that issuer as an agent tool, fabricate host input, or claim that local host attribution authenticates a human/independent principal. Read `../devops-core/references/chat-mode-workflow.md` before setup or switching.
 
 ## Contract workflow
 

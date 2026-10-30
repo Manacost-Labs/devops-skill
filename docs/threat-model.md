@@ -1,5 +1,7 @@
 # Threat model
 
+The native chat-mode adapter receives host session/prompt events, not authenticated human identity or a human-only signature. A same-user agent with unrestricted execution can forge stdin or edit writable issuer state; protect host hook/runtime/config/store writes through actual sandbox/principal/broker separation. Setup and callback-observed markers are workflow status, not evidence that this separation exists. Exact card/session/policy/profile bindings and final admission stop accidental/replayed/mismatched requests only within that trusted runtime boundary.
+
 This threat model covers the skill platform, its release/install path, and an agent using it to plan or execute infrastructure work. It does not replace an adopting organization's system-specific threat model.
 
 ## Assets and security objectives
