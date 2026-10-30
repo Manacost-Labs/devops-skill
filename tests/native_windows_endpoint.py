@@ -144,7 +144,12 @@ def diagnose_tls(folder):
                 with context.wrap_socket(connection,server_hostname='localhost') as channel:
                     print('TLS_DIAGNOSTIC',version.name,'handshake',channel.version(),channel.cipher()[0])
                     stage='send'
-                    channel.sendall(b'GET /wsman HTTP/1.1\r\nHost: localhost\r\nAuthorization: http://schemas.dmtf.org/wbem/wsman/1/wsman/secprofile/https/mutual\r\nConnection: close\r\n\r\n')
+                    # GET can be rejected by HTTP.sys before client-certificate
+                    # authentication. A static Identify POST tests that stage
+                    # without creating a shell or dispatching any task.
+                    body=('''<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd"><s:Header><a:To>https://localhost:%s/wsman</a:To><w:ResourceURI>http://schemas.microsoft.com/powershell/%s</w:ResourceURI><a:ReplyTo><a:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address></a:ReplyTo><a:Action>http://schemas.dmtf.org/wbem/wsman/identity/1/wsmanidentity/Identify</a:Action><a:MessageID>uuid:00000000-0000-0000-0000-000000000001</a:MessageID></s:Header><s:Body><Identify xmlns="http://schemas.dmtf.org/wbem/wsman/identity/1/wsmanidentity.xsd"/></s:Body></s:Envelope>'''%(resource['port'],resource['configuration_name'])).encode('ascii')
+                    headers=('POST /wsman HTTP/1.1\r\nHost: localhost:%s\r\nAuthorization: http://schemas.dmtf.org/wbem/wsman/1/wsman/secprofile/https/mutual\r\nContent-Type: application/soap+xml;charset=UTF-8\r\nContent-Length: %s\r\nConnection: close\r\n\r\n'%(resource['port'],len(body))).encode('ascii')
+                    channel.sendall(headers+body)
                     stage='read'
                     line=channel.recv(2048).split(b'\r\n',1)[0].decode('ascii','replace')
                     print('TLS_DIAGNOSTIC',version.name,'status',line[:160])
