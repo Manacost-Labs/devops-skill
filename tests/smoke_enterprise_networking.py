@@ -164,10 +164,14 @@ ip prefix-list EXPORT seq 5 permit {own}
 """
             config = directory / "bgpd.conf"
             config.write_text(text, encoding="utf-8")
-            self.ns(side, "/usr/lib/frr/bgpd", "-C", "-S", "-Z", "-f", str(config))
+            # FRR 8.4 bgp_init still initializes its ZAPI client with -Z. A
+            # filesystem UNIX socket is not isolated by the network namespace;
+            # never let this lab consult the runner's host zebra/NHT state.
+            zebra_socket = directory / "unserved-zebra.sock"
+            self.ns(side, "/usr/lib/frr/bgpd", "-C", "-S", "-Z", "-z", str(zebra_socket), "-f", str(config))
             log = (directory / "bgpd.log").open("w", encoding="utf-8")
             self.logs.append(log)
-            process = subprocess.Popen(["ip", "netns", "exec", self.names[side], "/usr/lib/frr/bgpd", "-S", "-Z", "-f", str(config), "-i", str(directory / "bgpd.pid"), "--vty_socket", str(directory)], stdout=log, stderr=log)
+            process = subprocess.Popen(["ip", "netns", "exec", self.names[side], "/usr/lib/frr/bgpd", "-S", "-Z", "-z", str(zebra_socket), "-f", str(config), "-i", str(directory / "bgpd.pid"), "--vty_socket", str(directory)], stdout=log, stderr=log)
             self.processes.append(process)
         wait_for(lambda: rib_matches(lambda: self.bgp("a"), present=("10.20.0.0/24",)), "BGP permitted prefix")
 
