@@ -321,13 +321,14 @@ def build_plan() -> int:
         f"RISK: {request['change']['risk']}",
         f"AUTONOMY: {request.get('autonomy', {}).get('mode', 'safe')} (policy and bounded authority still apply)",
         "",
-        "NOT YET AUTHORIZED. This request is deliberately incomplete:" if todo else "READY FOR FRESH GATE CHECK. No additional human confirmation is required within validated authority:",
+        "PLANNING ONLY. This request is deliberately incomplete:" if todo else "PLANNING ONLY. Local contract checks do not authorize execution:",
     ]
     summary += [f"  - {item}" for item in todo] or ["  - nothing further is required by policy for this risk class"]
     summary += [
         "",
-        "Then execute exactly this command through the gate:",
-        f"  python tools/devops_exec.py --operation {args.output or '<request.json>'} --policy {args.policy} -- {subprocess.list2cmdline(command)}",
+        "Match the intended work to an owner-registered task and submit typed parameters to the protected broker.",
+        "An independent owner must sign the finite task grant. Local request JSON and chat confirmation cannot supply that authority.",
+        "The legacy arbitrary-command executor is removed; see docs/protected-execution.md.",
     ]
     print("\n".join(summary), file=sys.stderr)
     return 0

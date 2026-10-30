@@ -117,7 +117,7 @@ def execute():
             packet = {"call": call, "grant": C.read_record(args.grant), "admission": C.read_record(args.admission) if args.admission else None}
         result = call_broker(C.read_record(args.broker_config), packet, args.route)
         print(json.dumps(result, ensure_ascii=True, sort_keys=True))
-        if result.get("status") == "outcome_unknown":
+        if result.get("status") in {"outcome_unknown", "launch_intent"}:
             return 4
         if result.get("status") == "executed":
             return 0 if result.get("exit_code") == 0 and result.get("result_valid") is True else 1

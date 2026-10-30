@@ -382,6 +382,13 @@ class BrokerJournalTests(unittest.TestCase):
 
 
 class BrokerClientResultTests(unittest.TestCase):
+    def test_launch_intent_status_is_uncertain_not_prelaunch_refusal(self):
+        spec=importlib.util.spec_from_file_location('broker_client_pending',ROOT/'tools/devops_exec.py')
+        client=importlib.util.module_from_spec(spec); spec.loader.exec_module(client)
+        path='C:/fixture/profile.json' if os.name=='nt' else '/fixture/profile.json'
+        with mock.patch.object(sys,'argv',['devops_exec.py','--broker-config',path,'--route','status','--operation-id','ops-fixture-pending']),mock.patch.object(client.C,'read_record',return_value={}),mock.patch.object(client,'call_broker',return_value={'status':'launch_intent'}),mock.patch('sys.stdout',new_callable=io.StringIO):
+            self.assertEqual(client.execute(),4)
+
     def test_uncertain_http_responses_after_execute_never_claim_prelaunch_refusal(self):
         spec=importlib.util.spec_from_file_location('broker_client_result',ROOT/'tools/devops_exec.py')
         client=importlib.util.module_from_spec(spec); spec.loader.exec_module(client)

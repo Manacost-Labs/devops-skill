@@ -91,7 +91,7 @@ class PlanBuilderTests(unittest.TestCase):
         self.assertEqual(request["policy"]["digest"], request["approvals"][0]["policy_digest"])
         self.assertTrue(request["target"]["profile_digest"].startswith("sha256:"))
         self.assertEqual(request["execution"]["window_start"], "2026-08-17T10:15:00Z")
-        self.assertIn("NOT YET AUTHORIZED", result.stderr)
+        self.assertIn("PLANNING ONLY", result.stderr)
 
     def test_generated_request_is_not_authorized_until_a_human_fills_approvals(self):
         command = [PYTHON, "-c", "print('must-not-run')"]
