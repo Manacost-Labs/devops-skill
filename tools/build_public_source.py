@@ -35,6 +35,8 @@ PUBLIC_TOOLS = {
     "tools/build_release.py",
     "tools/devops_exec.py",
     "tools/devops_plan.py",
+    "tools/devops_mode.py",
+    "tools/hooks/chat_mode_hook.py",
     "tools/hooks/pretooluse_gate.py",
     "tools/install.py",
     "tools/verify_release.py",

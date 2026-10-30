@@ -1,7 +1,7 @@
 ---
 name: devops-core
-description: Coordinate safe, evidence-driven infrastructure work across modular DevOps skills. Use for any request to assess, design, deploy, change, troubleshoot, or operate servers, cloud resources, containers, networking, DNS/TLS, CI/CD, observability, backups, or production infrastructure—especially when the task needs risk classification, module routing, approvals, rollback, or verification.
-allowed-tools: Read, Grep, Glob, Bash(python devops-core/scripts/profile_digest.py:*), Bash(python devops-core/scripts/validate_contracts.py:*), Bash(python devops-platform-contracts/scripts/operation_gate.py:*), Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*)
+description: Coordinate safe, evidence-driven infrastructure work across modular DevOps skills. Use for DevOps autonomy-mode selection or revocation through chat, and requests to assess, design, deploy, change, troubleshoot, or operate servers, cloud resources, containers, networking, DNS/TLS, CI/CD, observability, backups, or production infrastructure—especially when the task needs risk classification, module routing, approvals, rollback, or verification.
+allowed-tools: Read, Grep, Glob, Bash(python devops-core/scripts/profile_digest.py:*), Bash(python devops-core/scripts/validate_contracts.py:*), Bash(python devops-platform-contracts/scripts/operation_gate.py:*), Bash(python devops-platform-contracts/scripts/resolve_capabilities.py:*), Bash(python tools/devops_mode.py:*)
 ---
 
 # DevOps Core
@@ -9,6 +9,8 @@ allowed-tools: Read, Grep, Glob, Bash(python devops-core/scripts/profile_digest.
 Treat every infrastructure request as an operation with an owner, target, risk, evidence, and recovery path. Coordinate specialized modules; do not replace their technical expertise or claim capabilities that are not installed.
 
 Read `references/autonomy-modes.md` for Safe, Balanced, Semi-Auto and Full Auto. Safe is the absent-selection default. Above-Safe autonomy uses a prior operator-issued bounded authority record; it does not lower risk or override policy. Reuse valid authority inside its envelope without repeated human questions. Ask one grouped question only for a concrete missing admission/boundary, after completing authorized preparation.
+
+When the human selects/revokes a mode in conversation, follow `references/chat-mode-workflow.md`. Prepare setup/profile/card yourself, use one direct host-observed confirmation, then inherit the session selection automatically. Never send the user to edit configuration or invoke the issuer hook as an agent tool. Safe only restricts and needs no new confirmation.
 
 Apply this admission model when a specialist module calls for approval: use valid prior scoped authority or exact operation approval as the selected mode/policy requires. Still prepare and validate each exact plan/artifact. Destructive/irreversible effects, exceptions, hard denials and actual owner decisions outside issued scope retain their separate boundaries.
 

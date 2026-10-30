@@ -20,6 +20,28 @@ BINARIES = {
 NODE = "kindest/node:v1.35.0@sha256:452d707d4862f52530247495d180205e029056831160e22870e37e3f6c1ac31f"
 
 
+def crash_backoff_evidence(pod, events, namespace, name, uid, container="app"):
+    """Corroborate the owned crash loop without inventing a sampled Waiting state."""
+    metadata = pod.get("metadata", {})
+    if (metadata.get("namespace"), metadata.get("name"), metadata.get("uid")) != (namespace, name, uid): return None
+    rows = [row for row in pod.get("status", {}).get("containerStatuses", []) if row.get("name") == container]
+    if len(rows) != 1: return None
+    row = rows[0]; restarts = row.get("restartCount")
+    if type(restarts) is not int or restarts < 1 or row.get("lastState", {}).get("terminated", {}).get("exitCode") != 42: return None
+    current = row.get("state", {})
+    if current.get("waiting", {}).get("reason") == "CrashLoopBackOff": return "container-status"
+    if current.get("terminated", {}).get("exitCode") != 42: return None
+    for event in events:
+        obj = event.get("involvedObject", {})
+        reporter = event.get("source", {}).get("component") or event.get("reportingComponent") or event.get("reportingController")
+        if ((obj.get("kind"), obj.get("namespace"), obj.get("name"), obj.get("uid"), obj.get("fieldPath"))
+                == ("Pod", namespace, name, uid, "spec.containers{"+container+"}")
+                and reporter == "kubelet" and event.get("type") == "Warning" and event.get("reason") == "BackOff"
+                and isinstance(event.get("message"), str) and event["message"].startswith("Back-off restarting failed container "+container+" in pod ")):
+            return "uid-bound-kubelet-event"
+    return None
+
+
 class KubernetesFixture(DockerFixture):
     def start_cluster(self):
         if os.uname().machine not in {"x86_64", "amd64"}:
@@ -124,7 +146,22 @@ class KubernetesFixture(DockerFixture):
             if predicate(value):
                 return value
             time.sleep(2)
+        # Only this owned fixture Pod; keep a bounded failure explanation before cleanup.
+        status = value.get("status", {})
+        diagnostic = {"name": name, "phase": status.get("phase"), "conditions": status.get("conditions", [])[:8],
+                      "containers": [{key: row.get(key) for key in ("name", "restartCount", "state", "lastState")}
+                                     for row in status.get("containerStatuses", [])[:8]]}
+        print("FIXTURE POD TIMEOUT: "+json.dumps(diagnostic, ensure_ascii=True)[:6000], flush=True)
+        try:
+            events = json.loads(self.kubectl("get", "events", "--field-selector", "involvedObject.uid="+value["metadata"]["uid"], "-o", "json").stdout)
+            rows = [{key: event.get(key) for key in ("reason", "message", "count")} for event in events.get("items", [])[-8:]]
+            print("FIXTURE POD EVENTS: "+json.dumps(rows, ensure_ascii=True)[:6000], flush=True)
+        except Exception:
+            print("FIXTURE POD EVENTS: unavailable", flush=True)
         raise RuntimeError("fixture Pod did not reach expected state: "+name)
+
+    def pod_events(self, uid):
+        return json.loads(self.kubectl("get", "events", "--field-selector", "involvedObject.uid="+uid, "-o", "json").stdout).get("items", [])
 
     def execute(self, name, code, arguments=(), *, expected=0, mounts=()):
         uid = self.pod(name, code, arguments, mounts=mounts)
@@ -179,12 +216,20 @@ def main():
     fixture = KubernetesFixture()
     try:
         fixture.start_cluster()
-        fixture.pod("crash", "import sys; sys.exit(42)", restart="Always")
-        crash = fixture.wait("crash", lambda p: any(
-            c.get("restartCount", 0) >= 1 and c.get("state", {}).get("waiting", {}).get("reason") == "CrashLoopBackOff"
-            for c in p.get("status", {}).get("containerStatuses", [])))
+        crash_uid = fixture.pod("crash", "import sys; sys.exit(42)", restart="Always")
+        basis = []
+        def crash_observed(value):
+            evidence = crash_backoff_evidence(value, fixture.pod_events(crash_uid), fixture.tag, "crash", crash_uid)
+            if evidence: basis[:] = [evidence]
+            return evidence is not None
+        crash = fixture.wait("crash", crash_observed)
         row = fixture.snapshot(crash)["containers"]["containers"][0]
-        assert row["current"]["reason"] == "CrashLoopBackOff" and row["previous"]["exit_code"] == 42
+        assert row["restart_count"] >= 1 and row["previous"]["exit_code"] == 42
+        if basis == ["container-status"]:
+            assert row["current"]["kind"] == "waiting" and row["current"]["reason"] == "CrashLoopBackOff"
+        else:
+            assert basis == ["uid-bound-kubelet-event"] and row["current"]["kind"] == "terminated" and row["current"]["exit_code"] == 42
+        print("OK: native repeated exit/restart and restart-backoff evidence via "+basis[0])
         oom, _ = fixture.execute("oom", "block=bytearray(256*1024*1024)", expected=137)
         assert fixture.snapshot(oom)["containers"]["containers"][0]["current"]["reason"] == "OOMKilled"
         print("OK: native Pod backoff/previous exit and cgroup OOM snapshot evidence")

@@ -268,6 +268,7 @@ def operation_digest(request):
 
 def validate(request: dict[str, Any], policy: dict[str, Any], policy_digest: str, now: datetime, authority_dir=None) -> list[str]:
     reasons: list[str] = []
+    reasons.extend(AUTONOMY.chat_module().enforce(request, policy, policy_digest, now))
     unknown = sorted(set(request) - TOP_LEVEL)
     missing = sorted((TOP_LEVEL - {"exception", "autonomy"}) - set(request))
     if unknown:
@@ -505,14 +506,18 @@ def main() -> int:
     request_source = parser.add_mutually_exclusive_group()
     request_source.add_argument("--request", type=Path, help="Secret-free JSON operation request v2.")
     request_source.add_argument("--request-stdin", action="store_true", help="Validate the executor's frozen request bytes.")
-    parser.add_argument("--policy", default="default-policy.json", help="Registered policy basename.")
+    parser.add_argument("--policy", help="Registered policy basename; use the pinned chat policy or default-policy.json when omitted.")
     parser.add_argument("--at", help="RFC3339 evaluation time for deterministic testing; defaults to now.")
     parser.add_argument("--print-policy-digest", action="store_true", help="Print the canonical effective policy digest.")
     parser.add_argument("--print-operation-digest", action="store_true", help="Hash all operation facts except approvals; this does not validate or authorize execution.")
     args = parser.parse_args()
     try:
-        if args.at and os.environ.get(AUTONOMY.AUTHORITY_ENV):
+        if args.at and (os.environ.get(AUTONOMY.AUTHORITY_ENV) or AUTONOMY.chat_module().config()):
             raise ValueError("test clocks are forbidden when an authority store is configured")
+        settings = AUTONOMY.chat_module().config()
+        if settings and args.policy not in (None, settings["policy"]):
+            raise ValueError("chat policy cannot be replaced")
+        args.policy = args.policy or (settings["policy"] if settings else "default-policy.json")
         policy, policy_digest = load_registered_policy(args.policy)
         if args.print_policy_digest:
             print(f"POLICY: id={policy['policy_id']} version={policy['version']} digest={policy_digest}")
