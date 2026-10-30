@@ -4,6 +4,12 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 
 ## Unreleased
 
+## 0.14.0 — 2026-10-30
+
+- Deepen DNS authority/views/caches and cutover, TLS issuance/renewal and safe pair activation, Nginx/Caddy/Traefik routing/trust and actual-state recovery in network-edge-operations 0.3.0. Preserve mode authority, risk floors, gate/journal and provider/application ownership.
+- Pin diagnostic connections to validated numeric addresses, retain strict TLS and block proxy-environment bypass, unsafe destinations and redirect following; suppress URL path/query evidence.
+- Add real immutable-image CoreDNS and three-proxy CI with synthetic private PKI, certificate rejection/rotation, upstream failure and recovery. Public ACME/DNS, recursive propagation, IPv6/CDN/fleet and application data remain target-specific validation.
+
 ## 0.13.0 — 2026-10-30
 
 - Deepen GitHub Actions event/runner/caller trust, effective secrets/OIDC/environment admission, artifact provenance and partial-release recovery in cicd-operations 0.4.0. Preserve existing authority/gate/journal and replace unconditional failure rollback with actual-state/compatibility decisions.

@@ -54,7 +54,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_catalog_is_complete_dependency_closed_and_unambiguous(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8-sig"))
-        self.assertEqual(catalog["version"], "0.13.0")
+        self.assertEqual(catalog["version"], "0.14.0")
         self.assertEqual(len(catalog["skills"]), 23)
         self.assertEqual(set(catalog["profiles"]["all"]), set(catalog["skills"]))
         capability_owners = {}
@@ -105,6 +105,7 @@ class PlatformTests(unittest.TestCase):
             "cloudflare-operations": {"developers.cloudflare.com"},
             "iac-operations": {"developer.hashicorp.com", "opentofu.org", "docs.ansible.com", "cloudinit.readthedocs.io"},
             "cicd-operations": {"docs.github.com", "slsa.dev"},
+            "network-edge-operations": {"www.rfc-editor.org", "letsencrypt.org", "nginx.org", "caddyserver.com", "doc.traefik.io", "coredns.io", "www.alibabacloud.com"},
             "github-operations": {"docs.github.com"},
             "data-resilience-operations": {"www.postgresql.org", "redis.io", "csrc.nist.gov", "dev.mysql.com", "mariadb.com"},
             "cloud-aws": {"docs.aws.amazon.com"},
@@ -462,6 +463,10 @@ class PlatformTests(unittest.TestCase):
             "cicd-secret-federation-review": "cicd-operations",
             "artifact-identity-verification": "cicd-operations",
             "partial-deployment-recovery": "cicd-operations",
+            "dns-authority-cache-diagnosis": "network-edge-operations",
+            "certificate-renewal-rotation": "network-edge-operations",
+            "proxy-staged-change-recovery": "network-edge-operations",
+            "proxy-origin-trust-review": "network-edge-operations",
             "github-branch-protection-management": "github-operations",
             "github-environment-deployment-gates": "github-operations",
             "github-actions-run-operations": "github-operations",
@@ -536,7 +541,7 @@ class PlatformTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith(("lab-artifacts/", "operations/", ".github/")) for name in names))
                 manifest = json.loads(archive.read("RELEASE-MANIFEST.json"))
                 self.assertEqual(manifest["license"], "Apache-2.0")
-                self.assertEqual(manifest["version"], "0.13.0")
+                self.assertEqual(manifest["version"], "0.14.0")
                 self.assertEqual([item["path"] for item in manifest["files"]], sorted(item["path"] for item in manifest["files"]))
                 unpacked = Path(directory) / "unpacked"
                 archive.extractall(unpacked)

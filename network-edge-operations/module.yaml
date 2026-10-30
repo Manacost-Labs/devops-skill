@@ -1,24 +1,97 @@
 name: network-edge-operations
-version: 0.2.0
+version: 0.3.0
 kind: executor
 allowed_tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+- Read
+- Grep
+- Glob
+- Write
+- Edit
+- Bash
 requires:
-  - devops-platform-contracts >= 0.2.0
-  - devops-core >= 0.2.0
+- devops-platform-contracts >= 0.5.0
+- devops-core >= 0.5.0
 capabilities:
-  - dns-tls-http-diagnosis
-  - reverse-proxy-preflight
-  - upstream-connectivity-check
-  - service-path-verification
-  - proxy-config-rollback
+- dns-tls-http-diagnosis
+- reverse-proxy-preflight
+- upstream-connectivity-check
+- service-path-verification
+- proxy-config-rollback
+- dns-authority-cache-diagnosis
+- certificate-renewal-rotation
+- proxy-staged-change-recovery
+- proxy-origin-trust-review
 risk_domains:
-  - dns-and-certificates
-  - public-ports
-  - reverse-proxy-routing
-  - origin-exposure
+- dns-and-certificates
+- public-ports
+- reverse-proxy-routing
+- origin-exposure
+- dns-delegation-and-cache-transition
+- certificate-key-and-renewal-state
+- partial-edge-activation
+platforms:
+- dns
+- tls
+- nginx
+- caddy
+- traefik
+source_freshness:
+  last_verified: '2026-10-30'
+  refresh_before_change: true
+  official_sources:
+  - https://www.rfc-editor.org/info/rfc1035/
+  - https://www.rfc-editor.org/rfc/rfc9525.html
+  - https://nginx.org/en/docs/http/ngx_http_proxy_module.html
+  - https://nginx.org/en/docs/beginners_guide.html
+  - https://caddyserver.com/docs/command-line
+  - https://doc.traefik.io/traefik/reference/install-configuration/providers/others/file/
+  - https://nginx.org/en/docs/http/configuring_https_servers.html
+  - https://www.rfc-editor.org/rfc/rfc2308.html
+  - https://letsencrypt.org/docs/challenge-types/
+  - https://letsencrypt.org/docs/integration-guide/
+  - https://letsencrypt.org/docs/rate-limits/
+  - https://letsencrypt.org/docs/staging-environment/
+  - https://caddyserver.com/docs/automatic-https
+  - https://doc.traefik.io/traefik/reference/routing-configuration/http/tls/tls-certificates/
+  - https://coredns.io/plugins/file/
+  - https://www.alibabacloud.com/help/en/ecs/user-guide/view-instance-metadata/
+  capability_sources:
+    dns-tls-http-diagnosis:
+    - https://www.alibabacloud.com/help/en/ecs/user-guide/view-instance-metadata/
+    - https://www.rfc-editor.org/info/rfc1035/
+    - https://www.rfc-editor.org/rfc/rfc9525.html
+    - https://nginx.org/en/docs/http/ngx_http_proxy_module.html
+    reverse-proxy-preflight:
+    - https://nginx.org/en/docs/beginners_guide.html
+    - https://caddyserver.com/docs/command-line
+    - https://doc.traefik.io/traefik/reference/install-configuration/providers/others/file/
+    upstream-connectivity-check:
+    - https://nginx.org/en/docs/http/ngx_http_proxy_module.html
+    - https://nginx.org/en/docs/http/configuring_https_servers.html
+    service-path-verification:
+    - https://www.rfc-editor.org/info/rfc1035/
+    - https://www.rfc-editor.org/rfc/rfc9525.html
+    - https://nginx.org/en/docs/http/ngx_http_proxy_module.html
+    proxy-config-rollback:
+    - https://nginx.org/en/docs/beginners_guide.html
+    - https://caddyserver.com/docs/command-line
+    - https://doc.traefik.io/traefik/reference/install-configuration/providers/others/file/
+    dns-authority-cache-diagnosis:
+    - https://www.rfc-editor.org/info/rfc1035/
+    - https://www.rfc-editor.org/rfc/rfc2308.html
+    certificate-renewal-rotation:
+    - https://www.rfc-editor.org/rfc/rfc9525.html
+    - https://letsencrypt.org/docs/challenge-types/
+    - https://letsencrypt.org/docs/integration-guide/
+    - https://letsencrypt.org/docs/rate-limits/
+    - https://letsencrypt.org/docs/staging-environment/
+    - https://caddyserver.com/docs/automatic-https
+    - https://doc.traefik.io/traefik/reference/routing-configuration/http/tls/tls-certificates/
+    proxy-staged-change-recovery:
+    - https://nginx.org/en/docs/beginners_guide.html
+    - https://caddyserver.com/docs/command-line
+    - https://doc.traefik.io/traefik/reference/install-configuration/providers/others/file/
+    - https://doc.traefik.io/traefik/reference/routing-configuration/http/tls/tls-certificates/
+    proxy-origin-trust-review:
+    - https://nginx.org/en/docs/http/ngx_http_proxy_module.html
+    - https://nginx.org/en/docs/http/configuring_https_servers.html
