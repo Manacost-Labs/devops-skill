@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from datetime import datetime, timedelta, timezone
 import getpass
 import hashlib
@@ -22,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SESSION = re.compile(r"[A-Za-z0-9._:-]{6,128}")
 CONFIRM = re.compile(r"(?:подтверждаю границы|confirm boundaries) ([0-9a-f]{16})", re.IGNORECASE)
 SAFE_MESSAGES = {"safe", "/devops safe", "режим safe", "работай в safe", "переключись в safe", "безопасный режим", "отмени допуск", "revoke devops"}
-CARD_FIELDS = {"schema_version", "runtime_id", "session_id", "workspace", "profile_path", "base_selection_digest", "created_at", "confirm_before", "window_end", "mode", "policy", "target", "executor", "actions", "scope", "data_classifications", "allow_stateful", "allow_external_side_effects", "trusted_environment"}
+CARD_FIELDS = {"schema_version", "runtime_id", "session_id", "workspace", "profile_path", "base_selection_digest", "base_safety_epoch", "created_at", "confirm_before", "window_end", "mode", "policy", "target", "executor", "actions", "scope", "data_classifications", "allow_stateful", "allow_external_side_effects", "trusted_environment"}
 
 
 def module(name, path):
@@ -90,6 +91,11 @@ def observed_path(sid):
     return state_root()/"observed"/(session_key(sid)+".json")
 
 
+def safety_epoch(sid):
+    path = latch_path(sid)
+    return authority().digest(read(path) if path.exists() or path.is_symlink() else None)
+
+
 def read(path):
     return authority().read_record(path.absolute())
 
@@ -128,7 +134,7 @@ def raw_selection(sid):
     path = selection_path(sid)
     if not path.exists() and not path.is_symlink(): return None
     value = read(path)
-    expected = {"schema_version", "runtime_id", "session_id", "workspace", "selection", "profile_path", "card_digest", "updated_at"}
+    expected = {"schema_version", "runtime_id", "session_id", "workspace", "selection", "profile_path", "card_digest", "safety_epoch", "updated_at"}
     if set(value) != expected or value["schema_version"] != "1.0" or value["runtime_id"] != runtime_id() or value["session_id"] != sid:
         raise ChatError("invalid chat session selection")
     return value
@@ -152,7 +158,7 @@ def context(sid=None, cwd=None):
     if selected is None: return None
     if not same_path(selected["workspace"], workspace(cwd)):
         raise ChatError("chat mode belongs to another workspace; prepare new boundaries")
-    if latch_path(sid).exists() or latch_path(sid).is_symlink():
+    if selected["safety_epoch"] != safety_epoch(sid):
         selected = dict(selected, selection={"mode": "safe", "authorization_id": None, "authorization_digest": None})
     selection = selected["selection"]
     authority().exact(selection, {"mode", "authorization_id", "authorization_digest"}, "chat mode selection")
@@ -201,7 +207,12 @@ def setup(codex_home, policy_name, apply):
     if settings and settings["policy"] != policy_name: raise ChatError("setup cannot change existing chat policy")
     home = codex_home.expanduser().absolute()
     hook_path = home/"hooks.json"
-    command = subprocess.list2cmdline([sys.executable, str(ROOT/"tools/hooks/chat_mode_hook.py")]) if os.name == "nt" else __import__("shlex").join([sys.executable, str(ROOT/"tools/hooks/chat_mode_hook.py")])
+    if os.name == "nt":
+        quote = lambda value: "'"+str(value).replace("'", "''")+"'"
+        script = "$OutputEncoding=[Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); & "+quote(sys.executable)+" "+quote(ROOT/"tools/hooks/chat_mode_hook.py")+"; exit $LASTEXITCODE"
+        command = "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand "+base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    else:
+        command = __import__("shlex").join([sys.executable, str(ROOT/"tools/hooks/chat_mode_hook.py")])
     value = read(hook_path) if hook_path.exists() or hook_path.is_symlink() else {"hooks": {}}
     original_hooks = authority().digest(value)
     if not isinstance(value.get("hooks"), dict): raise ChatError("existing hook configuration is malformed")
@@ -244,7 +255,8 @@ def prepare(args):
     g = gate(); policy, pdigest = g.load_registered_policy(policy_name)
     a = authority()
     if a.MODES[args.mode] > a.MODES[policy["autonomy"]["maximum_mode"]]: raise ChatError("organization policy forbids this mode")
-    if args.mode == "safe": return safe(sid)
+    if args.mode == "safe":
+        print(safe(sid)); return
     if max(policy["minimum_approvals"]["R"+str(rank)] for rank in range(a.MODES[args.mode]+1)) > 1:
         raise ChatError("policy requires multiple independent owners; use the trusted external issuer instead of a one-user callback")
     if not args.target_profile: raise ChatError("prepare a validated target profile before asking for confirmation")
@@ -266,7 +278,7 @@ def prepare(args):
         trust = {"isolation_ref": args.isolation_ref, "credential_scope_ref": args.credential_scope_ref, "owner_evidence_ref": args.owner_evidence_ref}
         for item in trust.values(): a.text(item, "real Full Auto evidence reference", 4)
     a.text(args.executor, "executor", 3)
-    if selected and same_path(selected["workspace"], cwd) and selected["selection"]["mode"] == args.mode and not latch_path(sid).exists():
+    if selected and same_path(selected["workspace"], cwd) and selected["selection"]["mode"] == args.mode and selected["safety_epoch"] == safety_epoch(sid):
         try:
             existing = read(authority_directory()/(selected["selection"]["authorization_id"]+".json"))
             a.validate_record(existing, policy, pdigest, now)
@@ -280,7 +292,7 @@ def prepare(args):
         except (OSError, ValueError, KeyError, TypeError):
             pass  # New explicit confirmation is required; never silently renew.
     body = {"schema_version": "1.0", "runtime_id": runtime_id(), "session_id": sid, "workspace": cwd,
-            "profile_path": str(profile_path), "base_selection_digest": a.digest(selected), "created_at": now.isoformat(),
+            "profile_path": str(profile_path), "base_selection_digest": a.digest(selected), "base_safety_epoch": safety_epoch(sid), "created_at": now.isoformat(),
             "confirm_before": (now+timedelta(minutes=min(10, minutes))).isoformat(),
             "window_end": (now+timedelta(minutes=minutes)).isoformat(), "mode": args.mode,
             "policy": {"id": policy["policy_id"], "version": policy["version"], "digest": pdigest},
@@ -306,8 +318,9 @@ def render(body, token):
     trust_text = ("Проверенное владельцем окружение: изоляция "+trust["isolation_ref"]+", ограничения доступа "+trust["credential_scope_ref"]+", решение владельца "+trust["owner_evidence_ref"]+"\n") if trust else ""
     return (f"Режим: {body['mode']}\nОкружение: {body['target']['name']} ({body['target']['environment']}); владелец: {body['target']['owner']}\n"
             f"Действия: {', '.join(body['actions'])}\nРесурсы: {', '.join(body['scope'])}\n"
-            f"Данные: {', '.join(body['data_classifications'])}; изменение состояния: {body['allow_stateful']}; внешние последствия: {body['allow_external_side_effects']}\n"
+            f"Данные: {', '.join(body['data_classifications'])}; изменение состояния: {'разрешено' if body['allow_stateful'] else 'не разрешено'}; внешние последствия: {'разрешены' if body['allow_external_side_effects'] else 'не разрешены'}\n"
             f"Срок: после подтверждения до {body['window_end']}\nПолитика: {body['policy']['id']}; исполнитель: {body['executor']}\n"
+            f"Подтвердить до: {body['confirm_before']}\n"
             f"Рабочая область: {body['workspace']}\n"+trust_text+
             "Разрушительные/необратимые действия и выход за границы требуют отдельного допуска. Проверка, восстановление и журнал сохраняются.\n"
             f"Для одного подтверждения ответьте: Подтверждаю границы {token}\nДля отмены: Safe")
@@ -315,8 +328,8 @@ def render(body, token):
 
 def safe(sid=None):
     sid = session_id(sid)
-    atomic_write(latch_path(sid), {"safe": True, "session_id": sid})
-    print("SAFE: higher-mode launches are disabled for this session; no confirmation required.")
+    atomic_write(latch_path(sid), {"safe": True, "session_id": sid, "nonce": uuid.uuid4().hex})
+    return "SAFE: higher-mode launches are disabled for this session; no confirmation required."
 
 
 def status(sid=None):
@@ -339,6 +352,7 @@ def status(sid=None):
             policy, pdigest = gate().load_registered_policy(settings["policy"])
             authority().validate_record(record, policy, pdigest, datetime.now(timezone.utc))
             if authority().digest(record) != selected["selection"]["authorization_digest"]: raise ChatError("authority changed")
+            if profile_digest(selected["profile_path"]) != record["target"]["profile_digest"]: raise ChatError("target profile changed; prepare new boundaries")
         print(json.dumps(selected, ensure_ascii=False, sort_keys=True))
 
 
@@ -370,24 +384,32 @@ def host_event(event):
     normalized = " ".join(prompt.strip().split())
     match = CONFIRM.fullmatch(normalized)
     if not match and normalized.casefold() not in SAFE_MESSAGES: return None
+    if not match:
+        safe(sid)  # Cancellation must restrict immediately, even if issuance owns the lock.
     support = module("chat_host_lock", ROOT/"tools/runtime_lock.py")
-    with support.runtime_lock(ROOT.parent/(".chat-coordination-"+runtime_id()[:16])):
+    try:
+        lock = support.runtime_lock(ROOT.parent/(".chat-coordination-"+runtime_id()[:16]))
+        lock.__enter__()
+    except support.RuntimeLockError:
+        if not match: return "SAFE: restriction applied immediately; issuer metadata cleanup is pending. Previously prepared higher-mode plans are blocked."
+        raise
+    try:
         previous = raw_selection(sid)
         now = datetime.now(timezone.utc); a = authority()
         if not match:
             revoke_record(previous)
             value = {"schema_version": "1.0", "runtime_id": runtime_id(), "session_id": sid, "workspace": cwd,
                      "selection": {"mode": "safe", "authorization_id": None, "authorization_digest": None},
-                     "profile_path": None, "card_digest": None, "updated_at": now.isoformat()}
+                     "profile_path": None, "card_digest": None, "safety_epoch": safety_epoch(sid), "updated_at": now.isoformat()}
             atomic_write(selection_path(sid), value)
-            safe(sid)
             return "SAFE: user revoked the chat authority; previously prepared higher-mode plans must not execute."
         body = read(pending_path(sid)); a.exact(body, CARD_FIELDS, "chat boundaries"); card_digest = a.digest(body)
         if match[1].casefold() != card_digest[7:23]: raise ChatError("confirmation does not match current boundaries")
         if body.get("runtime_id") != runtime_id() or body.get("session_id") != sid or not same_path(body.get("workspace", ""), cwd): raise ChatError("confirmation belongs to another session/workspace")
+        if body["base_safety_epoch"] != safety_epoch(sid): raise ChatError("newer Safe cancellation wins; prepare new boundaries")
+        if profile_digest(body["profile_path"]) != body["target"]["profile_digest"]: raise ChatError("profile changed after preparation")
         # A duplicate confirmation never extends permission or revives a revoked selection.
         if previous and previous["card_digest"] == card_digest and previous["selection"]["mode"] != "safe":
-            if latch_path(sid).exists(): raise ChatError("Safe cancelled this admission; prepare new boundaries")
             record = read(authority_directory()/(previous["selection"]["authorization_id"]+".json"))
             policy, pdigest = gate().load_registered_policy(settings["policy"])
             a.validate_record(record, policy, pdigest, now)
@@ -397,7 +419,6 @@ def host_event(event):
         if not a.timestamp(body["created_at"], "card created") <= now < a.timestamp(body["confirm_before"], "card expiry"): raise ChatError("confirmation card expired or not open")
         policy, pdigest = gate().load_registered_policy(settings["policy"])
         if body["policy"] != {"id": policy["policy_id"], "version": policy["version"], "digest": pdigest}: raise ChatError("policy changed after preparation")
-        if profile_digest(body["profile_path"]) != body["target"]["profile_digest"]: raise ChatError("profile changed after preparation")
         identifier = "authority-chat-"+session_key(sid)[:12]+"-"+match[1].casefold()
         path = authority_directory()/(identifier+".json")
         if path.exists():
@@ -416,10 +437,13 @@ def host_event(event):
         revoke_record(previous)
         value = {"schema_version": "1.0", "runtime_id": runtime_id(), "session_id": sid, "workspace": cwd,
                  "selection": {"mode": body["mode"], "authorization_id": identifier, "authorization_digest": a.digest(record)},
-                 "profile_path": body["profile_path"], "card_digest": card_digest, "updated_at": now.isoformat()}
+                 "profile_path": body["profile_path"], "card_digest": card_digest, "safety_epoch": body["base_safety_epoch"], "updated_at": now.isoformat()}
         atomic_write(selection_path(sid), value)
-        if latch_path(sid).exists(): latch_path(sid).unlink()
+        if safety_epoch(sid) != body["base_safety_epoch"]:
+            return "SAFE: a newer cancellation wins over this confirmation; higher-mode launches remain blocked."
         return "ACTIVE: "+body["mode"]+" until "+record["window_end"]+". Reuse these boundaries without new human questions; retain fresh gate/recovery/verification/journal checks."
+    finally:
+        lock.__exit__(None, None, None)
 
 
 def main():
@@ -442,7 +466,7 @@ def main():
     try:
         if args.command == "setup": setup(args.codex_home, args.policy, args.apply)
         elif args.command == "prepare": prepare(args)
-        elif args.command == "safe": safe(args.session_id)
+        elif args.command == "safe": print(safe(args.session_id))
         else: status(args.session_id)
         return 0
     except ChatError as error:

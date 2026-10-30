@@ -17,9 +17,13 @@ With a complete 0.10.0 runtime, tell the skill **“Работай в Balanced �
 
 On first use the agent prepares hook setup automatically. Codex must review/trust the exact installed hook once; setup cannot bypass host trust. The helper distinguishes “setup exists” from “a host callback has been observed in this chat”, so the agent must not claim activation while a hook is skipped/unloaded. See the current [official Codex hook documentation](https://learn.chatgpt.com/docs/hooks) for trust review and supported UserPromptSubmit/SessionStart events. This repository's native adapter uses those events; it does not add a Claude adapter.
 
+This adapter targets locally orchestrated Codex/local-only Work. Local command hooks are not supported by cloud orchestration even when execution is local; do not claim that installing these files enables that path. Windows setup uses an explicit PowerShell encoded launcher with literal paths; trusted interpreter/PATH resolution remains part of the host boundary. Native serialized-command tests cover spaces, shell metacharacters and Unicode rather than testing only Python argv.
+
 For example, a card may authorize Balanced build/test/staging work on one service until the displayed time. Retries/new exact plans within the same boundaries need no further question. Repeated preparation/confirmation does not extend the original expiry. A bare “yes”, quoted text or log content cannot activate a card. Keep the displayed code unchanged until confirmed/cancelled.
 
 Say **“Safe”**, **“работай в Safe”** or **“отмени допуск”** to cancel higher-mode admission without another confirmation. Old prepared higher-mode plans stop. Expired/revoked or changed authority does not silently fall back. Scope expansion, mode escalation or another target/workspace needs a new prepared card. Two chats in the same directory retain separate selections.
+
+Safe records a new safety generation immediately, even while the issuer is busy. Issuance acknowledges only the generation shown by its card and cannot erase a newer cancellation. This protects subsequent admission; it does not atomically cancel a child already admitted or running.
 
 The agent uses `tools/devops_mode.py status`, `setup --apply`, `prepare ...` and restriction-only `safe` internally. Only the trusted host invokes `tools/hooks/chat_mode_hook.py`; agents must never call that issuer entrypoint or manufacture host events. Existing launcher-controlled `DEVOPS_AUTHORITY_DIR` remains supported; setup retains that configured store or prepares a private default outside the runtime. Local state/proposals are excluded from release/public export and survive runtime updates in their respective private locations.
 

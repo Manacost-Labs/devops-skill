@@ -352,6 +352,8 @@ class ChatModeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.profile.write_bytes(self.profile.read_bytes().replace(b"example-lab", b"changed-lab"))
         self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
+        self.assertNotEqual(self.cli("tools/devops_mode.py", "status").returncode, 0)
+        self.assertNotIn("ALREADY ACTIVE", self.confirm().stdout)
 
     def test_concurrent_same_confirmation_issues_once_with_fixed_expiry(self):
         from concurrent.futures import ThreadPoolExecutor
@@ -361,3 +363,64 @@ class ChatModeTests(unittest.TestCase):
         self.assertTrue(any("ACTIVE:" in output for output in outputs))
         self.assertEqual(len(list((self.state/"authorities").glob("*.json"))), 1)
         self.assertEqual(json.loads(self.grant().read_text())["window_end"], body["window_end"])
+
+    def test_safe_under_issuer_lock_contention_blocks_old_plan_immediately(self):
+        self.prepare(); self.confirm()
+        result, path, marker, argv = self.plan()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        spec = importlib.util.spec_from_file_location("synthetic_contention_chat", self.runtime/"devops-platform-contracts/scripts/chat_modes.py")
+        chat = importlib.util.module_from_spec(spec); spec.loader.exec_module(chat)
+        support = chat.module("synthetic_contention_lock", self.runtime/"tools/runtime_lock.py")
+        with support.runtime_lock(self.runtime.parent/(".chat-coordination-"+chat.runtime_id()[:16])):
+            self.assertIn("SAFE:", self.hook("Safe").stdout)
+            self.assertEqual(self.execute(path, argv).returncode, 3)
+        self.assertFalse(marker.exists())
+
+    def test_new_safe_after_selection_publication_wins_without_deleting_epoch(self):
+        self.prepare()
+        spec = importlib.util.spec_from_file_location("synthetic_safe_race_chat", self.runtime/"devops-platform-contracts/scripts/chat_modes.py")
+        chat = importlib.util.module_from_spec(spec); spec.loader.exec_module(chat)
+        write = chat.atomic_write
+        def cancel_after_publication(path, value):
+            write(path, value)
+            if path == chat.selection_path(self.sid):
+                cancelled = self.cli("tools/devops_mode.py", "safe")
+                self.assertEqual(cancelled.returncode, 0, cancelled.stdout)
+        event = {"session_id": self.sid, "cwd": str(self.workspace), "hook_event_name": "UserPromptSubmit",
+                 "turn_id": "synthetic-race-turn", "prompt": "Подтверждаю границы "+digest(self.pending())[7:23]}
+        with mock.patch.dict(os.environ, self.env, clear=True), mock.patch.object(chat, "atomic_write", side_effect=cancel_after_publication):
+            self.assertIn("SAFE:", chat.host_event(event))
+        self.assertTrue(chat.latch_path(self.sid).is_file())
+        result, path, marker, argv = self.plan()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertEqual(json.loads(path.read_text())["autonomy"]["mode"], "safe")
+        self.assertEqual(self.execute(path, argv).returncode, 3); self.assertFalse(marker.exists())
+        self.confirm()  # Original code cannot clear the newer Safe generation.
+        self.assertIn('"mode": "safe"', self.cli("tools/devops_mode.py", "status").stdout)
+
+    def test_serialized_hook_command_handles_shell_metacharacters_and_unicode(self):
+        moved = self.case/"runtime & shell 'quoted'"
+        self.runtime.rename(moved); self.runtime = moved
+        self.profile = moved/"devops-platform-contracts/templates/target-profile.yaml"
+        key = hashlib.sha256(os.path.normcase(str(self.runtime.resolve())).encode()).hexdigest()
+        self.state = self.runtime.parent/".devops-skill-state"/key[:16]
+        self.workspace = self.case/"рабочая область"; self.workspace.mkdir()
+        interpreter = sys.executable
+        if os.name == "nt":
+            venv = self.case/"Python & With Spaces"
+            made = subprocess.run([sys.executable, "-m", "venv", "--without-pip", "--system-site-packages", str(venv)], capture_output=True, text=True, timeout=30)
+            self.assertEqual(made.returncode, 0, made.stdout+made.stderr)
+            interpreter = str(venv/"Scripts/python.exe")
+        setup = subprocess.run([interpreter, str(self.runtime/"tools/devops_mode.py"), "setup", "--codex-home", str(self.codex_home), "--apply"],
+                               env=self.env, cwd=self.workspace, capture_output=True, text=True, timeout=30)
+        self.assertEqual(setup.returncode, 0, setup.stdout+setup.stderr)
+        command = json.loads((self.codex_home/"hooks.json").read_text())["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+        event = json.dumps({"session_id": self.sid, "cwd": str(self.workspace), "hook_event_name": "SessionStart"}, ensure_ascii=False)
+        invoked = subprocess.run(command, shell=True, input=event, env=self.env, cwd=self.workspace, capture_output=True, text=True, timeout=30)
+        self.assertEqual(invoked.returncode, 0, invoked.stdout+invoked.stderr)
+        self.assertEqual(json.loads(invoked.stdout)["hookSpecificOutput"]["hookEventName"], "SessionStart")
+        if os.name == "nt":
+            invoked = subprocess.run(["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], input=event,
+                                     env=self.env, cwd=self.workspace, capture_output=True, text=True, timeout=30)
+            self.assertEqual(invoked.returncode, 0, invoked.stdout+invoked.stderr)
+            self.assertEqual(json.loads(invoked.stdout)["hookSpecificOutput"]["hookEventName"], "SessionStart")

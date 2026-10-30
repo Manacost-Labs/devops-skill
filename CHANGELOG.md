@@ -10,6 +10,7 @@ All notable platform changes are recorded here. The project follows Semantic Ver
 - Prepare Codex hook configuration and empty private state without manual environment variables; preserve existing hooks with a backup. Host trust review remains explicit and cannot be bypassed.
 - Reuse pending/active boundaries without TTL renewal; stop old plans after Safe/revocation, identity/profile/policy drift or copied session authority. Preserve risk ceilings, separate destructive/irreversible admission, recovery, locks and journal checks.
 - Keep issuer execution separate from agent tools and document raw-hook/same-user/full-access trust limits. Do not claim independent identity, ACL or sandbox protection from a local callback.
+- Preserve newer Safe cancellation through issuer contention/publication races; encode Windows hook launch commands safely for spaces/metacharacters and retain literal Unicode input.
 
 ## 0.9.0 — 2026-10-30
 
