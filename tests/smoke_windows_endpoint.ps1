@@ -127,6 +127,7 @@ public static class DevopsJEAServiceTokenDiagnostic {
   [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
   [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
   [DllImport("advapi32.dll", SetLastError=true)] static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+  [DllImport("advapi32.dll")] static extern bool IsTokenRestricted(IntPtr token);
   [DllImport("advapi32.dll", SetLastError=true)] static extern bool GetTokenInformation(IntPtr token, int kind, IntPtr data, int size, out int needed);
   [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern bool LookupPrivilegeValue(string system, string name, out Luid value);
   public static string Inspect(int pid) {
@@ -142,7 +143,7 @@ public static class DevopsJEAServiceTokenDiagnostic {
       for(int i=0;i<count;i++) {
         IntPtr entry=IntPtr.Add(data,4+12*i);
         if(unchecked((uint)Marshal.ReadInt32(entry))==wanted.Low && Marshal.ReadInt32(entry,4)==wanted.High)
-          return "present;enabled="+((Marshal.ReadInt32(entry,8)&2)!=0);
+          return "present;enabled="+((Marshal.ReadInt32(entry,8)&2)!=0)+";restricted="+IsTokenRestricted(token);
       }
       return "absent";
     } finally {
@@ -158,7 +159,7 @@ public static class DevopsJEAServiceTokenDiagnostic {
     $liveOwner=Invoke-CimMethod -InputObject $liveProcess -MethodName GetOwnerSid
     $liveTcb=[DevopsJEAServiceTokenDiagnostic]::Inspect([int]$liveService.ProcessId)
     Require-Fixture ((Get-CimInstance Win32_Service -Filter "Name='WinRM'").ProcessId -eq $liveService.ProcessId) 'stable_service_process'
-    @{fixture_live_service=$true;account=$liveService.StartName;owner_sid=$liveOwner.Sid;service_type=$liveService.ServiceType;created=$liveProcess.CreationDate.ToUniversalTime().ToString('o');tcb=$liveTcb}|ConvertTo-Json -Compress
+    @{fixture_live_service=$true;account=$liveService.StartName;owner_sid=$liveOwner.Sid;service_type=$liveService.ServiceType;created=$liveProcess.CreationDate.ToUniversalTime().ToString('o');service_sid_type=(Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM).ServiceSidType;tcb=$liveTcb}|ConvertTo-Json -Compress
     $activePlugin=Get-WSManInstance -ResourceURI winrm/config/Plugin -SelectorSet @{Name=$endpoint}
     @{fixture_active_plugin=$true;virtual_account=[string]$activePlugin.RunAsVirtualAccount;worker_groups=[string]$activePlugin.RunAsVirtualAccountGroups;expected_group_sid=$createdGroup.SID.Value}|ConvertTo-Json -Compress
     Require-Fixture ([string]$activePlugin.RunAsVirtualAccount -ieq 'true' -and [string]$activePlugin.RunAsVirtualAccountGroups -ceq $qualifiedWorkerGroup) 'active_virtual_account_configuration'
@@ -178,6 +179,17 @@ public static class DevopsJEAServiceTokenDiagnostic {
     $mappedSid=([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier])
     Require-Fixture ($mappedSid.Value -ceq $createdUser.SID.Value) 'mapping_user_sid'
     $requestStart=Get-Date
+    # Read-only owner-side protocol comparison, never a bridge fallback or
+    # business-task retry. Same nonadmin principal, endpoint and verified TLS.
+    $nativeSession=$null
+    try{
+        $nativeSession=New-PSSession -ComputerName '127.0.0.1' -Port $port -UseSSL -ConfigurationName $endpoint -Credential $credential -Authentication Negotiate -ErrorAction Stop
+        Write-Output 'NATIVE_NEGOTIATE_PROBE session_opened'
+        $nativeBinding=Invoke-Command -Session $nativeSession -ScriptBlock {Get-DevopsEndpointBinding} -ErrorAction Stop
+        Require-Fixture (($nativeBinding|ConvertFrom-Json).binding_digest -ceq $binding) 'native_readonly_binding'
+        Write-Output 'NATIVE_NEGOTIATE_PROBE binding_verified'
+    }catch{Write-Output ('NATIVE_NEGOTIATE_PROBE refused '+$_.FullyQualifiedErrorId+' '+$_.Exception.Message.Substring(0,[Math]::Min(1200,$_.Exception.Message.Length)))}
+    finally{if($nativeSession){Remove-PSSession -Session $nativeSession}}
     # Require real named-endpoint binding before any task dispatch. The
     # credential mapping and service account remain unchanged across it.
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') probe-binding --folder $root
@@ -200,7 +212,8 @@ public static class DevopsJEAServiceTokenDiagnostic {
     try{
         foreach($event in @(Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625;StartTime=$requestStart} -MaxEvents 16 -ErrorAction Stop)){
             $data=@{};foreach($entry in ([xml]$event.ToXml()).Event.EventData.Data){$data[$entry.Name]=[string]$entry.'#text'}
-            if($data['TargetUserName'] -ieq $name){@{fixture_logon_failure=$true;at=$event.TimeCreated.ToUniversalTime().ToString('o');status=$data['Status'];substatus=$data['SubStatus'];logon_type=$data['LogonType']}|ConvertTo-Json -Compress}
+            $ownedVa=$data['TargetUserName'] -imatch ('^WinRM[ _]VA_[0-9]+_(?:[A-Za-z0-9.-]+_)?'+[regex]::Escape($name)+'(?:@localhost)?$')
+            if($data['TargetUserName'] -ieq $name -or $ownedVa){@{fixture_logon_failure=$true;virtual_account=$ownedVa;at=$event.TimeCreated.ToUniversalTime().ToString('o');status=$data['Status'];substatus=$data['SubStatus'];logon_type=$data['LogonType']}|ConvertTo-Json -Compress}
         }
     }catch{'FIXTURE_LOGON_DIAGNOSTIC_UNAVAILABLE'}
     throw
