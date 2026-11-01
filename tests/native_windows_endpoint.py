@@ -116,6 +116,10 @@ def exercise(folder):
     # filesystem cmdlet or a code evaluation primitive in this actual endpoint.
     denied_commands=(('Get-Item',{'LiteralPath':str(target)}),
         ('Invoke-Expression',{'Command':'Get-DevopsEndpointBinding'}),
+        ('Microsoft.PowerShell.Utility\\Invoke-Expression',{'Command':'Get-DevopsEndpointBinding'}),
+        ('Get-CimInstance',{'ClassName':'Win32_OperatingSystem'}),
+        ('CimCmdlets\\Get-CimInstance',{'ClassName':'Win32_OperatingSystem'}),
+        ('CimCmdlets\\Invoke-CimMethod',{'ClassName':'DevopsNonexistentFixture','MethodName':'DevopsNoOp'}),
         ('New-PSSession',{'ComputerName':'localhost','UseSSL':True,'Port':resource['port'],'ConfigurationName':resource['configuration_name']}))
     for command,parameters in denied_commands:
         with B.PSRP(resource) as client:

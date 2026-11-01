@@ -118,6 +118,15 @@ class WindowsBridgeTests(unittest.TestCase):
                 self.assertEqual(sent,[{'allow_redirects':False}])
 
     @unittest.skipUnless(os.name=='nt','Windows PowerShell 5.1 runtime fixture')
+    def test_fresh_no_autoload_has_private_dependencies_and_only_three_exports(self):
+        shell=Path(os.environ['SystemRoot'])/'System32/WindowsPowerShell/v1.0/powershell.exe'
+        environment=os.environ.copy();environment['PSModulePath']=str(shell.parent/'Modules')+';'+str(Path(os.environ['ProgramFiles'])/'WindowsPowerShell/Modules')
+        result=subprocess.run([str(shell),'-NoProfile','-NonInteractive','-File',str(ROOT/'tests/check_windows_endpoint_dependencies.ps1'),'-SourceRoot',str(ROOT)],
+            capture_output=True,text=True,timeout=30,env=environment)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn('WINDOWS_ENDPOINT_PRIVATE_DEPENDENCIES_PASS',result.stdout)
+
+    @unittest.skipUnless(os.name=='nt','Windows PowerShell 5.1 runtime fixture')
     def test_native_windows_journal_replay_and_quarantine(self):
         shell=Path(os.environ.get('SystemRoot','C:/Windows'))/'System32/WindowsPowerShell/v1.0/powershell.exe'
         environment=os.environ.copy()
