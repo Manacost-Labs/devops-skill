@@ -8,6 +8,7 @@ $dependencies=$endpointModule.Invoke({
         if(-not (Get-Command -Name $dependency -ErrorAction SilentlyContinue)){throw ('Missing private dependency: '+$dependency)}
     }
 })
-$exports=@($endpointModule.ExportedFunctions.Keys|Sort-Object)
+$exports=[string[]]@($endpointModule.ExportedFunctions.Keys)
+[Array]::Sort($exports,[StringComparer]::Ordinal)
 if(($exports -join ',') -cne 'Get-DevopsBoundTaskStatus,Get-DevopsEndpointBinding,Invoke-DevopsBoundTask' -or $endpointModule.ExportedCmdlets.Count -ne 0 -or $endpointModule.ExportedAliases.Count -ne 0){throw 'Endpoint export boundary changed'}
-Write-Output 'WINDOWS_ENDPOINT_PRIVATE_DEPENDENCIES_PASS: no autoload, no CIM query, exactly three exports'
+[Console]::WriteLine('WINDOWS_ENDPOINT_PRIVATE_DEPENDENCIES_PASS: no autoload, no CIM query, exactly three exports')
