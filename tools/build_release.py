@@ -31,6 +31,12 @@ TOOL_FILES = {
     "tools/broker_worker.py",
     "tools/devops_authorize.py",
     "tools/devops_guard_setup.py",
+    "tools/windows_bridge.py",
+    "tools/prepare_windows_endpoint.py",
+    "tools/install_windows_endpoint.ps1",
+    "tools/windows_agent_readiness.ps1",
+    "tools/windows_endpoint/DevopsEndpoint.psm1",
+    "tools/requirements-windows-bridge.txt",
     "tools/hooks/codex_pretooluse_gate.py",
 
     "tools/runtime_lock.py",

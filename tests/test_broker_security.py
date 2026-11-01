@@ -32,6 +32,38 @@ class BrokerContractTests(unittest.TestCase):
             self.assertEqual(result["request"]["change"]["risk"], "R2")
             self.assertEqual(result["signer_ids"], ["owner-key"])
 
+    def test_legacy_worker_input_is_byte_compatible(self):
+        request = call()
+        actual = C.worker_input(self.registry, request, self.assess(request))
+        self.assertEqual(actual, C.canonical({"parameters": request["parameters"], "target": self.registry["targets"]["fixture-target"]["resource"]}))
+
+    def test_context_protocol_requires_reregistered_task_and_fresh_grant(self):
+        self.registry["tasks"]["configure-task"]["worker_input"] = "context-v2"
+        with self.assertRaises(C.Denied):
+            self.assess()
+        self.grant = grant(self.registry, self.keys)
+        request = call()
+        admitted = self.assess(request)
+        value = C.decode(C.worker_input(self.registry, request, admitted))
+        self.assertEqual(value["schema_version"], "2.0")
+        self.assertEqual(value["context"]["operation_id"], request["operation_id"])
+        self.assertEqual(value["context"]["call_digest"], admitted["call_digest"])
+        self.assertEqual(value["context"]["target_digest"], C.digest(value["target"]))
+        self.assertEqual(value["context"]["parameters_digest"], C.digest(request["parameters"]))
+        self.assertEqual(value["context"]["expires"], admitted["request"]["execution"]["window_end"])
+        with self.assertRaises(C.Denied):
+            C.worker_input(self.registry, request, self.assess(request, preparation=True))
+
+    def test_worker_context_cannot_be_injected_into_call_or_parameters(self):
+        for field in ("context", "worker_input", "expires", "call_digest"):
+            request = call(); request[field] = "forged"
+            with self.assertRaises(C.Denied): self.assess(request)
+            request = call(); request["parameters"][field] = "forged"
+            with self.assertRaises(C.Denied): self.assess(request)
+        for value in (None, [], "context-v3"):
+            self.registry["tasks"]["configure-task"]["worker_input"] = value
+            with self.assertRaises(C.Denied): C.validate_registry(self.registry)
+
     def test_caller_cannot_supply_risk_argv_target_effects_or_approval_labels(self):
         for field, value in (("risk", "R0"), ("argv", ["python", "-c", "write()"]), ("target", "other"), ("scope", ["all"]), ("destructive", False), ("approvals", [{"approver": "user:invented"}]), ("env", {"DEVOPS_AUTHORITY_DIR": "/fake"})):
             request = call(); request[field] = value

@@ -468,6 +468,10 @@ class Broker:
             raise C.Denied("target outcome requires owner reconciliation")
         run_dir = self.worker_dir / (call["operation_id"] + "-" + uuid.uuid4().hex)
         argv, environment, payload = self.snapshot(result["task"], registry, call, run_dir)
+        # Remote workers need admitted correlation/deadline bindings. Preserve
+        # the exact legacy payload unless the protected registry opts in.
+        if result["task"].get("worker_input", "legacy-v1") == "context-v2":
+            payload = C.worker_input(registry, call, result)
         entry = {"schema_version": "1.0", "operation_id": call["operation_id"], "call_digest": result["call_digest"], "subject": subject, "principal": self.clients[subject]["principal"],
                  "registry_digest": result["registry_digest"], "grant_digest": result["grant_digest"], "signer_ids": result["signer_ids"],
                  "task_id": call["task_id"], "target_id": result["task"]["target_id"], "policy_digest": registry["policy_digest"], "intent_at": datetime.now(timezone.utc).isoformat(),

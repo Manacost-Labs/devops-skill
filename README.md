@@ -1,6 +1,6 @@
 # DevOps Skill Platform
 
-**Portfolio project · release candidate 0.15.0**
+**Portfolio project · release candidate 0.16.0**
 
 A modular, Codex-first platform for bounded, evidence-driven infrastructure work. It contains 23 composable skills under contract v2: a coordinator, a fail-closed policy and validation layer, and focused modules for hosts, directory identity, containers, edge, delivery, the GitHub control plane, data, cloud providers, Kubernetes, networking, access, reliability, and security governance.
 
@@ -61,6 +61,8 @@ Use absolute paths to runtime programs when working in another project. The rela
 ## How the pieces fit together
 
 Skills guide investigation and planning. The local gate checks contract consistency. A separately protected broker admits only registered tasks using externally signed, finite authority, then runs a verified snapshot under a separate worker identity. The agent has neither signing keys nor direct target credentials. See [protected execution and migration](docs/protected-execution.md).
+
+Platform 0.16 adds an optional [Windows PSRP/JEA task foundation](docs/windows-protected-execution.md), remote journals and owner-reviewed endpoint bundles. It does not install an AD executor or restrict the current desktop account. Enforcement requires independent owner setup, a fresh unprivileged Codex context and actual deployment acceptance.
 
 ## Autonomy modes
 
@@ -237,8 +239,8 @@ The following commands require a source checkout. Runtime release archives inten
 python devops-platform-contracts/scripts/validate_platform.py
 python -m unittest discover -s tests -v
 python tools/build_public_source.py --output ..\devops-skill-platform-public
-python tools/build_release.py --output dist/devops-skill-platform-0.15.0.zip
-python tools/verify_release.py dist/devops-skill-platform-0.15.0.zip
+python tools/build_release.py --output dist/devops-skill-platform-0.16.0.zip
+python tools/verify_release.py dist/devops-skill-platform-0.16.0.zip
 ```
 
 `PUBLIC-SOURCE-MANIFEST.json` is generated only in a fresh public-source export, not maintained as a stale receipt in the development tree. `build_public_source.py` creates a fresh allowlisted source tree without Git history, private operation records, lab artifacts, release archives, credentials, or target-specific tools. Use that clean tree—not an export of a private operations repository—as the source of a new public portfolio repository.

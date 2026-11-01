@@ -15,6 +15,7 @@ MANIFEST_KEYS = {"schema_version", "name", "version", "contract_version", "licen
 FILE_KEYS = {"path", "sha256", "size"}
 REQUIRED_ROOT_FILES = {"catalog.json", "requirements.txt", "README.md", "SECURITY.md", "LICENSE", "CONTRIBUTING.md", "GOVERNANCE.md", "SUPPORT.md", "CHANGELOG.md"}
 REQUIRED_TOOL_FILES = {"tools/broker_server.py", "tools/broker_worker.py", "tools/devops_authorize.py", "tools/devops_guard_setup.py", "tools/hooks/codex_pretooluse_gate.py", "tools/runtime_lock.py", "tools/devops_exec.py", "tools/devops_plan.py", "tools/devops_mode.py", "tools/hooks/chat_mode_hook.py", "tools/hooks/pretooluse_gate.py", "tools/install.py", "tools/verify_release.py"}
+REQUIRED_TOOL_FILES |= {"tools/windows_bridge.py", "tools/prepare_windows_endpoint.py", "tools/install_windows_endpoint.ps1", "tools/windows_agent_readiness.ps1", "tools/windows_endpoint/DevopsEndpoint.psm1", "tools/requirements-windows-bridge.txt"}
 ALLOWED_SKILL_SUFFIXES = {".sql", ".md", ".yaml", ".yml", ".json", ".py", ".ps1", ".txt"}
 SPECIAL_SKILL_FILES = {"host-audit"}
 CATALOG_KEYS = {"name", "version", "contract_version", "skills", "profiles"}

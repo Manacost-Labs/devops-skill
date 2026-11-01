@@ -45,6 +45,10 @@ Read `references/evidence-helpers.md` before use:
 
 ## Boundaries and completion
 
+For protected endpoint preparation and remote outcomes, read
+[protected-endpoint.md](references/protected-endpoint.md). The full runtime tools
+need separate owner provisioning; a bundle or privileged session is not authority.
+
 Read `references/module-handoffs.md`. AD/GPO object policy belongs to identity-directory; AD CS issuance/templates/CA recovery needs the PKI owner. This module owns host certificate installation/key access and host binding intent; edge owns public TLS/IIS user-path acceptance. Provider/IaC owners keep their APIs/source. Data resilience supports its declared database engines; SQL Server/Exchange/application-consistent recovery requires a confirmed specialist owner/runbook.
 
 Never disable firewall/Defender/UAC/TLS validation, enable SMB1/guest or grant Everyone Full Control to suppress a failure. Never reset ACLs recursively, format an unidentified disk, delete shadow copies, run an unknown task, clear logs or remove the sole key/backup as diagnosis.

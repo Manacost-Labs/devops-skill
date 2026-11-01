@@ -143,6 +143,10 @@ must preserve outstanding receipts, revocations and unknown outcomes.
 
 ## Evidence and limits
 
+Platform 0.16 adds opt-in `worker_input: context-v2` and a Windows PSRP/JEA
+foundation. Legacy input remains unchanged. Read [Windows integration and owner
+activation](windows-protected-execution.md) for remote journals and evidence limits.
+
 Cross-platform regression tests cover signatures, field injection, mode ceilings,
 signer scopes, replay, restriction races, durability failures and native hook wire
 format. Dedicated Linux CI uses a pinned read-only container with no network,

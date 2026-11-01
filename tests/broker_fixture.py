@@ -20,6 +20,14 @@ HANDLER = b'''import json, os, pathlib, sys, time
 mode = sys.argv[1]
 if mode == 'ignore': time.sleep(30)
 value = json.load(sys.stdin)
+if mode == 'context':
+    import hashlib
+    context = value['context']
+    canonical = lambda data: json.dumps(data,ensure_ascii=True,sort_keys=True,separators=(',',':')).encode('ascii')
+    expected = 'sha256:' + hashlib.sha256(canonical(value['parameters'])).hexdigest()
+    valid = value['schema_version']=='2.0' and context['operation_id']=='ops-native-context' and context['task_id']=='context-task' and context['parameters_digest']==expected
+    print(json.dumps({'state':'after' if valid else 'exposed'}))
+    raise SystemExit(0)
 path = pathlib.Path(value['target']['path'])
 if mode == 'apply': path.write_text(value['parameters']['value'], encoding='utf-8')
 if mode == 'fail':

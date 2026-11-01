@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.0 — 2026-10-30
+
+- Add registry-opted context-v2 worker input with admitted operation, digest,
+  epoch and deadline bindings; preserve legacy task input exactly.
+- Add strict worker-only HTTPS/PSRP and finite owner-registered Windows JEA
+  foundation with remote replay, intent, status and quarantine.
+- Add unsigned owner bundle preparation, byte-bound bootstrap and caller checks.
+  No AD task, credentials, signing authority or desktop policy is auto-installed.
+- Exercise native Linux worker context, Windows PS5 journal/error/refusal cases
+  and synthetic actual HTTPS/JEA connector restrictions in dedicated Windows CI.
+
 ## 0.15.0 — 2026-10-30
 
 - Remove arbitrary local argv execution and unsigned metadata admission.
