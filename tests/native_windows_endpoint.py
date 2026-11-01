@@ -196,7 +196,14 @@ def probe_binding(folder):
     from pypsrp.exceptions import AuthenticationError
     resource=B.decode((folder/'target.json').read_bytes())
     try:
-        with B.PSRP(resource) as client:binding=client.invoke('Get-DevopsEndpointBinding',{})
+        with B.PSRP(resource) as client:
+            pipeline=client.PowerShell(client.pool);pipeline.add_cmdlet('Get-DevopsEndpointBinding')
+            output=pipeline.invoke()
+            print('BINDING_PIPELINE_DIAGNOSTIC',pipeline.had_errors,[type(item).__name__ for item in output[:5]])
+            for error in pipeline.streams.error[:5]:
+                print('BINDING_PIPELINE_ERROR',getattr(error,'fq_error',''),str(error)[:1200])
+            B.require(not pipeline.had_errors and len(output)==1 and isinstance(output[0],str))
+            binding=B.decode(output[0])
         assert binding=={'target_id':'fixture-target','binding_digest':resource['binding_digest']}
         print('MAPPING_BINDING_PROBE authenticated_named_endpoint')
         return 0
