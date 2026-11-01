@@ -141,11 +141,18 @@ def exercise(folder):
         try:
             pool=RunspacePool(client.connection) if shell=='default' else WinRS(client.connection)
             pool.open()
-        except AuthenticationError:denied=True
-        except WSManFaultError as error:denied=error.code in (5,0x80070005)
-        except WinRMTransportError as error:denied=error.code in (401,403)
+        except AuthenticationError:
+            denied=True
+            print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'authentication_401')
+        except WSManFaultError as error:
+            denied=error.code in (5,0x80070005)
+            print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'fault',error.code,str(error.reason)[:700])
+        except WinRMTransportError as error:
+            denied=error.code in (401,403)
+            print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'http',error.code)
+        else:print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'opened')
         finally:client.connection.close()
-        assert denied,'unrestricted remote entry point accepted'
+        assert denied,('missing explicit unrestricted-entrypoint denial',shell)
     bad=packet(resource,operation='ops-native-bad-value');bad['parameters']['value']='unregistered';bad['context']['parameters_digest']=B.digest(bad['parameters'])
     assert B.run(bad)[1]!=0 and target.read_text()=='external-change'
     # Lose the reply after an actual remote task, then reconcile/read the
