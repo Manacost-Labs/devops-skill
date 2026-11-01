@@ -46,6 +46,17 @@ class Transport:
 class WindowsBridgeTests(unittest.TestCase):
     def setUp(self): Transport.calls=[];Transport.fail=False
 
+    def test_entrypoint_certificate_scope_denial_is_not_generic_missing_resource(self):
+        spec=importlib.util.spec_from_file_location('native_endpoint_denial_fixture',ROOT/'tests/native_windows_endpoint.py')
+        native=importlib.util.module_from_spec(spec);spec.loader.exec_module(native)
+        reason=('The WS-Management service cannot process the request. '
+            'There was no matching certificate mapping found for the requested resource URI.')
+        self.assertEqual(native.entrypoint_denial(2,reason),'certificate_uri_denied')
+        for code,text in ((2,'The system cannot find the file specified.'),(2,''),(2,None),(2150859262,reason),(500,reason),('2',reason)):
+            with self.subTest(code=code,reason=text):self.assertIsNone(native.entrypoint_denial(code,text))
+        self.assertEqual(native.entrypoint_denial(5,'Access is denied'),'access_denied')
+        self.assertEqual(native.entrypoint_denial(0x80070005,'Access is denied'),'access_denied')
+
     def test_validated_fixed_command_and_typed_parameters(self):
         result,code=B.run(packet(),transport=Transport)
         self.assertEqual((result,code),({'state':'after'},0))

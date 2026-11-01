@@ -15,6 +15,17 @@ spec=importlib.util.spec_from_file_location('native_windows_bridge',ROOT/'tools/
 B=importlib.util.module_from_spec(spec);spec.loader.exec_module(B)
 
 
+def entrypoint_denial(code, reason):
+    if type(code) is not int:return None
+    if code in (5,0x80070005):return 'access_denied'
+    # WinRM reports the exact-URI certificate-scope refusal as Win32 error2.
+    # Error2 alone can also mean an unrelated missing resource; never accept it.
+    mapping_reason=('The WS-Management service cannot process the request. '
+        'There was no matching certificate mapping found for the requested resource URI.')
+    if code==2 and isinstance(reason,str) and reason.strip()==mapping_reason:return 'certificate_uri_denied'
+    return None
+
+
 def certificates(folder, username):
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
@@ -145,8 +156,9 @@ def exercise(folder):
             denied=True
             print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'authentication_401')
         except WSManFaultError as error:
-            denied=error.code in (5,0x80070005)
-            print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'fault',error.code,str(error.reason)[:700])
+            classification=entrypoint_denial(error.code,error.reason)
+            denied=classification is not None
+            print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'fault',error.code,classification or 'unclassified',str(error.reason)[:700])
         except WinRMTransportError as error:
             denied=error.code in (401,403)
             print('DEFAULT_ENTRYPOINT_DIAGNOSTIC',shell,'http',error.code)
