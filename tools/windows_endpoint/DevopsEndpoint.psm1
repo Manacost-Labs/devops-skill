@@ -2,6 +2,10 @@
 # No target operation is included: owner-registered scripts are a separate review.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# JEA hides global utility functions and disables ordinary autoload paths.
+# Import OS-owned helpers into this module's private session state; callers
+# still receive only the three explicitly exported endpoint functions.
+Import-Module -Name (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -Scope Local -ErrorAction Stop
 $script:ConfigPath = Join-Path $PSScriptRoot 'endpoint.psd1'
 
 function Assert-Endpoint($Condition) {
