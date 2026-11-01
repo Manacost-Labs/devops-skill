@@ -113,6 +113,47 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     Restart-Service WinRM -Force
     Require-Fixture ((Get-CimInstance Win32_Service -Filter "Name='WinRM'").StartName -ceq 'LocalSystem') 'service_identity'
     Require-Fixture ((Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM).RequiredPrivileges -contains 'SeTcbPrivilege') 'service_virtual_account_privilege'
+    # Observe the *running* service token, not just registry/SCM intent. This
+    # helper only opens QUERY handles; it never duplicates/impersonates a token
+    # or changes a privilege. No token bytes or unrelated privilege list leave it.
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class DevopsJEAServiceTokenDiagnostic {
+  [StructLayout(LayoutKind.Sequential)] struct Luid { public uint Low; public int High; }
+  [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+  [DllImport("advapi32.dll", SetLastError=true)] static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+  [DllImport("advapi32.dll", SetLastError=true)] static extern bool GetTokenInformation(IntPtr token, int kind, IntPtr data, int size, out int needed);
+  [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern bool LookupPrivilegeValue(string system, string name, out Luid value);
+  public static string Inspect(int pid) {
+    IntPtr process=OpenProcess(0x1000,false,pid),token=IntPtr.Zero,data=IntPtr.Zero;
+    try {
+      if(process==IntPtr.Zero || !OpenProcessToken(process,8,out token)) return "query_failed:"+Marshal.GetLastWin32Error();
+      int needed; GetTokenInformation(token,3,IntPtr.Zero,0,out needed);
+      if(needed<4 || needed>65536) return "invalid_token_size";
+      data=Marshal.AllocHGlobal(needed);
+      if(!GetTokenInformation(token,3,data,needed,out needed)) return "query_failed:"+Marshal.GetLastWin32Error();
+      Luid wanted; if(!LookupPrivilegeValue(null,"SeTcbPrivilege",out wanted)) return "lookup_failed";
+      int count=Marshal.ReadInt32(data); if(count<0 || 4L+12L*count>needed) return "invalid_token_size";
+      for(int i=0;i<count;i++) {
+        IntPtr entry=IntPtr.Add(data,4+12*i);
+        if(unchecked((uint)Marshal.ReadInt32(entry))==wanted.Low && Marshal.ReadInt32(entry,4)==wanted.High)
+          return "present;enabled="+((Marshal.ReadInt32(entry,8)&2)!=0);
+      }
+      return "absent";
+    } finally {
+      if(data!=IntPtr.Zero) Marshal.FreeHGlobal(data);
+      if(token!=IntPtr.Zero) CloseHandle(token);
+      if(process!=IntPtr.Zero) CloseHandle(process);
+    }
+  }
+}
+'@
+    $liveService=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
+    $liveProcess=Get-CimInstance Win32_Process -Filter ('ProcessId='+$liveService.ProcessId)
+    $liveOwner=Invoke-CimMethod -InputObject $liveProcess -MethodName GetOwnerSid
+    @{fixture_live_service=$true;account=$liveService.StartName;owner_sid=$liveOwner.Sid;service_type=$liveService.ServiceType;tcb=[DevopsJEAServiceTokenDiagnostic]::Inspect([int]$liveService.ProcessId)}|ConvertTo-Json -Compress
     $observed=Get-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address='IP:127.0.0.1';Transport='HTTPS'}
     Require-Fixture ([int]$observed.Port -eq $port -and $observed.Hostname -ceq 'localhost' -and $observed.CertificateThumbprint -ieq $server.Thumbprint -and $observed.Enabled -ieq 'true')
     Require-Fixture (@($observed.ListeningOn).Count -eq 1 -and @($observed.ListeningOn)[0] -ceq '127.0.0.1')
