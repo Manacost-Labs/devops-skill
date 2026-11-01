@@ -13,6 +13,7 @@ $root=Join-Path $env:RUNNER_TEMP ('devops-jea-'+$tag)
 $name='DvJ'+$tag.Substring(0,10);$groupName='DvJW'+$tag.Substring(0,10);$endpoint='DevopsBound-'+$tag
 $createdUser=$null;$createdGroup=$null;$certs=@();$listenerPath=$null;$mappingPath=$null;$registered=$false;$configuredWinrm=$false
 $manageServiceLogon=$false;$serviceLogonSnapshot=@()
+$ownedCtlStore=$false;$ctlName='DevopsJEA-'+$tag;$ownedSslBinding=$null
 $fixtureStart=Get-Date;$requestStart=$fixtureStart
 $serviceBefore=(Get-Service WinRM).Status;$certificateBefore=$null
 $serviceConfigBefore=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
@@ -76,6 +77,12 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $certs+=@{Path=('Cert:\LocalMachine\TrustedPeople\'+$client.Thumbprint);Private=$false}
     $clientTrust=Import-Certificate -FilePath (Join-Path $root 'client.pem') -CertStoreLocation Cert:\LocalMachine\Root
     $certs+=@{Path=('Cert:\LocalMachine\Root\'+$clientTrust.Thumbprint);Private=$false}
+    # GH images have a large root store. Advertise only this owned client's
+    # issuer to avoid truncated certificate-authority selection lists.
+    Require-Fixture (-not(Test-Path -LiteralPath ('HKLM:\SOFTWARE\Microsoft\SystemCertificates\'+$ctlName))) 'unused_ctl_store'
+    $ownedCtlStore=$true
+    $ctl=[Security.Cryptography.X509Certificates.X509Store]::new($ctlName,[Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+    try{$ctl.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite);$ctl.Add($clientTrust)}finally{$ctl.Dispose()}
     $existing=@(Get-ChildItem WSMan:\localhost\Listener | Where-Object {$_.Keys -contains 'Transport=HTTPS' -and $_.Keys -contains 'Address=IP:127.0.0.1'})
     Require-Fixture ($existing.Count -eq 0)
     $portProbe=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$portProbe.Start();$port=$portProbe.LocalEndpoint.Port;$portProbe.Stop()
@@ -83,6 +90,22 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $listener=@(Get-ChildItem WSMan:\localhost\Listener | Where-Object {$_.Keys -contains 'Transport=HTTPS' -and $_.Keys -contains 'Address=IP:127.0.0.1'})
     Require-Fixture ($listener.Count -eq 1)
     $listenerPath=$listener[0].PSPath
+    $ownedBindings=@()
+    foreach($candidateBinding in @(('0.0.0.0:'+$port),('127.0.0.1:'+$port))){
+        $bindingJson=& (Join-Path $env:SystemRoot 'System32\netsh.exe') http show sslcert ('ipport='+$candidateBinding) json=enable 2>&1
+        if($LASTEXITCODE -eq 0){
+            $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
+            Require-Fixture ($bindingRecords.Count -eq 1) 'single_owned_ssl_binding'
+            $hashMatches=@($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint})
+            Require-Fixture ($hashMatches.Count -eq 1) 'owned_ssl_certificate'
+            $bindingGuid=[guid]::Parse([string]$bindingRecords[0].GuidString)
+            $ownedBindings+=@{Address=$candidateBinding;AppId=$bindingGuid.ToString('B')}
+        }
+    }
+    Require-Fixture ($ownedBindings.Count -eq 1) 'one_owned_ssl_binding'
+    $ownedSslBinding=$ownedBindings[0].Address
+    & (Join-Path $env:SystemRoot 'System32\netsh.exe') http update sslcert ('ipport='+$ownedSslBinding) ('appid='+$ownedBindings[0].AppId) ('certhash='+$server.Thumbprint) ('sslctlstorename='+$ctlName) | Out-Null
+    Require-Fixture ($LASTEXITCODE -eq 0) 'owned_ssl_ctl_selection'
     $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$name),$password)
     $subject=$name+'@localhost';$resourceUri='http://schemas.microsoft.com/powershell/'+$endpoint
     Require-Fixture ($client.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::UpnName,$false) -ceq $subject) 'client_upn'
@@ -244,6 +267,27 @@ public static class DevopsJEAServiceTokenDiagnostic {
     Invoke-FixtureCleanup 'endpoint' {if($registered){Unregister-PSSessionConfiguration -Name $endpoint -NoServiceRestart -Force | Out-Null}}
     Invoke-FixtureCleanup 'mapping' {if($mappingPath){Remove-Item -LiteralPath $mappingPath -Recurse -Force}}
     Invoke-FixtureCleanup 'listener' {if($listenerPath){Remove-Item -LiteralPath $listenerPath -Recurse -Force}}
+    Invoke-FixtureCleanup 'owned_ssl_binding' {if($ownedSslBinding){
+        $bindingJson=& (Join-Path $env:SystemRoot 'System32\netsh.exe') http show sslcert ('ipport='+$ownedSslBinding) json=enable 2>&1
+        if($LASTEXITCODE -eq 0){
+            $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
+            Require-Fixture ($bindingRecords.Count -eq 1 -and @($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint}).Count -eq 1) 'owned_ssl_cleanup_binding'
+            & (Join-Path $env:SystemRoot 'System32\netsh.exe') http delete sslcert ('ipport='+$ownedSslBinding) | Out-Null
+            Require-Fixture ($LASTEXITCODE -eq 0) 'delete_owned_ssl_binding'
+        }
+    }}
+    Invoke-FixtureCleanup 'owned_ctl_store' {if($ownedCtlStore){
+        Require-Fixture ($ctlName -cmatch '^DevopsJEA-[a-f0-9]{32}$') 'owned_ctl_store_name'
+        $ctl=[Security.Cryptography.X509Certificates.X509Store]::new($ctlName,[Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+        try{
+            $ctl.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+            Require-Fixture (@($ctl.Certificates|Where-Object {$_.Thumbprint -ine $client.Thumbprint}).Count -eq 0) 'owned_ctl_contents'
+            $ctl.Remove($client)
+            Require-Fixture ($ctl.Certificates.Count -eq 0) 'empty_owned_ctl_store'
+        }finally{$ctl.Dispose()}
+        $ctlRegistryPath='HKLM:\SOFTWARE\Microsoft\SystemCertificates\'+$ctlName
+        if(Test-Path -LiteralPath $ctlRegistryPath){Remove-Item -LiteralPath $ctlRegistryPath -Recurse -Force}
+    }}
     Invoke-FixtureCleanup 'certificate_auth' {if($null -ne $certificateBefore){Set-Item WSMan:\localhost\Service\Auth\Certificate -Value $certificateBefore}}
     foreach($cert in $certs){Invoke-FixtureCleanup 'certificate' {if($cert.Private){Remove-Item -LiteralPath $cert.Path -DeleteKey -Force}else{Remove-Item -LiteralPath $cert.Path -Force}}}
     Invoke-FixtureCleanup 'user' {if($createdUser){Require-Fixture ((Get-LocalUser -Name $name).SID.Value -ceq $createdUser.SID.Value);Remove-LocalUser -Name $name}}
