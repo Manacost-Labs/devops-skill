@@ -55,19 +55,7 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
 '@.Replace('__VALUE_PATH__',$valuePath) | Set-Content -LiteralPath (Join-Path $moduleRoot 'canary-write.ps1') -Encoding utf8
     $taskHash='sha256:'+(Get-FileHash -LiteralPath (Join-Path $moduleRoot 'canary-write.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
     $binding='sha256:'+('b'*64)
-    # JEA virtual-account prerequisites belong to the trusted WinRM service,
-    # never the connector. Configure through SCM before mapping credentials:
-    # Register-PSSessionConfiguration can otherwise change its account after
-    # those mappings were encrypted, invalidating them.
-    & (Join-Path $env:SystemRoot 'System32\sc.exe') config WinRM type= own obj= LocalSystem | Out-Null
-    Require-Fixture ($LASTEXITCODE -eq 0) 'configure_owned_service'
-    $configuredWinrm=$true
-    $requiredPrivileges=@($requiredPrivilegesBefore+@('SeTcbPrivilege') | Select-Object -Unique)
-    & (Join-Path $env:SystemRoot 'System32\sc.exe') privs WinRM ($requiredPrivileges -join '/') | Out-Null
-    Require-Fixture ($LASTEXITCODE -eq 0) 'configure_owned_service_privileges'
-    Restart-Service WinRM -Force
-    Require-Fixture ((Get-CimInstance Win32_Service -Filter "Name='WinRM'").StartName -ceq 'LocalSystem') 'service_identity'
-    Require-Fixture ((Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM).RequiredPrivileges -contains 'SeTcbPrivilege') 'service_virtual_account_privilege'
+    Start-Service WinRM
     $certificateBefore=(Get-Item WSMan:\localhost\Service\Auth\Certificate).Value
     Set-Item WSMan:\localhost\Service\Auth\Certificate -Value $true
     $ca=Import-Certificate -FilePath (Join-Path $root 'ca.pem') -CertStoreLocation Cert:\LocalMachine\Root
@@ -87,10 +75,6 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $listenerPath=$listener[0].PSPath
     $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$name),$password)
     $subject=$name+'@localhost';$resourceUri='http://schemas.microsoft.com/powershell/'+$endpoint
-    $existingMappings=@(Get-ChildItem WSMan:\localhost\ClientCertificate | Where-Object {$_.Keys -contains ('Subject='+$subject) -and $_.Keys -contains ('URI='+$resourceUri) -and $_.Keys -contains ('Issuer='+$client.Thumbprint)})
-    Require-Fixture ($existingMappings.Count -eq 0)
-    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $client.Thumbprint -Credential $credential -Force
-    $mappingPath=$mapping.PSPath
     Require-Fixture ($client.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::UpnName,$false) -ceq $subject) 'client_upn'
     $chain=[Security.Cryptography.X509Certificates.X509Chain]::new()
     try{
@@ -98,12 +82,6 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
         if(-not $chainBuilt){@{fixture_chain_status=@($chain.ChainStatus|ForEach-Object {$_.Status.ToString()})}|ConvertTo-Json -Compress}
         Require-Fixture ($chainBuilt -and $chain.ChainElements[$chain.ChainElements.Count-1].Certificate.Thumbprint -ieq $client.Thumbprint) 'client_chain'
     }finally{$chain.Dispose()}
-    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\Enabled')).Value -ieq 'true') 'mapping_enabled'
-    $mappingUser=[string](Get-Item -LiteralPath ($mappingPath+'\UserName')).Value
-    Require-Fixture ($mappingUser -ieq $name -or $mappingUser -ieq ($env:COMPUTERNAME+'\'+$name)) 'mapping_user_name'
-    if($mappingUser -notmatch '\\'){$mappingUser=$env:COMPUTERNAME+'\'+$mappingUser}
-    $mappedSid=([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier])
-    Require-Fixture ($mappedSid.Value -ceq $createdUser.SID.Value) 'mapping_user_sid'
     # Match the exact IPv4 listener; localhost can select ::1 while HTTP.sys
     # has a port binding but WinRM has no matching IPv6 listener. The server
     # certificate explicitly includes the verified 127.0.0.1 IP SAN.
@@ -121,13 +99,35 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $sessionPath=Join-Path $moduleRoot 'endpoint.pssc'
     New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -RunAsVirtualAccount -RunAsVirtualAccountGroups @([string]$groupName) -ModulesToImport @([string](Join-Path $moduleRoot 'DevopsEndpoint.psm1')) -RoleDefinitions $roles
     Require-Fixture (Test-PSSessionConfigurationFile -Path $sessionPath)
+    # Registration can change WinRM's account/type/required privileges even on
+    # a partial failure. Restore its snapshot regardless of later cleanup.
+    $configuredWinrm=$true
     Register-PSSessionConfiguration -Name $endpoint -Path $sessionPath -NoServiceRestart -Force | Out-Null;$registered=$true
+    # Use SCM, after registration's own changes and before mapping credentials.
+    # These JEA prerequisites belong to the trusted service, not the connector.
+    & (Join-Path $env:SystemRoot 'System32\sc.exe') config WinRM type= own obj= LocalSystem | Out-Null
+    Require-Fixture ($LASTEXITCODE -eq 0) 'configure_owned_service'
+    $requiredPrivileges=@($requiredPrivilegesBefore+@('SeTcbPrivilege') | Select-Object -Unique)
+    & (Join-Path $env:SystemRoot 'System32\sc.exe') privs WinRM ($requiredPrivileges -join '/') | Out-Null
+    Require-Fixture ($LASTEXITCODE -eq 0) 'configure_owned_service_privileges'
     Restart-Service WinRM -Force
+    Require-Fixture ((Get-CimInstance Win32_Service -Filter "Name='WinRM'").StartName -ceq 'LocalSystem') 'service_identity'
+    Require-Fixture ((Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM).RequiredPrivileges -contains 'SeTcbPrivilege') 'service_virtual_account_privilege'
     $observed=Get-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address='IP:127.0.0.1';Transport='HTTPS'}
     Require-Fixture ([int]$observed.Port -eq $port -and $observed.Hostname -ceq 'localhost' -and $observed.CertificateThumbprint -ieq $server.Thumbprint -and $observed.Enabled -ieq 'true')
     Require-Fixture (@($observed.ListeningOn).Count -eq 1 -and @($observed.ListeningOn)[0] -ceq '127.0.0.1')
     Require-Fixture $server.HasPrivateKey
     Require-Fixture ((Get-Item WSMan:\localhost\Service\Auth\Certificate).Value -ieq 'true')
+    $existingMappings=@(Get-ChildItem WSMan:\localhost\ClientCertificate | Where-Object {$_.Keys -contains ('Subject='+$subject) -and $_.Keys -contains ('URI='+$resourceUri) -and $_.Keys -contains ('Issuer='+$client.Thumbprint)})
+    Require-Fixture ($existingMappings.Count -eq 0)
+    $mapping=New-Item WSMan:\localhost\ClientCertificate -Subject $subject -URI $resourceUri -Issuer $client.Thumbprint -Credential $credential -Force
+    $mappingPath=$mapping.PSPath
+    Require-Fixture ((Get-Item -LiteralPath ($mappingPath+'\Enabled')).Value -ieq 'true') 'mapping_enabled'
+    $mappingUser=[string](Get-Item -LiteralPath ($mappingPath+'\UserName')).Value
+    Require-Fixture ($mappingUser -ieq $name -or $mappingUser -ieq ($env:COMPUTERNAME+'\'+$name)) 'mapping_user_name'
+    if($mappingUser -notmatch '\\'){$mappingUser=$env:COMPUTERNAME+'\'+$mappingUser}
+    $mappedSid=([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier])
+    Require-Fixture ($mappedSid.Value -ceq $createdUser.SID.Value) 'mapping_user_sid'
     $requestStart=Get-Date
     # Require real named-endpoint binding before any task dispatch. The
     # credential mapping and service account remain unchanged across it.
@@ -156,23 +156,44 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     }catch{'FIXTURE_LOGON_DIAGNOSTIC_UNAVAILABLE'}
     throw
 }finally{
-    if($registered){Unregister-PSSessionConfiguration -Name $endpoint -NoServiceRestart -Force | Out-Null}
-    if($mappingPath){Remove-Item -LiteralPath $mappingPath -Recurse -Force}
-    if($listenerPath){Remove-Item -LiteralPath $listenerPath -Recurse -Force}
-    if($null -ne $certificateBefore){Set-Item WSMan:\localhost\Service\Auth\Certificate -Value $certificateBefore}
-    foreach($cert in $certs){if($cert.Private){Remove-Item -LiteralPath $cert.Path -DeleteKey -Force}else{Remove-Item -LiteralPath $cert.Path -Force}}
-    if($createdUser){Require-Fixture ((Get-LocalUser -Name $name).SID.Value -ceq $createdUser.SID.Value);Remove-LocalUser -Name $name}
-    if($createdGroup){Require-Fixture ((Get-LocalGroup -Name $groupName).SID.Value -ceq $createdGroup.SID.Value);Remove-LocalGroup -Name $groupName}
+    $script:cleanupFailures=New-Object 'Collections.Generic.List[string]'
+    function Invoke-FixtureCleanup([string]$Name,[scriptblock]$Step){
+        try{& $Step}catch{$script:cleanupFailures.Add($Name)}
+    }
+    Invoke-FixtureCleanup 'endpoint' {if($registered){Unregister-PSSessionConfiguration -Name $endpoint -NoServiceRestart -Force | Out-Null}}
+    Invoke-FixtureCleanup 'mapping' {if($mappingPath){Remove-Item -LiteralPath $mappingPath -Recurse -Force}}
+    Invoke-FixtureCleanup 'listener' {if($listenerPath){Remove-Item -LiteralPath $listenerPath -Recurse -Force}}
+    Invoke-FixtureCleanup 'certificate_auth' {if($null -ne $certificateBefore){Set-Item WSMan:\localhost\Service\Auth\Certificate -Value $certificateBefore}}
+    foreach($cert in $certs){Invoke-FixtureCleanup 'certificate' {if($cert.Private){Remove-Item -LiteralPath $cert.Path -DeleteKey -Force}else{Remove-Item -LiteralPath $cert.Path -Force}}}
+    Invoke-FixtureCleanup 'user' {if($createdUser){Require-Fixture ((Get-LocalUser -Name $name).SID.Value -ceq $createdUser.SID.Value);Remove-LocalUser -Name $name}}
+    Invoke-FixtureCleanup 'group' {if($createdGroup){Require-Fixture ((Get-LocalGroup -Name $groupName).SID.Value -ceq $createdGroup.SID.Value);Remove-LocalGroup -Name $groupName}}
     if($configuredWinrm){
         $restoreType=if($serviceRegistryBefore.Type -eq 16){'own'}else{'share'}
-        & (Join-Path $env:SystemRoot 'System32\sc.exe') config WinRM type= $restoreType obj= $serviceConfigBefore.StartName | Out-Null
-        Require-Fixture ($LASTEXITCODE -eq 0) 'restore_service_identity'
-        & (Join-Path $env:SystemRoot 'System32\sc.exe') privs WinRM ($requiredPrivilegesBefore -join '/') | Out-Null
-        Require-Fixture ($LASTEXITCODE -eq 0) 'restore_service_privileges'
-        Restart-Service WinRM -Force
-    }elseif($registered){Restart-Service WinRM -Force}
-    if($serviceBefore -eq 'Stopped'){Stop-Service WinRM -Force}
-    $resolved=[IO.Path]::GetFullPath($root);$parent=[IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\')+'\'
-    Require-Fixture ($resolved.StartsWith($parent,[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolved) -cmatch '^devops-jea-[a-f0-9]{32}$')
-    if(Test-Path -LiteralPath $resolved){Remove-Item -LiteralPath $resolved -Recurse -Force}
+        Invoke-FixtureCleanup 'service_identity' {
+            & (Join-Path $env:SystemRoot 'System32\sc.exe') config WinRM type= $restoreType obj= $serviceConfigBefore.StartName | Out-Null
+            Require-Fixture ($LASTEXITCODE -eq 0) 'restore_service_identity'
+        }
+        Invoke-FixtureCleanup 'service_privileges' {
+            & (Join-Path $env:SystemRoot 'System32\sc.exe') privs WinRM ($requiredPrivilegesBefore -join '/') | Out-Null
+            Require-Fixture ($LASTEXITCODE -eq 0) 'restore_service_privileges'
+        }
+    }
+    Invoke-FixtureCleanup 'service_restart' {if($configuredWinrm -or $registered){Restart-Service WinRM -Force}}
+    Invoke-FixtureCleanup 'service_restore_verification' {if($configuredWinrm){
+        $restored=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
+        $restoredRegistry=Get-ItemProperty -LiteralPath HKLM:\SYSTEM\CurrentControlSet\Services\WinRM
+        Require-Fixture ($restored.StartName -ceq $serviceConfigBefore.StartName -and $restored.ServiceType -ceq $serviceConfigBefore.ServiceType -and $restoredRegistry.Type -eq $serviceRegistryBefore.Type) 'restored_service_configuration'
+        Require-Fixture ((@($restoredRegistry.RequiredPrivileges|Sort-Object) -join ',') -ceq (@($requiredPrivilegesBefore|Sort-Object) -join ',')) 'restored_service_privileges'
+    }}
+    Invoke-FixtureCleanup 'service_running_state' {
+        if($serviceBefore -eq 'Stopped'){Stop-Service WinRM -Force}
+        Require-Fixture ((Get-Service WinRM).Status -eq $serviceBefore) 'restored_service_state'
+    }
+    Invoke-FixtureCleanup 'owned_files' {
+        $resolved=[IO.Path]::GetFullPath($root);$parent=[IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\')+'\'
+        Require-Fixture ($resolved.StartsWith($parent,[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolved) -cmatch '^devops-jea-[a-f0-9]{32}$')
+        if(Test-Path -LiteralPath $resolved){Remove-Item -LiteralPath $resolved -Recurse -Force}
+    }
+    if($script:cleanupFailures.Count -gt 0){throw ('Owned fixture cleanup failed: '+($script:cleanupFailures -join ','))}
+    Write-Output 'NATIVE_SERVICE_RESTORED: owned cleanup and captured service configuration verified'
 }
