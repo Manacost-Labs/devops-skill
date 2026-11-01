@@ -101,8 +101,7 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
             # This record contains public certificate/binding metadata only,
             # selected from the new owned loopback port, never a private key.
             Write-Output ('OWNED_SSL_BINDING_METADATA '+($bindingRecords[0]|ConvertTo-Json -Depth 5 -Compress))
-            $hashMatches=@($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint})
-            Require-Fixture ($hashMatches.Count -eq 1) 'owned_ssl_certificate'
+            Require-Fixture ($bindingRecords[0].IpPort -ceq $candidateBinding -and $bindingRecords[0].SslHash -ceq [Convert]::ToBase64String($server.GetCertHash())) 'owned_ssl_certificate'
             $bindingGuid=[guid]::Parse([string]$bindingRecords[0].GuidString)
             $ownedBindings+=@{Address=$candidateBinding;AppId=$bindingGuid.ToString('B')}
         }
@@ -111,6 +110,10 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     $ownedSslBinding=$ownedBindings[0].Address
     & (Join-Path $env:SystemRoot 'System32\netsh.exe') http update sslcert ('ipport='+$ownedSslBinding) ('appid='+$ownedBindings[0].AppId) ('certhash='+$server.Thumbprint) ('sslctlstorename='+$ctlName) | Out-Null
     Require-Fixture ($LASTEXITCODE -eq 0) 'owned_ssl_ctl_selection'
+    $bindingJson=& (Join-Path $env:SystemRoot 'System32\netsh.exe') http show sslcert ('ipport='+$ownedSslBinding) json=enable
+    Require-Fixture ($LASTEXITCODE -eq 0) 'owned_ssl_ctl_readback'
+    $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
+    Require-Fixture ($bindingRecords.Count -eq 1 -and $bindingRecords[0].IpPort -ceq $ownedSslBinding -and $bindingRecords[0].SslHash -ceq [Convert]::ToBase64String($server.GetCertHash()) -and $bindingRecords[0].DefaultSslCtlStoreName -ceq $ctlName) 'owned_ssl_ctl_bound'
     $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$name),$password)
     $subject=$name+'@localhost';$resourceUri='http://schemas.microsoft.com/powershell/'+$endpoint
     Require-Fixture ($client.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::UpnName,$false) -ceq $subject) 'client_upn'
@@ -278,7 +281,7 @@ public static class DevopsJEAServiceTokenDiagnostic {
         $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
         Require-Fixture ($bindingRecords.Count -le 1) 'owned_ssl_cleanup_count'
         if($bindingRecords.Count -eq 1){
-            Require-Fixture (@($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint}).Count -eq 1) 'owned_ssl_cleanup_binding'
+            Require-Fixture ($bindingRecords[0].IpPort -ceq $ownedSslBinding -and $bindingRecords[0].SslHash -ceq [Convert]::ToBase64String($server.GetCertHash())) 'owned_ssl_cleanup_binding'
             & (Join-Path $env:SystemRoot 'System32\netsh.exe') http delete sslcert ('ipport='+$ownedSslBinding) | Out-Null
             Require-Fixture ($LASTEXITCODE -eq 0) 'delete_owned_ssl_binding'
         }
