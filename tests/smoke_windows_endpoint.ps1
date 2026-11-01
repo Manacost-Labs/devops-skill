@@ -98,6 +98,9 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
             @{fixture_ssl_candidate=$candidateBinding;records=$bindingRecords.Count}|ConvertTo-Json -Compress
             if($bindingRecords.Count -eq 0){continue}
             Require-Fixture ($bindingRecords.Count -eq 1) 'single_owned_ssl_binding'
+            # This record contains public certificate/binding metadata only,
+            # selected from the new owned loopback port, never a private key.
+            Write-Output ('OWNED_SSL_BINDING_METADATA '+($bindingRecords[0]|ConvertTo-Json -Depth 5 -Compress))
             $hashMatches=@($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint})
             Require-Fixture ($hashMatches.Count -eq 1) 'owned_ssl_certificate'
             $bindingGuid=[guid]::Parse([string]$bindingRecords[0].GuidString)
