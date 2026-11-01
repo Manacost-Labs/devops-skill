@@ -188,6 +188,15 @@ public static class DevopsJEAServiceTokenDiagnostic {
     if($mappingUser -notmatch '\\'){$mappingUser=$env:COMPUTERNAME+'\'+$mappingUser}
     $mappedSid=([Security.Principal.NTAccount]::new($mappingUser)).Translate([Security.Principal.SecurityIdentifier])
     Require-Fixture ($mappedSid.Value -ceq $createdUser.SID.Value) 'mapping_user_sid'
+    # The transport maintainer's native CI setup finishes with one stable-
+    # account restart after certificate mapping to clear WinRM setup caches.
+    # This is before any readonly probe/task, and never a task retry.
+    Restart-Service WinRM -Force
+    $finalService=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
+    $finalProcess=Get-CimInstance Win32_Process -Filter ('ProcessId='+$finalService.ProcessId)
+    $finalOwner=Invoke-CimMethod -InputObject $finalProcess -MethodName GetOwnerSid
+    Require-Fixture ($finalService.StartName -ceq 'LocalSystem' -and $finalOwner.Sid -ceq 'S-1-5-18') 'final_service_identity'
+    @{fixture_final_service=$true;tcb=[DevopsJEAServiceTokenDiagnostic]::Inspect([int]$finalService.ProcessId);created=$finalProcess.CreationDate.ToUniversalTime().ToString('o')}|ConvertTo-Json -Compress
     $requestStart=Get-Date
     # Read-only owner-side protocol comparison, never a bridge fallback or
     # business-task retry. Same nonadmin principal, endpoint and verified TLS.
