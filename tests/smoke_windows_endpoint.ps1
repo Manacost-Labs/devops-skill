@@ -95,6 +95,8 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
         $bindingJson=& (Join-Path $env:SystemRoot 'System32\netsh.exe') http show sslcert ('ipport='+$candidateBinding) json=enable 2>&1
         if($LASTEXITCODE -eq 0){
             $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
+            @{fixture_ssl_candidate=$candidateBinding;records=$bindingRecords.Count}|ConvertTo-Json -Compress
+            if($bindingRecords.Count -eq 0){continue}
             Require-Fixture ($bindingRecords.Count -eq 1) 'single_owned_ssl_binding'
             $hashMatches=@($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint})
             Require-Fixture ($hashMatches.Count -eq 1) 'owned_ssl_certificate'
@@ -269,12 +271,16 @@ public static class DevopsJEAServiceTokenDiagnostic {
     Invoke-FixtureCleanup 'listener' {if($listenerPath){Remove-Item -LiteralPath $listenerPath -Recurse -Force}}
     Invoke-FixtureCleanup 'owned_ssl_binding' {if($ownedSslBinding){
         $bindingJson=& (Join-Path $env:SystemRoot 'System32\netsh.exe') http show sslcert ('ipport='+$ownedSslBinding) json=enable 2>&1
-        if($LASTEXITCODE -eq 0){
-            $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
-            Require-Fixture ($bindingRecords.Count -eq 1 -and @($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint}).Count -eq 1) 'owned_ssl_cleanup_binding'
+        Require-Fixture ($LASTEXITCODE -eq 0) 'owned_ssl_cleanup_inventory'
+        $bindingRecords=@(($bindingJson|ConvertFrom-Json).SslCertificateBindings)
+        Require-Fixture ($bindingRecords.Count -le 1) 'owned_ssl_cleanup_count'
+        if($bindingRecords.Count -eq 1){
+            Require-Fixture (@($bindingRecords[0].PSObject.Properties|Where-Object {$_.Value -is [string] -and ($_.Value -replace '\s','') -ieq $server.Thumbprint}).Count -eq 1) 'owned_ssl_cleanup_binding'
             & (Join-Path $env:SystemRoot 'System32\netsh.exe') http delete sslcert ('ipport='+$ownedSslBinding) | Out-Null
             Require-Fixture ($LASTEXITCODE -eq 0) 'delete_owned_ssl_binding'
         }
+        $bindingJson=& (Join-Path $env:SystemRoot 'System32\netsh.exe') http show sslcert ('ipport='+$ownedSslBinding) json=enable 2>&1
+        Require-Fixture ($LASTEXITCODE -eq 0 -and @(($bindingJson|ConvertFrom-Json).SslCertificateBindings).Count -eq 0) 'owned_ssl_binding_absent'
     }}
     Invoke-FixtureCleanup 'owned_ctl_store' {if($ownedCtlStore){
         Require-Fixture ($ctlName -cmatch '^DevopsJEA-[a-f0-9]{32}$') 'owned_ctl_store_name'
