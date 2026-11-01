@@ -12,6 +12,7 @@ $tag=[guid]::NewGuid().ToString('N')
 $root=Join-Path $env:RUNNER_TEMP ('devops-jea-'+$tag)
 $name='DvJ'+$tag.Substring(0,10);$groupName='DvJW'+$tag.Substring(0,10);$endpoint='DevopsBound-'+$tag
 $createdUser=$null;$createdGroup=$null;$certs=@();$listenerPath=$null;$mappingPath=$null;$registered=$false;$configuredWinrm=$false
+$manageServiceLogon=$false;$serviceLogonSnapshot=@()
 $fixtureStart=Get-Date;$requestStart=$fixtureStart
 $serviceBefore=(Get-Service WinRM).Status;$certificateBefore=$null
 $serviceConfigBefore=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
@@ -34,6 +35,15 @@ try{
     $createdUser=New-LocalUser -Name $name -Password $password -Description ('DevopsJEA '+$tag)
     Add-LocalGroupMember -SID ([Security.Principal.SecurityIdentifier]::new('S-1-5-32-545')) -Member $createdUser
     $createdGroup=New-LocalGroup -Name $groupName -Description ('DevopsJEA '+$tag)
+    . (Join-Path $SourceRoot 'tests/owned_service_logon_right.ps1')
+    $serviceLogonSnapshot=@([DevopsOwnedServiceLogonRight]::Read($createdGroup.SID.Value))
+    # Microsoft's JEA group pregrant variant avoids per-VA policy writes.
+    # Snapshot/cleanup responsibility precedes the attempt, including failure.
+    $manageServiceLogon=$true
+    if($serviceLogonSnapshot -cnotcontains 'SeServiceLogonRight'){
+        [DevopsOwnedServiceLogonRight]::Set($createdGroup.SID.Value,$true)
+    }
+    Require-Fixture (@([DevopsOwnedServiceLogonRight]::Read($createdGroup.SID.Value)) -ccontains 'SeServiceLogonRight') 'owned_worker_service_logon'
     Grant-Fixture $root $createdGroup.SID ([Security.AccessControl.FileSystemRights]::ReadAndExecute)
     & $PythonPath (Join-Path $SourceRoot 'tests/native_windows_endpoint.py') certificates --folder $root --username $name
     Require-Fixture ($LASTEXITCODE -eq 0)
@@ -228,6 +238,11 @@ public static class DevopsJEAServiceTokenDiagnostic {
     Invoke-FixtureCleanup 'certificate_auth' {if($null -ne $certificateBefore){Set-Item WSMan:\localhost\Service\Auth\Certificate -Value $certificateBefore}}
     foreach($cert in $certs){Invoke-FixtureCleanup 'certificate' {if($cert.Private){Remove-Item -LiteralPath $cert.Path -DeleteKey -Force}else{Remove-Item -LiteralPath $cert.Path -Force}}}
     Invoke-FixtureCleanup 'user' {if($createdUser){Require-Fixture ((Get-LocalUser -Name $name).SID.Value -ceq $createdUser.SID.Value);Remove-LocalUser -Name $name}}
+    Invoke-FixtureCleanup 'owned_service_logon' {if($manageServiceLogon){
+        Require-Fixture ((Get-LocalGroup -Name $groupName).SID.Value -ceq $createdGroup.SID.Value) 'owned_service_logon_sid'
+        if($serviceLogonSnapshot -cnotcontains 'SeServiceLogonRight'){[DevopsOwnedServiceLogonRight]::Set($createdGroup.SID.Value,$false)}
+        Require-Fixture ((@([DevopsOwnedServiceLogonRight]::Read($createdGroup.SID.Value)|Sort-Object) -join ',') -ceq (@($serviceLogonSnapshot|Sort-Object) -join ',')) 'restored_owned_group_rights'
+    }}
     Invoke-FixtureCleanup 'group' {if($createdGroup){Require-Fixture ((Get-LocalGroup -Name $groupName).SID.Value -ceq $createdGroup.SID.Value);Remove-LocalGroup -Name $groupName}}
     if($configuredWinrm){
         $restoreType=if($serviceRegistryBefore.Type -eq 16){'own'}else{'share'}
