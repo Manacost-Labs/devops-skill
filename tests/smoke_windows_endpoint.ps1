@@ -157,8 +157,8 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     throw
 }finally{
     $script:cleanupFailures=New-Object 'Collections.Generic.List[string]'
-    function Invoke-FixtureCleanup([string]$Name,[scriptblock]$Step){
-        try{& $Step}catch{$script:cleanupFailures.Add($Name)}
+    function Invoke-FixtureCleanup([string]$CleanupLabel,[scriptblock]$CleanupAction){
+        try{& $CleanupAction}catch{$script:cleanupFailures.Add($CleanupLabel)}
     }
     Invoke-FixtureCleanup 'endpoint' {if($registered){Unregister-PSSessionConfiguration -Name $endpoint -NoServiceRestart -Force | Out-Null}}
     Invoke-FixtureCleanup 'mapping' {if($mappingPath){Remove-Item -LiteralPath $mappingPath -Recurse -Force}}
