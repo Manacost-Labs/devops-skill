@@ -97,7 +97,10 @@ if($Parameters['value'] -ceq 'fail'){throw 'Synthetic failure after write'}
     New-PSRoleCapabilityFile -Path $rolePath -VisibleFunctions @('Get-DevopsEndpointBinding','Get-DevopsBoundTaskStatus','Invoke-DevopsBoundTask')
     $roles=@{};$roles[$env:COMPUTERNAME+'\'+$name]=@{RoleCapabilityFiles=@([string]$rolePath)}
     $sessionPath=Join-Path $moduleRoot 'endpoint.pssc'
-    New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -RunAsVirtualAccount -RunAsVirtualAccountGroups @([string]$groupName) -ModulesToImport @([string](Join-Path $moduleRoot 'DevopsEndpoint.psm1')) -RoleDefinitions $roles
+    $qualifiedWorkerGroup=$env:COMPUTERNAME+'\'+$groupName
+    Require-Fixture (([Security.Principal.NTAccount]::new($groupName)).Translate([Security.Principal.SecurityIdentifier]).Value -ceq $createdGroup.SID.Value) 'bare_worker_group_sid'
+    Require-Fixture (([Security.Principal.NTAccount]::new($qualifiedWorkerGroup)).Translate([Security.Principal.SecurityIdentifier]).Value -ceq $createdGroup.SID.Value) 'qualified_worker_group_sid'
+    New-PSSessionConfigurationFile -Path $sessionPath -SessionType RestrictedRemoteServer -LanguageMode NoLanguage -RunAsVirtualAccount -RunAsVirtualAccountGroups @([string]$qualifiedWorkerGroup) -ModulesToImport @([string](Join-Path $moduleRoot 'DevopsEndpoint.psm1')) -RoleDefinitions $roles
     Require-Fixture (Test-PSSessionConfigurationFile -Path $sessionPath)
     # Registration can change WinRM's account/type/required privileges even on
     # a partial failure. Restore its snapshot regardless of later cleanup.
@@ -153,7 +156,12 @@ public static class DevopsJEAServiceTokenDiagnostic {
     $liveService=Get-CimInstance Win32_Service -Filter "Name='WinRM'"
     $liveProcess=Get-CimInstance Win32_Process -Filter ('ProcessId='+$liveService.ProcessId)
     $liveOwner=Invoke-CimMethod -InputObject $liveProcess -MethodName GetOwnerSid
-    @{fixture_live_service=$true;account=$liveService.StartName;owner_sid=$liveOwner.Sid;service_type=$liveService.ServiceType;tcb=[DevopsJEAServiceTokenDiagnostic]::Inspect([int]$liveService.ProcessId)}|ConvertTo-Json -Compress
+    $liveTcb=[DevopsJEAServiceTokenDiagnostic]::Inspect([int]$liveService.ProcessId)
+    Require-Fixture ((Get-CimInstance Win32_Service -Filter "Name='WinRM'").ProcessId -eq $liveService.ProcessId) 'stable_service_process'
+    @{fixture_live_service=$true;account=$liveService.StartName;owner_sid=$liveOwner.Sid;service_type=$liveService.ServiceType;created=$liveProcess.CreationDate.ToUniversalTime().ToString('o');tcb=$liveTcb}|ConvertTo-Json -Compress
+    $activePlugin=Get-WSManInstance -ResourceURI winrm/config/Plugin -SelectorSet @{Name=$endpoint}
+    @{fixture_active_plugin=$true;virtual_account=[string]$activePlugin.RunAsVirtualAccount;worker_groups=[string]$activePlugin.RunAsVirtualAccountGroups;expected_group_sid=$createdGroup.SID.Value}|ConvertTo-Json -Compress
+    Require-Fixture ([string]$activePlugin.RunAsVirtualAccount -ieq 'true' -and [string]$activePlugin.RunAsVirtualAccountGroups -ceq $qualifiedWorkerGroup) 'active_virtual_account_configuration'
     $observed=Get-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address='IP:127.0.0.1';Transport='HTTPS'}
     Require-Fixture ([int]$observed.Port -eq $port -and $observed.Hostname -ceq 'localhost' -and $observed.CertificateThumbprint -ieq $server.Thumbprint -and $observed.Enabled -ieq 'true')
     Require-Fixture (@($observed.ListeningOn).Count -eq 1 -and @($observed.ListeningOn)[0] -ceq '127.0.0.1')
